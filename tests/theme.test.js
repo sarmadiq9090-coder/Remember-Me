@@ -19,13 +19,15 @@ function contrast(a, b) {
   const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p);
   return (x + 0.05) / (y + 0.05);
 }
-// [text or mark, background, minimum ratio]: 4.5:1 for text, 3:1 for focus rings, icons and controls.
+// [text or mark, background, minimum ratio]: 4.5:1 for text (placeholders too), 3:1 for focus rings, icons and controls.
 const PAIRS = [
-  ['ink', 'bg', 4.5], ['ink', 'surface', 4.5], ['ink-2', 'surface', 4.5], ['ink-2', 'bg', 4.5],
-  ['muted', 'surface', 4.5], ['muted', 'bg', 4.5], ['muted', 'surface-2', 4.5], ['muted', 'hover', 4.5], ['muted', 'accent-soft', 4.5],
+  ['ink', 'bg', 4.5], ['ink', 'surface', 4.5], ['ink', 'surface-2', 4.5], ['ink', 'field', 4.5], ['ink-2', 'surface', 4.5], ['ink-2', 'bg', 4.5], ['ink-2', 'surface-2', 4.5],
+  ['muted', 'field', 4.5], ['muted', 'surface', 4.5], ['muted', 'bg', 4.5], ['muted', 'surface-2', 4.5], ['muted', 'hover', 4.5], ['muted', 'accent-soft', 4.5],
   ['faint', 'surface', 3], ['faint', 'bg', 3],
+  // Switches and checkboxes when off: the outline against the card, the reminder panel and the page, and the knob against the track.
+  ['control', 'surface', 3], ['control', 'surface-2', 3], ['control', 'bg', 3], ['field', 'control', 3],
   ['on-accent', 'accent', 4.5], ['on-accent', 'accent-hover', 4.5],
-  ['accent-ink', 'surface', 4.5], ['accent-ink', 'bg', 4.5], ['accent-ink', 'accent-soft', 4.5], ['accent-ink', 'accent-soft-2', 4.5],
+  ['accent-ink', 'surface', 4.5], ['accent-ink', 'bg', 4.5], ['accent-ink', 'surface-2', 4.5], ['accent-ink', 'field', 4.5], ['accent-ink', 'accent-soft', 4.5], ['accent-ink', 'accent-soft-2', 4.5],
   ['accent', 'surface', 3], ['focus', 'surface', 3], ['focus', 'bg', 3],
   ['on-danger', 'danger', 4.5], ['danger', 'surface', 4.5], ['danger', 'danger-soft', 4.5],
   ['success', 'surface', 3], ['success-ink', 'success-soft', 4.5], ['warning-ink', 'warning-soft', 4.5],
@@ -46,6 +48,23 @@ test('text, buttons and focus rings meet WCAG contrast in every palette and mode
     if (ratio < min) failures.push(`${id} ${mode}: ${fg} on ${bg} is ${ratio.toFixed(2)}:1, needs ${min}:1`);
   }
   assert.deepEqual(failures, []);
+});
+
+test('text on a filled background uses a tested pair, never --accent on a tint', () => {
+  // Every rule that sets both a text color and a background from the tokens must use a pair from PAIRS, so accent
+  // text on tinted fills (the active nav item, tag chips) is --accent-ink, which reaches 4.5:1 there.
+  const alias = { purple: 'accent', 'purple-light': 'accent-soft', green: 'success' };
+  const tested = new Set(PAIRS.map(([fg, bg]) => `${fg} on ${bg}`)), untested = [];
+  for (const name of ['styles.css', 'alert.css']) {
+    const source = fs.readFileSync(path.join(__dirname, '../ui/styles', name), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const [, selector, body] of source.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const [fg, bg] = [/(?:^|;)color:var\(--([\w-]+)\)/, /(?:^|;)background(?:-color)?:var\(--([\w-]+)\)/].map(re => body.match(re)?.[1]).map(t => alias[t] || t);
+      if (fg in palettes.lavender.light && bg in palettes.lavender.light && !tested.has(`${fg} on ${bg}`)) untested.push(`${name} ${selector.trim()}: ${fg} on ${bg}`);
+    }
+  }
+  assert.deepEqual(untested, []);
+  // The active item's count badge sets only its background (accent-soft-2) and takes the item's color.
+  assert.match(fs.readFileSync(path.join(__dirname, '../ui/styles/styles.css'), 'utf8'), /\.nav-item\.active\{color:var\(--accent-ink\)/);
 });
 
 test('the brand mark stands out from its tile in every palette and mode', () => {
