@@ -15,6 +15,15 @@
 
 Open-source task, note, and reminder app for 64-bit Windows with Arabic and English interfaces. It works without an account or a permanent internet connection, and keeps reminders visible until completed or snoozed.
 
+<p align="center">
+  <img src="docs/screenshots/main-ar.png" width="68%" alt="الواجهة العربية لذكرني: مهام اليوم والتذكير القادم">
+  <img src="docs/screenshots/alert-ar.png" width="23%" alt="التنبيه الثابت فوق شريط المهام مع الإنجاز والتأجيل">
+</p>
+<p align="center">
+  <img src="docs/screenshots/main-en.png" width="68%" alt="Remember Me English interface: today's tasks and next reminder">
+  <img src="docs/screenshots/alert-en.png" width="23%" alt="Sticky reminder above the taskbar with Done and Snooze">
+</p>
+
 ## المزايا | Features
 
 - واجهة عربية RTL وإنجليزية LTR قابلة للتبديل من الإعدادات.
