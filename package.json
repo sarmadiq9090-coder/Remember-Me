@@ -4,7 +4,7 @@
   "description": "تطبيق مهام وملاحظات وتذكيرات عربي وإنجليزي لويندوز",
   "main": "src/main.js",
   "private": true,
-  "author": "SaifMohamd",
+  "author": "Sarmad",
   "license": "MIT",
   "repository": { "type": "git", "url": "https://github.com/sarmadiq9090-coder/Remember-Me.git" },
   "homepage": "https://github.com/sarmadiq9090-coder/Remember-Me#readme",
