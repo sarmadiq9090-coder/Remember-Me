@@ -5,6 +5,7 @@
 ### Added
 
 - Automatic updates from GitHub Releases, only after you allow them. Remember Me asks once, then checks about 30 seconds after starting and once a day, downloads in the background and installs when you choose **Restart now** or the next time you quit. It saves a safety copy of your data first and never restarts on its own. **Settings → Updates** has the switch and **Check now**.
+- **Settings → About** (also **About Remember Me** in the tray menu): the version, the developer, links to the source code, release notes, problem reports, privacy notice and license, **Check for updates**, and **Copy diagnostic info** with versions, language and theme only.
 
 ### Changed
 

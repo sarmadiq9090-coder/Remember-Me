@@ -1,6 +1,7 @@
 'use strict';
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, Notification, nativeTheme } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, Notification, nativeTheme, clipboard } = require('electron');
 const path = require('node:path');
+const os = require('node:os');
 const { randomUUID } = require('node:crypto');
 const { REMIND_AGAIN, Store, saveTask, completeTask, skipOccurrence, undoComplete, snoozeTask, dueTasks, alertQueue, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
 const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
@@ -13,6 +14,7 @@ const { createRepeatBeep } = require('./repeat-beep');
 const { Updates, configure: configureUpdater } = require('./updates');
 const { migrateDataFolder } = require('./data-folder');
 const { setLoginItem, refreshLoginItem } = require('./login-item');
+const { linkUrl, diagnostics } = require('./about');
 const testMode = process.env.WAQT_TEST === '1';
 // Lets the desktop tests read early notifications without showing them.
 if (testMode) globalThis.waqtTest = { get early() { return earlyLog; } };
@@ -84,6 +86,14 @@ function showMain() {
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show(); mainWindow.focus();
 }
+// Opens the main window on a part of it, such as the About card, once its page has loaded.
+function showSection(section) {
+  showMain();
+  const contents = mainWindow?.webContents;
+  if (!contents) return;
+  if (contents.isLoading()) contents.once('did-finish-load', () => contents.send('waqt:show', section));
+  else contents.send('waqt:show', section);
+}
 function placeAlert() {
   if (!alertWindow || alertWindow.isDestroyed()) return;
   alertWindow.setBounds(alertBounds(screen.getPrimaryDisplay(), store.state.settings.alertSide));
@@ -101,6 +111,7 @@ function rebuildTrayMenu() {
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: nativeText('فتح ذكرني', 'Open Remember Me'), click: showMain },
     { label: nativeText('مهمة جديدة', 'New task'), click: () => { showMain(); mainWindow.webContents.send('waqt:update'); mainWindow.webContents.executeJavaScript('window.openTaskEditor?.()'); } },
+    { label: nativeText('حول ذكرني', 'About Remember Me'), click: () => showSection('about') },
     { type: 'separator' },
     { label: nativeText('خروج وإيقاف التذكيرات', 'Exit and stop reminders'), click: async () => {
       const { response } = await dialog.showMessageBox(mainWindow, { type: 'question', title: nativeText('إغلاق ذكرني', 'Close Remember Me'), message: nativeText('ستتوقف التذكيرات حتى تفتح البرنامج مجددًا.', 'Reminders will stop until you open the app again.'), buttons: [nativeText('البقاء في الخلفية', 'Keep running'), nativeText('خروج', 'Exit')], defaultId: 0, cancelId: 0 });
@@ -340,10 +351,16 @@ A safety copy of your current data is saved in the backups folder first.`),
           catch (error) { throw new Error(nativeText(`تعذّر حفظ نسخة أمان من بياناتك، فلم يُثبَّت التحديث. ${error.message}`, `Couldn't save a safety copy of your data, so the update was not installed. ${error.message}`)); }
           break;
         case 'dismissUpdate': updates.dismiss(); break;
+        case 'openLink': await shell.openExternal(linkUrl(payload.link)); break;
+        case 'copyDiagnostics':
+          value = diagnostics({ version: app.getVersion(), packaged: app.isPackaged, versions: process.versions, windows: os.release(), arch: process.arch,
+            language: language(), theme: store.state.settings.theme });
+          clipboard.writeText(value);
+          break;
         case 'open': showMain(); break;
         default: throw new Error('إجراء غير معروف.');
       }
-      if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder', 'checkUpdates', 'installUpdate', 'dismissUpdate'].includes(action)) { scan(); notifyViews(); }
+      if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder', 'checkUpdates', 'installUpdate', 'dismissUpdate', 'openLink', 'copyDiagnostics'].includes(action)) { scan(); notifyViews(); }
       return { ok: true, value };
     } catch (error) { return { ok: false, error: error.message }; }
   });

@@ -51,3 +51,13 @@ test('skip is allowed from the alert, needs an ID and validates the expected tim
   assert.throws(() => checkRequest('skip', {}, { fromAlert: true }), /معرّف/);
   assert.throws(() => checkRequest('skip', { id: 'a', expectedDueAt: 'later' }), /موعد/);
 });
+
+test('openLink takes a link ID from the fixed list, never a URL, and not from the alert', () => {
+  for (const link of ['github', 'repo', 'releases', 'issues', 'privacy', 'license']) assert.deepEqual(checkRequest('openLink', { link }), { link });
+  for (const link of [undefined, null, '', 'https://github.com/sarmadiq9090-coder', 'file:///C:/Windows/System32/calc.exe', 'javascript:alert(1)', '__proto__', 'constructor', 'toString', 'GITHUB', ['github'], { toString: () => 'github' }, 7]) {
+    assert.throws(() => checkRequest('openLink', { link }), /رابط غير معروف/, String(link));
+  }
+  assert.throws(() => checkRequest('openLink', { link: 'mailto:x' }, { text: (ar, en) => en }), /Unknown link/);
+  assert.throws(() => checkRequest('openLink', { link: 'github' }, { fromAlert: true }), /غير مسموح/);
+  assert.throws(() => checkRequest('copyDiagnostics', {}, { fromAlert: true }), /غير مسموح/);
+});

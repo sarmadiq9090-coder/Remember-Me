@@ -84,6 +84,7 @@ v1.4.0 can't update itself: install the next version from Releases once by hand,
 - **Attachments:** while editing a task or note, choose **Add files**. Files are copied into Remember Me's data folder, so moving or deleting the original doesn't break the attachment. Removing an attachment from one item doesn't affect other items.
 - **Opening files:** click an attachment to open it with the default Windows app. Excel files need a compatible app such as Excel.
 - **Settings:** alert sound, start with Windows, alert position (left or right) and interface language.
+- **About:** at the end of Settings, or **About Remember Me** in the tray menu. It shows the version, links to the source code, release notes, problem reports, the privacy notice and the MIT license, and has **Check for updates**. **Copy diagnostic info** copies the app, Electron, Chromium and Windows versions plus the interface language and theme, to paste into a problem report. It never includes your tasks, notes, files or folder paths.
 - **Shortcuts:** Ctrl+N creates a task or note, Ctrl+K focuses search.
 
 The bell button at the top shows a **preview alert**. Snoozing a preview only closes it, while reminders you set on tasks are real.
