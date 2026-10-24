@@ -18,6 +18,7 @@ const { migrateDataFolder } = require('./data-folder');
 const { setLoginItem, refreshLoginItem } = require('./login-item');
 const { linkUrl, diagnostics } = require('./about');
 const { UNTIL_RESUMED, isPaused, shownAlerts, createPause } = require('./pause');
+const { createEarlyNotices } = require('./early-notices');
 const testMode = process.env.WAQT_TEST === '1';
 // Lets the desktop tests read early notifications without showing them.
 if (testMode) globalThis.waqtTest = { get early() { return earlyLog; } };
@@ -40,23 +41,19 @@ const repeatBeep = createRepeatBeep(() => shell.beep());
 // The task just completed from the alert, which can be undone for a few seconds.
 let undoable = null;
 const UNDO_MS = 6000;
-// Early notifications already shown, by task and due time, so each occurrence is announced once.
-const announced = new Set();
 const earlyLog = [];
-function announceUpcoming() {
-  for (const task of upcomingTasks(store.state)) {
-    const key = task.id + ':' + task.dueAt;
-    if (announced.has(key)) continue;
-    announced.add(key);
-    const time = new Date(task.dueAt).toLocaleTimeString(localeTag(), { hour: 'numeric', minute: '2-digit' });
-    const message = { title: nativeText(`قريبًا: ${task.title}`, `Coming up: ${task.title}`), body: nativeText(`الموعد عند ${time}`, `Due at ${time}`) };
-    if (testMode) { earlyLog.push(message); continue; }
-    if (!Notification.isSupported()) continue;
-    const notification = new Notification({ ...message, icon, silent: !store.state.settings.sound });
-    notification.on('click', showMain);
-    notification.show();
-  }
-}
+// "Coming up" notifications, each occurrence once. While paused they are only recorded.
+const earlyNotices = createEarlyNotices({ show: task => {
+  const time = new Date(task.dueAt).toLocaleTimeString(localeTag(), { hour: 'numeric', minute: '2-digit' });
+  const message = { title: nativeText(`قريبًا: ${task.title}`, `Coming up: ${task.title}`), body: nativeText(`الموعد عند ${time}`, `Due at ${time}`) };
+  if (testMode) { earlyLog.push(message); return null; }
+  if (!Notification.isSupported()) return null;
+  const notification = new Notification({ ...message, icon, silent: !store.state.settings.sound });
+  notification.on('click', showMain);
+  notification.show();
+  return notification;
+} });
+function announceUpcoming(paused) { earlyNotices.announce(upcomingTasks(store.state), { silent: paused }); }
 const icon = path.join(__dirname, '../assets/icon.png');
 // Windows picks the matching size from the ICO for the title bar, taskbar and Alt+Tab.
 const windowIcon = path.join(__dirname, '../assets/icon.ico');
@@ -176,7 +173,7 @@ function scan() {
 function scanNow() {
   // While paused nothing pops up or beeps; due reminders stay queued and appear when it ends.
   const paused = pause.check();
-  if (!paused) announceUpcoming();
+  announceUpcoming(paused);
   const queue = activeAlerts(), tasks = shownAlerts(queue, paused);
   const current = new Set(tasks.map(t => t.id));
   const newlyDue = tasks.some(t => !previousDue.has(t.id));
