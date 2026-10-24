@@ -9,6 +9,7 @@
 ### Changed
 
 - The app is called Remember Me everywhere: `Remember Me.exe`, the installer, its shortcuts and the Apps & features entry.
+- The installer shows the privacy notice and the license, in English or Arabic, before installing. The uninstaller says your data in `%APPDATA%\Remember Me` is kept.
 - Data moves from `%APPDATA%\Waqt` to `%APPDATA%\Remember Me` automatically the first time the app starts. If the folder is locked it is copied and checked instead, and the original is kept as `Waqt.migrated-<date>`. The old data is never deleted.
 - Start with Windows is pointed at the renamed executable on startup.
 - New backup folders are named `RememberMe-backup-…` and `RememberMe-before-restore-…`. Backups named `Waqt-…` still restore and rotate.
