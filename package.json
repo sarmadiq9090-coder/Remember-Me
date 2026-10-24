@@ -20,7 +20,7 @@
     "installer": "node tools/installer.cjs"
   },
   "dependencies": {
-    "electron-updater": "6.8.10"
+    "electron-updater": "6.8.11"
   },
   "devDependencies": {
     "@electron/fuses": "1.8.0",
