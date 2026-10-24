@@ -58,7 +58,7 @@ function render() {
   $('breadcrumb').textContent = names[0];
   $('page-title').innerHTML = `${names[1]}<span class="title-dot">.</span>`;
   $('page-description').textContent = names[2];
-  $('date-label').textContent = new Date().toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + (state.settings.hijri ? ' • ' + new Date().toLocaleDateString(locale(true), { day: 'numeric', month: 'long', year: 'numeric' }) : '');
+  $('date-label').textContent = new Date().toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   $('dashboard').hidden = view !== 'today';
   $('tasks-section').hidden = ['notes', 'settings', 'trash'].includes(view);
   $('trash-section').hidden = view !== 'trash';
@@ -86,7 +86,6 @@ function render() {
     $('setting-digits').value = state.settings.digits;
     $('setting-theme').value = state.settings.theme;
     $('setting-week').value = String(state.settings.weekStart);
-    $('setting-hijri').checked = state.settings.hijri;
     $('data-path').textContent = state.dataPath;
     renderStorage();
     renderDriveBackup();
@@ -375,9 +374,9 @@ function renderRemindAgain() {
   $('setting-remind-again').value = String(state.settings.remindAgain || 0);
 }
 function settingsPayload() {
-  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, digits: $('setting-digits').value, weekStart: $('setting-week').value === 'auto' ? 'auto' : Number($('setting-week').value), hijri: $('setting-hijri').checked, theme: $('setting-theme').value, remindAgain: Number($('setting-remind-again').value) };
+  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, digits: $('setting-digits').value, weekStart: $('setting-week').value === 'auto' ? 'auto' : Number($('setting-week').value), theme: $('setting-theme').value, remindAgain: Number($('setting-remind-again').value) };
 }
-for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-digits', 'setting-week', 'setting-hijri', 'setting-theme', 'setting-remind-again']) $(id).addEventListener('change', async () => {
+for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-digits', 'setting-week', 'setting-theme', 'setting-remind-again']) $(id).addEventListener('change', async () => {
   try { await api('settings', settingsPayload()); await refresh(); toast(tr('حُفظت الإعدادات.','Settings saved.')); }
   catch (err) { toast(err.message); } await refresh();
 });

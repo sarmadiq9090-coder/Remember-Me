@@ -29,10 +29,9 @@ const icons = {
 function icon(name) { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.note}</svg>`; }
 function hydrateIcons(root = document) { root.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon); }); }
 function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-// Locale for every date, time and number, with the chosen digits and optionally the Hijri calendar.
-function locale(hijri = false) {
-  const extensions = [...(hijri ? ['ca-islamic-umalqura'] : []), ...(uiDigits === 'auto' ? [] : ['nu-' + uiDigits])];
-  return (uiLanguage === 'en' ? 'en-US' : 'ar-IQ') + (extensions.length ? '-u-' + extensions.join('-') : '');
+// Locale for every date, time and number, with the chosen digits.
+function locale() {
+  return (uiLanguage === 'en' ? 'en-US' : 'ar-IQ') + (uiDigits === 'auto' ? '' : '-u-nu-' + uiDigits);
 }
 // Counts keep plain digits unless a digit style was chosen explicitly.
 function num(value) { return uiDigits === 'auto' ? String(value) : Number(value).toLocaleString(locale()); }
