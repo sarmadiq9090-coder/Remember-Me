@@ -17,10 +17,10 @@ async function pruneLocales({ buildPath }) {
   for (const name of await fs.readdir(folder)) if (!locales.has(name)) await fs.rm(path.join(folder, name));
 }
 const paths = await packager({
-  dir: root, name: 'Waqt', executableName: 'Waqt', out: path.join(root, 'release', process.env.WAQT_BUILD_FOLDER || `v${version}`),
+  dir: root, name: 'Remember Me', executableName: 'Remember Me', out: path.join(root, 'release', process.env.WAQT_BUILD_FOLDER || `v${version}`),
   platform: 'win32', arch: 'x64', electronVersion: require('electron/package.json').version,
   electronZipDir: process.env.WAQT_ELECTRON_ZIP_DIR || undefined,
   icon: path.join(root, 'assets/icon.ico'), overwrite: true, asar: true, prune: false, ignore, afterExtract: [pruneLocales],
-  win32metadata: { CompanyName: 'sarmadiq9090-coder', FileDescription: 'ذكرني | Remember Me — Tasks and reminders', ProductName: 'ذكرني | Remember Me', InternalName: 'Waqt' },
+  win32metadata: { CompanyName: 'sarmadiq9090-coder', FileDescription: 'Remember Me', ProductName: 'Remember Me', InternalName: 'Remember Me' },
 });
 console.log('Ready:', paths.join('\n'));

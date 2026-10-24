@@ -63,7 +63,7 @@ function resolveAttachment(state, directory, id) {
   if (!record) throw new Error('المرفق غير موجود.');
   const file = attachmentPath(directory, record);
   let stat;
-  try { stat = fs.lstatSync(file); } catch { throw new Error(`ملف «${record.name}» غير موجود في مجلد بيانات وقت. استعده من نسختك الاحتياطية.`); }
+  try { stat = fs.lstatSync(file); } catch { throw new Error(`ملف «${record.name}» غير موجود في مجلد بيانات ذكرني. استعده من نسختك الاحتياطية.`); }
   if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('مسار المرفق غير صالح.');
   return { file, record };
 }

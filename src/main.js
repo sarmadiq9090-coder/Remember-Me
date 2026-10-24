@@ -9,8 +9,10 @@ const { DriveBackup } = require('./drive-backup');
 const { checkRequest, fromPage } = require('./ipc');
 const { readBackup, restoreBackup } = require('./backups');
 const testMode = process.env.WAQT_TEST === '1';
-app.setName('ذكرني');
+app.setName('Remember Me');
 app.setPath('userData', testMode && process.env.WAQT_DATA_DIR ? process.env.WAQT_DATA_DIR : path.join(app.getPath('appData'), 'Waqt'));
+// The ID predates the Remember Me name. Keep it: it names the start-with-Windows entry and taskbar
+// group of v1.4.0, and the installer's appId must stay the same for upgrades and updates.
 app.setAppUserModelId('com.waqt.reminder');
 let mainWindow, alertWindow, tray, store, quitting = false, interval, preview = null, driveBackup, backupInterval;
 const imagePreview = createPreviewService(nativeImage);
@@ -19,7 +21,7 @@ const icon = path.join(__dirname, '../assets/icon.png');
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => showMain());
-  app.whenReady().then(start).catch(error => { dialog.showErrorBox('تعذّر تشغيل ذكرني', error.message); app.quit(); });
+  app.whenReady().then(start).catch(error => { dialog.showErrorBox(nativeText('تعذّر تشغيل ذكرني', 'Remember Me could not start'), error.message); app.quit(); });
 }
 function options() { return { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }; }
 function secure(win) {
@@ -28,7 +30,7 @@ function secure(win) {
 }
 function createMain(visible = !process.argv.includes('--background')) {
   const win = mainWindow = new BrowserWindow({ width: 1250, height: 850, minWidth: 900, minHeight: 650,
-    title: 'ذكرني • مساحة ليومك', icon, show: false, backgroundColor: '#f7f8fa', autoHideMenuBar: true, webPreferences: options() });
+    title: nativeText('ذكرني • مساحة ليومك', 'Remember Me • Your day'), icon, show: false, backgroundColor: '#f7f8fa', autoHideMenuBar: true, webPreferences: options() });
   win.setMenu(null);
   secure(win);
   win.loadFile(path.join(__dirname, '../ui/index.html'));

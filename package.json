@@ -1,5 +1,5 @@
 {
-  "name": "waqt-reminder",
+  "name": "remember-me",
   "version": "1.4.0",
   "description": "تطبيق مهام وملاحظات وتذكيرات عربي وإنجليزي لويندوز",
   "main": "src/main.js",
@@ -21,5 +21,5 @@
     "electron": "^45.0.0",
     "electron-builder": "^26.18.0"
   },
-  "productName": "ذكرني - Remember Me"
+  "productName": "Remember Me"
 }
