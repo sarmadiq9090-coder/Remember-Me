@@ -56,6 +56,7 @@ gh attestation verify .\Remember-Me-Setup-1.5.0-x64.exe --repo sarmadiq9090-code
 Use a Windows 10 or 11 PC or VM where you can install and uninstall freely, ideally with a separate Windows user.
 
 - [ ] **Fresh install:** run the installer, choosing **More info → Run anyway** at the SmartScreen prompt (the installer isn't signed yet).
+  - After the language choice, the license page shows the privacy notice in that language, then the MIT license.
   - The Start menu and desktop shortcuts are called **Remember Me**.
   - Apps & features shows **Remember Me** version 1.5.0.
   - The process is `Remember Me.exe`, and data is in `%APPDATA%\Remember Me`.
@@ -67,7 +68,7 @@ Use a Windows 10 or 11 PC or VM where you can install and uninstall freely, idea
   - Install v1.4.0, add a task, a note with an attachment and an exported backup, and turn on Start with Windows.
   - Install v1.5.0 over it.
   - Everything is still there. `%APPDATA%\Waqt` is gone, or kept as `Waqt.migrated-<date>`. The shortcuts point at `Remember Me.exe`, and the Start with Windows entry in Task Manager's Startup apps points at `Remember Me.exe`.
-- [ ] **Uninstall** from Apps & features. `%APPDATA%\Remember Me` is kept.
+- [ ] **Uninstall** from Apps & features. The first page says the data in `%APPDATA%\Remember Me` is kept and shows the full path, and the folder is still there afterwards.
 
 The automatic update itself can only be tested end to end once v1.5.1 exists: install v1.5.0, allow updates, publish v1.5.1, then check that the banner appears and **Restart now** installs it after saving a `RememberMe-before-update-` copy in the backups folder.
 
