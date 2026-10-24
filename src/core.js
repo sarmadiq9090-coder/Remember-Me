@@ -108,7 +108,7 @@ function saveTask(state, input, now = new Date()) {
     setEarly(task, input.remindBefore);
     setTags(task, input.tags ?? task.tags);
     setChecklist(task, input.checklist ?? task.checklist);
-    if (anchor) { task.scheduleAt = fields.dueAt; task.snoozedAt = null; }
+    if (anchor) { task.scheduleAt = fields.dueAt; task.snoozedAt = null; delete task.snoozeCount; }
   } else {
     if ('repeatFrom' in rule) rule.repeatFrom = fields.dueAt;
     task = { ...fields, ...rule, id: randomUUID(), scheduleAt: fields.dueAt, createdAt: now.toISOString(), updatedAt: now.toISOString(), completedAt: null, snoozedAt: null };
@@ -173,7 +173,7 @@ function completeTask(state, id, now = new Date(), { expectedDueAt } = {}) {
     if (task.checklist) task.checklist = task.checklist.map(step => ({ ...step, done: false }));
     task.dueAt = nextOccurrence(task.scheduleAt, task.repeat, now, task);
     task.scheduleAt = task.dueAt;
-    task.snoozedAt = null;
+    task.snoozedAt = null; delete task.snoozeCount;
     task.updatedAt = now.toISOString();
     return { id, copyId: done.id };
   }
@@ -190,6 +190,7 @@ function undoComplete(state, id, copyId, now = new Date()) {
   const copy = state.tasks.find(t => t.id === copyId && t.sourceId === id && t.completedAt);
   if (!copy) return;
   Object.assign(task, { dueAt: copy.dueAt, scheduleAt: copy.scheduleAt, snoozedAt: copy.snoozedAt, updatedAt: now.toISOString() });
+  if (copy.snoozeCount) task.snoozeCount = copy.snoozeCount; else delete task.snoozeCount;
   state.tasks = state.tasks.filter(t => t !== copy);
 }
 // Deleted tasks and notes stay in a trash for TRASH_DAYS before they are removed for good.
@@ -213,7 +214,7 @@ function skipOccurrence(state, id, expectedDueAt, now = new Date()) {
   if (stale(task, expectedDueAt)) return false;
   task.dueAt = nextOccurrence(task.scheduleAt, task.repeat, now, task);
   task.scheduleAt = task.dueAt;
-  task.snoozedAt = null;
+  task.snoozedAt = null; delete task.snoozeCount;
   task.updatedAt = now.toISOString();
   return true;
 }
@@ -226,6 +227,8 @@ function snoozeTask(state, id, until, now = new Date(), { expectedDueAt } = {}) 
   if (!next || Date.parse(next) <= now.getTime()) throw new Error('Choose a later time for the reminder.');
   task.dueAt = next;
   task.snoozedAt = now.toISOString();
+  // Counted so the alert can suggest a better time after repeated snoozes.
+  task.snoozeCount = Math.min(999, (task.snoozeCount || 0) + 1);
   task.updatedAt = now.toISOString();
   return true;
 }
@@ -284,6 +287,7 @@ function validateState(data) {
     task.scheduleAt = date(task.scheduleAt); task.completedAt = date(task.completedAt);
     if (task.repeat !== 'none' && !task.scheduleAt) task.scheduleAt = task.dueAt;
     try { task.snoozedAt = date(task.snoozedAt); } catch { task.snoozedAt = null; }
+    if ('snoozeCount' in task && !(Number.isInteger(task.snoozeCount) && task.snoozeCount > 0 && task.snoozeCount <= 999)) delete task.snoozeCount;
     if ('remindBefore' in task) setEarly(task, task.remindBefore);
     if ('tags' in task) setTags(task, task.tags);
     if ('checklist' in task) setChecklist(task, task.checklist);

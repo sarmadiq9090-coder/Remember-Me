@@ -352,3 +352,21 @@ test('moving one occurrence with onlyThisTime keeps the series at its usual time
   saveTask(s, { ...once, dueAt: new Date(2026, 9, 26, 11).toISOString(), onlyThisTime: true });
   assert.equal(once.scheduleAt, once.dueAt, 'The flag means nothing for a one-time task');
 });
+test('snoozes are counted until the occurrence is done, skipped or moved, and Undo restores the count', () => {
+  const { undoComplete, skipOccurrence, validateState } = require('../src/core');
+  const s = initialState(), now = new Date('2026-10-24T09:00:00Z');
+  const t = saveTask(s, { title: 'مؤجلة', dueAt: '2026-10-24T09:00:00.000Z', repeat: 'daily' });
+  for (const hour of [10, 11, 12]) snoozeTask(s, t.id, `2026-10-24T${hour}:00:00.000Z`, now);
+  assert.equal(t.snoozeCount, 3);
+  const done = completeTask(s, t.id, new Date('2026-10-24T12:05:00Z'));
+  assert.ok(!('snoozeCount' in t), 'The next occurrence starts afresh');
+  undoComplete(s, done.id, done.copyId);
+  assert.equal(t.snoozeCount, 3, 'Undo brings the count back');
+  skipOccurrence(s, t.id, t.dueAt, new Date('2026-10-24T12:10:00Z'));
+  assert.ok(!('snoozeCount' in t));
+  snoozeTask(s, t.id, '2026-10-26T10:00:00.000Z', new Date('2026-10-25T09:00:00Z'));
+  saveTask(s, { ...t, dueAt: '2026-10-27T08:00:00.000Z' });
+  assert.ok(!('snoozeCount' in t), 'Choosing a new time resets it');
+  assert.ok(!('snoozeCount' in validateState({ ...initialState(), tasks: [{ ...t, snoozeCount: 'many' }] }).tasks[0]));
+  assert.ok(!('snoozeCount' in saveTask(s, { title: 'جديدة' })), 'Old and new tasks without snoozes have no field');
+});
