@@ -84,21 +84,31 @@ function validateState(data) {
     attachmentMap.add(record.id);
   }
   for (const item of [...data.tasks, ...data.notes]) {
+    if (!item || typeof item !== 'object') throw new Error('بيانات المهام أو الملاحظات غير صالحة.');
     item.attachments = attachmentIds(item.attachments);
     if (item.attachments.some(id => !attachmentMap.has(id))) throw new Error('مرجع المرفق غير موجود.');
   }
   const ids = new Set();
   for (const task of data.tasks) {
-    taskInput(task);
+    // Out-of-range fields are normalized rather than rejected, so one odd value never hides the whole file.
+    const { body, priority, category, dueAt, repeat } = taskInput(task);
+    Object.assign(task, { body, priority, category, dueAt, repeat });
     if (typeof task.id !== 'string' || ids.has(task.id)) throw new Error('بيانات المهام غير صالحة.');
     ids.add(task.id);
-    date(task.scheduleAt); date(task.completedAt);
+    task.scheduleAt = date(task.scheduleAt); task.completedAt = date(task.completedAt);
+    if (task.repeat !== 'none' && !task.scheduleAt) task.scheduleAt = task.dueAt;
+    try { task.snoozedAt = date(task.snoozedAt); } catch { task.snoozedAt = null; }
   }
   for (const note of data.notes) {
     title(note.title);
     if (typeof note.id !== 'string' || typeof note.body !== 'string') throw new Error('بيانات الملاحظات غير صالحة.');
+    if (!['cream', 'green', 'blue', 'pink'].includes(note.color)) note.color = 'cream';
   }
-  data.settings = { ...initialState().settings, ...data.settings };
+  const defaults = initialState().settings;
+  const saved = data.settings && typeof data.settings === 'object' && !Array.isArray(data.settings) ? data.settings : {};
+  data.settings = { ...defaults, ...saved };
+  for (const key of ['sound', 'startAtLogin']) if (typeof data.settings[key] !== 'boolean') data.settings[key] = defaults[key];
+  data.settings.alertSide = data.settings.alertSide === 'left' ? 'left' : 'right';
   data.settings.language = data.settings.language === 'en' ? 'en' : 'ar';
   return data;
 }

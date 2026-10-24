@@ -104,3 +104,27 @@ test('saving retries a rename blocked briefly by antivirus or indexing, and keep
     assert.equal(new Store(dir).state.tasks.length, 2);
   } finally { fs.renameSync = rename; fs.rmSync(dir, { recursive: true, force: true }); }
 });
+test('loading normalizes out-of-range fields instead of rejecting the file, and leaves valid v1.4.0 data unchanged', () => {
+  const { validateState } = require('../src/core');
+  const valid = initialState();
+  const daily = saveTask(valid, { title: 'يومية', dueAt: '2026-10-23T06:00:00.000Z', repeat: 'daily' });
+  completeTask(valid, daily.id, new Date('2026-10-23T07:00:00Z'));
+  snoozeTask(valid, daily.id, '2026-10-25T06:00:00.000Z', new Date('2026-10-24T07:00:00Z'));
+  valid.notes.push({ id: 'n1', title: 'ملاحظة', body: 'نص', attachments: [], color: 'green', createdAt: '2026-10-23T06:00:00.000Z', updatedAt: '2026-10-23T06:00:00.000Z' });
+  valid.settings = { sound: false, startAtLogin: true, alertSide: 'left', language: 'en' };
+  const before = JSON.parse(JSON.stringify(valid));
+  assert.deepEqual(validateState(JSON.parse(JSON.stringify(valid))), before);
+
+  const odd = JSON.parse(JSON.stringify(valid));
+  Object.assign(odd.tasks[0], { priority: 'urgent', category: 42, repeat: 'monthly', snoozedAt: 'yesterday' });
+  odd.tasks.push({ ...odd.tasks[0], id: 'legacy', repeat: 'weekly', scheduleAt: null });
+  odd.notes[0].color = 'neon';
+  odd.settings = 'broken';
+  const fixed = validateState(odd);
+  assert.deepEqual([fixed.tasks[0].priority, fixed.tasks[0].category, fixed.tasks[0].repeat, fixed.tasks[0].snoozedAt], ['normal', 'personal', 'none', null]);
+  assert.equal(fixed.tasks[2].scheduleAt, fixed.tasks[2].dueAt, 'A recurring task always keeps its recurrence anchor');
+  assert.equal(fixed.notes[0].color, 'cream');
+  assert.deepEqual(fixed.settings, initialState().settings);
+  assert.throws(() => validateState({ ...before, tasks: [null] }), /المهام/);
+  assert.throws(() => validateState({ ...before, version: 2 }), /غير صالح/);
+});
