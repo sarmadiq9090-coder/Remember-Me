@@ -43,6 +43,8 @@ build({
       installerIcon: path.join(root, 'assets/icon.ico'),
       uninstallerIcon: path.join(root, 'assets/icon.ico'),
       installerLanguages: ['ar_SA', 'en_US'], displayLanguageSelector: true,
+      // Says on the uninstaller's first page that the data folder is kept.
+      include: path.join(root, 'installer', 'installer.nsh'),
     },
   },
 }).then(files => files.forEach(file => console.log(file))).catch(error => { console.error(error.message); process.exitCode = 1; });
