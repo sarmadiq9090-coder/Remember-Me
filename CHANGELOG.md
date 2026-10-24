@@ -4,7 +4,7 @@
 
 Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0 load unchanged, and the data folder moves from `%APPDATA%\Waqt` to `%APPDATA%\Remember Me` by itself the first time v1.5.0 starts.
 
-> **Before release:** replace each **TODO** line below with the merged work and its PR, or delete it. Then check this entry against `git log v1.4.0..main --oneline` (see RELEASING.md).
+> **Before release:** replace each **TODO** line below with the merged work and its PR, or delete it. PRs up to #23 are included. Then check this entry against `git log v1.4.0..main --oneline` (see RELEASING.md).
 
 ### Highlights
 
@@ -59,6 +59,7 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 - Sharper icons at every size, with a simpler bell at small sizes and dedicated notification-area images. [#22]
 - A smaller installer: it bundles only the app's own files and the Arabic and English Chromium language files. [#3]
 - A data file with an out-of-range value is corrected when it loads instead of being treated as damaged. [#2]
+- The executable's file properties name Sarmad as the publisher and include the copyright. [#23]
 
 ### Fixed
 
@@ -71,12 +72,17 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 - Saving retries when antivirus or the search indexer briefly locks the data file. [#2]
 - One failed reminder check no longer stops later reminders, and shutting down or signing out of Windows no longer waits on the app. [#2]
 - Text in the other language keeps its reading order, the English sidebar and statistics no longer overflow, and the main window comes back if it was closed unexpectedly. [#3]
-- **TODO:** fixes from QC round 1.
+- A monthly or yearly repeat no longer drifts to an earlier day after you edit the task's text, use **Only this time**, or snooze it. [#23]
+- A daylight-saving change moves only the one occurrence that falls in the skipped hour, not every later one. [#23]
+- Automatic local and Google Drive backups keep running after the PC's clock moves backwards. [#23]
+- Restoring a backup keeps this PC's own settings (start with Windows, automatic updates, a pause) and refreshes the tray, alert position and theme. [#23]
+- **TODO:** the remaining fixes from QC round 1.
 
 ### Security
 
 - Every request from the app's windows is checked (a known action, valid data, the app's own page), and the alert window may use only its own small set of actions. [#2]
 - More risky file types open in File Explorer instead of running, including script hosts, installers, disk images, shortcuts and Office add-ins, and names like `report.pdf.exe` or ones hidden with right-to-left override characters. [#2]
+- Windows theme and visual-style files, update packages (`.msu`), Python zip apps (`.pyzw`), and Visual Studio and Office extensions are also shown in File Explorer instead of opened. [#23]
 - All browser permission requests are denied, embedded web views are blocked, and the content security policy is stricter. [#2]
 - Updates come only over HTTPS from this repository's GitHub Releases, are checked against the release's SHA-512, and are never pre-releases or downgrades. [#10]
 - About can open only six fixed GitHub addresses; the window can't ask for any other link. [#22]
@@ -111,3 +117,4 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 [#16]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/16
 [#17]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/17
 [#22]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/22
+[#23]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/23

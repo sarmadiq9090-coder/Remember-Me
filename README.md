@@ -118,6 +118,7 @@ Everything is stored locally in `%APPDATA%\Remember Me\data.json`, with the prev
 
 - Remember Me checks every file against its checksum first and shows the number of tasks, notes and attachments for you to confirm.
 - Before replacing anything, it saves a safety copy of your current data in the `backups` folder.
+- Settings that belong to this PC (start with Windows, automatic updates and a pause) stay as they are.
 - Backups made before checksums existed can still be restored. Remember Me only checks that their files are present and the right size, and labels them "unverified".
 
 Settings also shows how much space attachments and backups use, and can clean up attachment files that no task or note uses any more.
