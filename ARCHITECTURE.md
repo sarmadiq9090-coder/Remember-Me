@@ -26,6 +26,7 @@ true (see "Keeping this document current").
 | Start with Windows entry | `src/login-item.js` |
 | Pausing reminders from the tray | `src/pause.js` |
 | Update checks, download and install policy | `src/updates.js` |
+| About card: link allowlist and diagnostic info | `src/about.js` |
 | Main window and sticky alert pages, shared scripts and CSS | `ui/` |
 | Packaging, installer, winget manifests, icon and dark-theme generators | `tools/` |
 | Unit tests (`node --test`) and Playwright desktop suites (`*-desktop.cjs`, `desktop-smoke.cjs`) | `tests/` |
@@ -38,11 +39,17 @@ the tray icon and, when reminders are due, a frameless always-on-top alert windo
 `contextIsolation`, `sandbox`, `nodeIntegration: false`, a strict CSP in their HTML, and deny new
 windows, navigation, webviews and every browser permission request.
 
-The preload script exposes two functions to the pages:
+The preload script exposes these functions to the pages:
 
 - `window.waqt.call(action, payload)` invokes the single `waqt:action` IPC channel and resolves to
   `{ ok: true, value }` or `{ ok: false, error }` (the error text is already in the UI language);
-- `window.waqt.onUpdate(callback)` fires when the main process sends `waqt:update` after a change.
+- `window.waqt.onUpdate(callback)` fires when the main process sends `waqt:update` after a change;
+- `window.waqt.onOpenEditor(callback)` fires on `waqt:open-editor`, the tray's "New task";
+- `window.waqt.onShow(callback)` fires on `waqt:show` with a section name (only `'about'`), the
+  tray's "About Remember Me".
+
+Main sends the last two once the page has loaded, so they also work when the tray recreates the
+window.
 
 ## IPC actions and validation
 
@@ -52,7 +59,8 @@ Every request goes through one `ipcMain.handle('waqt:action')` handler, which:
    window's own bundled page (`fromPage`);
 2. runs `checkRequest(action, payload, { fromAlert })`, which rejects unknown actions (`ACTIONS`),
    limits the alert window to `ALERT_ACTIONS`, requires a plain-object payload, requires a short
-   string `id` for `ID_ACTIONS`, and checks `expectedDueAt` for `DUE_ACTIONS`;
+   string `id` for `ID_ACTIONS`, checks `expectedDueAt` for `DUE_ACTIONS`, and accepts `openLink`
+   only with a `link` ID from the About module's fixed list;
 3. runs the action. Anything that changes data goes through `store.change()`, after which the
    scheduler rescans and both windows are told to refresh.
 
@@ -65,6 +73,7 @@ Every request goes through one `ipcMain.handle('waqt:action')` handler, which:
 | Attachments | `attachFiles`, `openAttachment`, `imagePreview`, `cleanOrphans` |
 | Backups | `export`, `restore`, `chooseDriveFolder`, `driveBackupNow`, `driveAutomatic`, `driveKeep`, `driveHelp`, `openDriveFolder` |
 | Updates | `updateConsent`, `checkUpdates`, `installUpdate`, `dismissUpdate` |
+| About | `openLink`, `copyDiagnostics`, `openLogs` |
 | App | `settings`, `preview`, `dataFolder`, `open` |
 
 The alert window may only use `alerts`, `language`, `complete`, `skip`, `undoComplete`, `undoable`,
@@ -206,11 +215,27 @@ The updates module wraps electron-updater with the app's policy:
   (`RememberMe-before-update-<time>`) is made first; if it fails, nothing is installed.
 - Test mode replaces the updater with a stub that never contacts GitHub.
 
+## About
+
+Settings ends with an About card (also opened by "About Remember Me" in the tray menu): the icon,
+name, version and links, "Check for updates" (the same `checkUpdates` action and status text as the
+Updates card), "Copy diagnostic info" and "Open log folder".
+
+- Links: the page sends `openLink` with an ID (`github`, `repo`, `releases`, `issues`, `privacy`,
+  `license`), never a URL. The About module maps the ID to an exact `https://github.com/...` address
+  and main passes only that to `shell.openExternal`. An unknown ID is rejected in `checkRequest`.
+- `copyDiagnostics` builds the text in main and writes it with Electron's `clipboard` (the pages
+  have no clipboard permission): the app, Electron, Chromium and Node versions, the Windows version
+  and architecture, the UI language and the theme. Never tasks, notes, file names or paths.
+- `openLogs` creates `logs/` if needed and opens it in File Explorer.
+
+The alert window can use none of these actions.
+
 ## Logging
 
 The logger appends one JSON line per event to `logs/remember-me.log` in the data folder,
 rotating at 1 MB and keeping three files (at most 3 MB), so a user can attach it to a bug report.
-Settings' "Open data folder" shows it. It records:
+Settings' "Open data folder" and About's "Open log folder" show it. It records:
 
 - `start` (version, whether packaged, and task, note and attachment counts), `quit` and `resume`;
 - `data-folder-migrated` (renamed or copied) and `data-folder-migration-failed`, and
@@ -253,8 +278,15 @@ which Chromium keeps bounded. Backups never include them.
   runs the tests, builds the installer, writes `SHA256SUMS.txt`, attests the build provenance,
   publishes a GitHub release with `latest.yml` and the `.blockmap`, and builds winget manifests
   (`tools/winget-manifest.mjs`) as an artifact. `RELEASING.md` is the release checklist.
-- `tools/build-assets.cjs` regenerates the icons, including the tray's "waiting" variant, and
-  `tools/dark-theme.cjs` regenerates `ui/dark.css` from the light stylesheets (a test checks it is
+- `tools/build-assets.cjs` (`pnpm run assets`, run by Electron) regenerates the icons. A hidden
+  sandboxed window's preload (`tools/build-assets-preload.cjs`) draws each SVG at its exact pixel
+  size on a canvas and sends the PNGs back over IPC. It writes `assets/icon.ico` (PNG entries at
+  16, 20, 24, 32, 40, 48, 64, 96, 128 and 256 px; 32 px and below use the simplified
+  `icon-small.svg` glyph), `icon.png` (256 px, for notifications and the pages), the tray images
+  `tray.png` and `tray-waiting.png` (16 px, with `@1.5x` and `@2x` files that `nativeImage` loads on
+  scaled displays) and `docs/icon-preview.png`. Windows use `icon.ico`, the tray uses the tray
+  images, and the packager and installer embed `icon.ico`. `tests/icons.test.js` checks the sizes.
+- `tools/dark-theme.cjs` regenerates `ui/dark.css` from the light stylesheets (a test checks it is
   up to date).
 
 ## Keeping this document current

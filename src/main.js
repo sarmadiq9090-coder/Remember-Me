@@ -1,6 +1,8 @@
 'use strict';
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, Notification, nativeTheme } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, Notification, nativeTheme, clipboard } = require('electron');
+const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const { randomUUID } = require('node:crypto');
 const { REMIND_AGAIN, Store, saveTask, completeTask, skipOccurrence, undoComplete, snoozeTask, dueTasks, alertQueue, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
 const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
@@ -14,6 +16,7 @@ const { createLogger } = require('./logger');
 const { Updates, configure: configureUpdater } = require('./updates');
 const { migrateDataFolder } = require('./data-folder');
 const { setLoginItem, refreshLoginItem } = require('./login-item');
+const { linkUrl, diagnostics } = require('./about');
 const { UNTIL_RESUMED, isPaused, shownAlerts, createPause } = require('./pause');
 const testMode = process.env.WAQT_TEST === '1';
 // Lets the desktop tests read early notifications without showing them.
@@ -55,6 +58,10 @@ function announceUpcoming() {
   }
 }
 const icon = path.join(__dirname, '../assets/icon.png');
+// Windows picks the matching size from the ICO for the title bar, taskbar and Alt+Tab.
+const windowIcon = path.join(__dirname, '../assets/icon.ico');
+// 16 px tray images; nativeImage also loads their @1.5x and @2x files for scaled displays.
+const trayIcon = waiting => path.join(__dirname, '../assets', waiting ? 'tray-waiting.png' : 'tray.png');
 // The tray shows a dotted variant while real reminders are waiting; trayWaiting avoids calling setImage every second.
 let trayWaiting = false;
 if (!app.requestSingleInstanceLock()) app.quit();
@@ -75,7 +82,7 @@ function secure(win) {
 }
 function createMain(visible = !process.argv.includes('--background')) {
   const win = mainWindow = new BrowserWindow({ width: 1250, height: 850, minWidth: 900, minHeight: 650,
-    title: nativeText('ذكرني • مساحة ليومك', 'Remember Me • Your day'), icon, show: false, backgroundColor: background('#f7f8fa', '#181d27'), autoHideMenuBar: true, webPreferences: options() });
+    title: nativeText('ذكرني • مساحة ليومك', 'Remember Me • Your day'), icon: windowIcon, show: false, backgroundColor: background('#f7f8fa', '#181d27'), autoHideMenuBar: true, webPreferences: options() });
   win.setMenu(null);
   secure(win);
   win.loadFile(path.join(__dirname, '../ui/index.html'));
@@ -98,6 +105,14 @@ function showMain() {
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show(); mainWindow.focus();
 }
+// Opens the main window on a part of it, such as the About card, once its page has loaded.
+function showSection(section) {
+  showMain();
+  const contents = mainWindow?.webContents;
+  if (!contents) return;
+  if (contents.isLoading()) contents.once('did-finish-load', () => contents.send('waqt:show', section));
+  else contents.send('waqt:show', section);
+}
 function placeAlert() {
   if (!alertWindow || alertWindow.isDestroyed()) return;
   alertWindow.setBounds(alertBounds(screen.getPrimaryDisplay(), store.state.settings.alertSide));
@@ -116,6 +131,7 @@ function trayMenuItems() {
     { label: nativeText('فتح ذكرني', 'Open Remember Me'), click: showMain },
     { label: nativeText('مهمة جديدة', 'New task'), click: openTaskEditor },
     pauseMenuItem(),
+    aboutMenuItem(),
     { type: 'separator' },
     exitMenuItem(),
   ];
@@ -132,6 +148,7 @@ function pauseMenuItem() {
   ] };
 }
 function pauseFor(choice) { pause.pause(choice); scan(); }
+function aboutMenuItem() { return { label: nativeText('حول ذكرني', 'About Remember Me'), click: () => showSection('about') }; }
 function exitMenuItem() {
   return { label: nativeText('خروج وإيقاف التذكيرات', 'Exit and stop reminders'), click: async () => {
     const { response } = await dialog.showMessageBox(mainWindow, { type: 'question', title: nativeText('إغلاق ذكرني', 'Close Remember Me'), message: nativeText('ستتوقف التذكيرات حتى تفتح البرنامج مجددًا.', 'Reminders will stop until you open the app again.'), buttons: [nativeText('البقاء في الخلفية', 'Keep running'), nativeText('خروج', 'Exit')], defaultId: 0, cancelId: 0 });
@@ -167,7 +184,7 @@ function scanNow() {
   if (tasks.length) {
     if (!alertWindow || alertWindow.isDestroyed()) {
       alertWindow = new BrowserWindow({ width: 410, height: 570, frame: false, resizable: false, minimizable: false,
-        maximizable: false, skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: background('#ffffff', '#15171e'), icon, webPreferences: options() });
+        maximizable: false, skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: background('#ffffff', '#15171e'), icon: windowIcon, webPreferences: options() });
       secure(alertWindow);
       alertWindow.setAlwaysOnTop(true, 'pop-up-menu');
       placeAlert();
@@ -182,7 +199,7 @@ function scanNow() {
   } else { repeatBeep(null, 0); if (alertWindow && !(undoable && undoable.until > Date.now())) { alertWindow.destroy(); alertWindow = null; } }
   if (newlyDue) notifyViews();
   const waiting = tasks.length > 0 && tasks[0].id !== '__preview';
-  if (tray && waiting !== trayWaiting) { trayWaiting = waiting; tray.setImage(nativeImage.createFromPath(waiting ? path.join(__dirname, '../assets/tray-waiting.png') : icon)); }
+  if (tray && waiting !== trayWaiting) { trayWaiting = waiting; tray.setImage(nativeImage.createFromPath(trayIcon(waiting))); }
   if (tray) tray.setToolTip(paused ? nativeText(`ذكرني • التذكيرات متوقفة ${pauseText(store.state.settings.pausedUntil)}`, `Remember Me • Reminders paused ${pauseText(store.state.settings.pausedUntil)}`) + (queue.length ? nativeText(` • ${queue.length} بانتظارك`, ` • ${queue.length} waiting`) : '')
     : tasks.length ? (language() === 'en' ? `Remember Me • ${tasks.length} reminders waiting` : `ذكرني • ${tasks.length} تذكير بانتظارك`) : nativeText('ذكرني • مهامك في وقتها', 'Remember Me • Your tasks on time'));
 }
@@ -226,7 +243,7 @@ async function start() {
   }
   updates = createUpdates();
   createMain();
-  tray = new Tray(nativeImage.createFromPath(icon));
+  tray = new Tray(nativeImage.createFromPath(trayIcon(false)));
   rebuildTrayMenu();
   tray.on('double-click', showMain);
   tray.on('click', showMain);
@@ -399,10 +416,23 @@ A safety copy of your current data is saved in the backups folder first.`),
           catch (error) { throw new Error(nativeText(`تعذّر حفظ نسخة أمان من بياناتك، فلم يُثبَّت التحديث. ${error.message}`, `Couldn't save a safety copy of your data, so the update was not installed. ${error.message}`), { cause: error }); }
           break;
         case 'dismissUpdate': updates.dismiss(); break;
+        case 'openLink': await shell.openExternal(linkUrl(payload.link)); break;
+        case 'copyDiagnostics':
+          value = diagnostics({ version: app.getVersion(), packaged: app.isPackaged, versions: process.versions, windows: os.release(), arch: process.arch,
+            language: language(), theme: store.state.settings.theme });
+          clipboard.writeText(value);
+          break;
+        case 'openLogs': {
+          // The folder appears with the first log line; create it so the button always opens something.
+          fs.mkdirSync(log.folder, { recursive: true });
+          const error = await shell.openPath(log.folder);
+          if (error) throw new Error(nativeText('تعذّر فتح مجلد السجل.', "Couldn't open the log folder."));
+          break;
+        }
         case 'open': showMain(); break;
         default: throw new Error('إجراء غير معروف.');
       }
-      if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder', 'checkUpdates', 'installUpdate', 'dismissUpdate'].includes(action)) { scan(); notifyViews(); }
+      if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder', 'checkUpdates', 'installUpdate', 'dismissUpdate', 'openLink', 'copyDiagnostics', 'openLogs'].includes(action)) { scan(); notifyViews(); }
       return { ok: true, value };
     } catch (error) { log.warn('action-failed', error, { action: typeof action === 'string' ? action.slice(0, 40) : typeof action }); return { ok: false, error: error.message }; }
   });
