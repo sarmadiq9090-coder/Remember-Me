@@ -3,9 +3,10 @@ const { randomUUID } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { attachmentIds, validateAttachment } = require('./attachments');
+const { validPause } = require('./pause');
 
 function initialState() {
-  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'ar', weekStart: 6, theme: 'system', autoUpdate: null } };
+  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'ar', weekStart: 6, theme: 'system', autoUpdate: null, pausedUntil: null } };
 }
 // Minutes between repeated alert sounds; 0 is off. Data from before the setting has no value, meaning off.
 const REMIND_AGAIN = [0, 2, 5, 15];
@@ -253,6 +254,8 @@ function validateState(data) {
   if (data.settings.remindAgain !== undefined && !REMIND_AGAIN.includes(data.settings.remindAgain)) data.settings.remindAgain = 0;
   // null until the user answers the one-time question about automatic updates.
   if (data.settings.autoUpdate !== true && data.settings.autoUpdate !== false) data.settings.autoUpdate = null;
+  // A pause from the tray survives a restart; anything that isn't one means no pause.
+  data.settings.pausedUntil = validPause(data.settings.pausedUntil);
   return data;
 }
 // Antivirus scanners, the search indexer and sync clients briefly lock new files on Windows.
@@ -284,7 +287,7 @@ class Store {
     this.recovered = false;
     if (!fs.existsSync(this.file)) { this.state = initialState(); return; }
     try { this.state = validateState(JSON.parse(fs.readFileSync(this.file, 'utf8'))); }
-    catch (err) {
+    catch {
       try {
         this.state = validateState(JSON.parse(fs.readFileSync(this.file + '.bak', 'utf8')));
         fs.copyFileSync(this.file, this.file + '.damaged-' + Date.now());

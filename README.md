@@ -93,6 +93,8 @@ The bell button at the top shows a **preview alert**. Snoozing a preview only cl
 
 Closing the main window keeps Remember Me running next to the Windows clock. Its icon may be under the hidden-icons arrow. Click it to open the app, or right-click it to quit completely.
 
+To stop reminders for a while, right-click the icon and choose **Pause reminders**: for 1 hour, until tomorrow at 8:00, or until you resume. Nothing pops up or makes a sound during a pause. Reminders that come due wait and appear when it ends, or when you choose **Resume reminders**. A pause continues after a restart.
+
 Turn on **Settings → Start with Windows** to start reminders automatically when you sign in. It's off by default.
 
 Alerts can't appear while the PC is off or asleep, or while the app isn't running. Missed reminders appear as soon as you return. Remember Me doesn't wake the PC, uses your device's local time, and doesn't appear over the secure Windows lock screen.
@@ -157,11 +159,14 @@ Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable
 - `tests/about.test.js`: the About links are exact GitHub addresses, and diagnostic info holds only versions, language and theme.
 - `tests/icons.test.js`: every size in `icon.ico` and the tray images' dimensions.
 - `tests/search.test.js`: Arabic-aware search matching.
+- `tests/pause.test.js`: pausing reminders from the tray, with a fake clock.
 - `tests/winget-manifest.test.js`: the winget manifests written from a release's `SHA256SUMS.txt`.
 - `tests/updates.test.js`: the update consent, background schedule, Check now, the ready banner, and installing after a safety backup.
 - `tests/data-folder.test.js` and `tests/login-item.test.js`: moving the old `Waqt` data folder, including locked and interrupted moves, and pointing start with Windows at the renamed executable.
 - `tests/attachments.test.js`, `tests/backups.test.js` and `tests/drive-backup.test.js`: copying, export, checksums, restore, rotation, migration, validation and Drive-folder recovery.
-- **Desktop tests (Playwright):** `tests/desktop-smoke.cjs`, `tests/attachments-desktop.cjs` and `tests/photos-drive-desktop.cjs` drive the real Windows app with temporary data. They need Playwright (and JSZip for attachments), or the `WAQT_PLAYWRIGHT` and `WAQT_JSZIP` paths.
+- `tests/formatting.test.js` and `tests/logger.test.js`: Western digits in dates and times, and a log that rotates and never records task or note content.
+- **Desktop tests (Playwright):** `tests/desktop-smoke.cjs`, `tests/attachments-desktop.cjs` and `tests/photos-drive-desktop.cjs` drive the real Windows app with temporary data. Run the smoke test with `pnpm test:desktop`; set `WAQT_EXECUTABLE` to a packaged `Waqt.exe` to test a build instead of the sources. Playwright is a devDependency; the attachments suite also needs JSZip (or the `WAQT_PLAYWRIGHT` and `WAQT_JSZIP` paths). `.github/workflows/desktop.yml` packages the app and runs the smoke test on every pull request.
+- `pnpm lint` runs ESLint (`eslint.config.cjs`); CI runs it after the unit tests.
 
 ### Releasing
 

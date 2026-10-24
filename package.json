@@ -12,8 +12,10 @@
   "keywords": ["reminder", "todo", "notes", "windows", "electron", "arabic", "english"],
   "scripts": {
     "start": "electron .",
-    "test": "node --test tests/core.test.js tests/scheduling.test.js tests/ipc.test.js tests/placement.test.js tests/search.test.js tests/attachments.test.js tests/backups.test.js tests/drive-backup.test.js tests/dark-theme.test.js tests/formatting.test.js tests/data-folder.test.js tests/login-item.test.js tests/updates.test.js tests/winget-manifest.test.js tests/about.test.js tests/icons.test.js",
+    "test": "node --test tests/core.test.js tests/scheduling.test.js tests/ipc.test.js tests/placement.test.js tests/search.test.js tests/attachments.test.js tests/backups.test.js tests/drive-backup.test.js tests/dark-theme.test.js tests/formatting.test.js tests/data-folder.test.js tests/login-item.test.js tests/updates.test.js tests/winget-manifest.test.js tests/logger.test.js tests/pause.test.js tests/about.test.js tests/icons.test.js",
     "assets": "electron tools/build-assets.cjs",
+    "lint": "eslint .",
+    "test:desktop": "node tests/desktop-smoke.cjs",
     "package": "node tools/package.mjs",
     "installer": "node tools/installer.cjs"
   },
@@ -22,8 +24,12 @@
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",
+    "@eslint/js": "10.0.1",
     "electron": "^45.0.0",
-    "electron-builder": "^26.18.0"
+    "electron-builder": "^26.18.0",
+    "eslint": "10.12.0",
+    "globals": "17.13.0",
+    "playwright": "1.64.0"
   },
   "productName": "Remember Me"
 }

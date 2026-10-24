@@ -61,3 +61,10 @@ test('openLink takes a link ID from the fixed list, never a URL, and not from th
   assert.throws(() => checkRequest('openLink', { link: 'github' }, { fromAlert: true }), /غير مسموح/);
   assert.throws(() => checkRequest('copyDiagnostics', {}, { fromAlert: true }), /غير مسموح/);
 });
+
+test('ARCHITECTURE.md lists every IPC action', () => {
+  const doc = require('node:fs').readFileSync(path.join(__dirname, '..', 'ARCHITECTURE.md'), 'utf8');
+  const { ACTIONS } = require('../src/ipc');
+  const missing = [...ACTIONS, ...ALERT_ACTIONS].filter(action => !doc.includes('`' + action + '`'));
+  assert.deepEqual(missing, [], 'Add these actions to the IPC table in ARCHITECTURE.md');
+});
