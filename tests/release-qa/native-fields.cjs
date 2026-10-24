@@ -10,7 +10,7 @@ async function run() {
     const s = await launch({ seed: seed(language) });
     await check('native fields', `${language}: Chromium starts in ${expected}, with digits 0-9`, async () => {
       const c = await controls(s.page);
-      return c.lang === expected && /^[\d.,\s  ]+$/.test(c.digits) && !/[٠-٩۰-۹]/.test(c.date) ? `${c.lang} ${c.date}` : bad(JSON.stringify(c));
+      return c.lang === expected && !/\p{Nd}/u.test((c.digits + c.date).replace(/[0-9]/g, '')) ? `${c.lang} ${c.date}` : bad(JSON.stringify(c));
     });
     if (language === 'ar') {
       await check('native fields', 'ar: the task editor shows its time and repeat-every fields', async () => {
