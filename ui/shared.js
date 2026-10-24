@@ -22,16 +22,24 @@ const icons = {
   trash: '<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/>',
   repeat: '<path d="m17 2 4 4-4 4M3 11V8a2 2 0 0 1 2-2h16M7 22l-4-4 4-4m14-1v3a2 2 0 0 1-2 2H3"/>',
   undo: '<path d="M3 10h11a6 6 0 0 1 0 12M3 10l6-6m-6 6 6 6"/>',
+  skip: '<path d="m5 5 9 7-9 7zM19 5v14"/>',
   paperclip: '<path d="m21 11-9 9a6 6 0 0 1-8.5-8.5l10-10a4 4 0 0 1 5.7 5.7l-10 10a2 2 0 0 1-2.8-2.8L16 5"/>',
   file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8m-8 4h5"/>',
 };
 function icon(name) { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.note}</svg>`; }
 function hydrateIcons(root = document) { root.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon); }); }
 function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+// Locale for every date, time and number, with the chosen digits and optionally the Hijri calendar.
+function locale(hijri = false) {
+  const extensions = [...(hijri ? ['ca-islamic-umalqura'] : []), ...(uiDigits === 'auto' ? [] : ['nu-' + uiDigits])];
+  return (uiLanguage === 'en' ? 'en-US' : 'ar-IQ') + (extensions.length ? '-u-' + extensions.join('-') : '');
+}
+// Counts keep plain digits unless a digit style was chosen explicitly.
+function num(value) { return uiDigits === 'auto' ? String(value) : Number(value).toLocaleString(locale()); }
 function localDateValue(date) { const d = new Date(date); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }
 function isToday(value) { return value && new Date(value).toDateString() === new Date().toDateString(); }
-function timeLabel(value) { return new Date(value).toLocaleTimeString(uiLanguage === 'en' ? 'en-US' : 'ar-IQ', { hour: 'numeric', minute: '2-digit' }); }
-function dateLabel(value) { if (!value) return ''; const d = new Date(value); return `${isToday(value) ? tr('اليوم', 'Today') : d.toLocaleDateString(uiLanguage === 'en' ? 'en-US' : 'ar-IQ', { day: 'numeric', month: 'short' })}${tr('، ', ', ')}${timeLabel(value)}`; }
+function timeLabel(value) { return new Date(value).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }); }
+function dateLabel(value) { if (!value) return ''; const d = new Date(value); return `${isToday(value) ? tr('اليوم', 'Today') : d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' })}${tr('، ', ', ')}${timeLabel(value)}`; }
 async function api(action, payload) { const result = await window.waqt.call(action, payload); if (!result.ok) throw new Error(result.error); return result.value; }
 function fileSize(bytes) { return bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1048576).toFixed(1)} MB`; }
 function fileBadge(name) { const ext = name.includes('.') ? name.split('.').pop().toUpperCase() : 'FILE'; return ext.slice(0, 5); }

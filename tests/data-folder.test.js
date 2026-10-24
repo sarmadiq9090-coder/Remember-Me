@@ -8,6 +8,8 @@ const { migrateDataFolder } = require('../src/data-folder');
 const now = () => new Date('2026-10-24T08:30:00.000Z');
 const locked = (from, to) => { const error = new Error(`EPERM: operation not permitted, rename '${from}' -> '${to}'`); error.code = 'EPERM'; throw error; };
 
+// Fields newer versions keep in drive-backup.json; the migration must carry them over unchanged.
+const driveExtras = { skipped: [{ id: 'x', name: 'gone.pdf' }], snapshotAt: '2026-10-20T10:00:00.000Z', snapshotHash: 'ab12', keep: 5 };
 // An %APPDATA% with a v1.4 data folder: tasks, an attachment, a backup and Drive settings.
 function setup() {
   const appData = fs.mkdtempSync(path.join(os.tmpdir(), 'remember-me-appdata-'));
@@ -20,7 +22,7 @@ function setup() {
   const backup = path.join(legacy, 'backups', 'Waqt-backup-2026-01-01T00-00-00-000Z');
   fs.mkdirSync(backup, { recursive: true });
   fs.copyFileSync(path.join(legacy, 'data.json'), path.join(backup, 'data.json'));
-  fs.writeFileSync(path.join(legacy, 'drive-backup.json'), JSON.stringify({ folder: path.join(appData, 'Drive'), lastLocalPath: backup, pending: true }));
+  fs.writeFileSync(path.join(legacy, 'drive-backup.json'), JSON.stringify({ folder: path.join(appData, 'Drive'), lastLocalPath: backup, pending: true, ...driveExtras }));
   return { appData, legacy, folder: path.join(appData, 'Remember Me'), snapshot: snapshot(legacy) };
 }
 function snapshot(folder) {
@@ -50,6 +52,7 @@ test('the v1.4 Waqt folder is renamed as a whole, with the Drive settings pointi
   const drive = JSON.parse(fs.readFileSync(path.join(folder, 'drive-backup.json'), 'utf8'));
   assert.equal(drive.lastLocalPath, path.join(folder, 'backups', 'Waqt-backup-2026-01-01T00-00-00-000Z'));
   assert.equal(drive.folder, path.join(appData, 'Drive'));
+  assert.deepEqual({ skipped: drive.skipped, snapshotAt: drive.snapshotAt, snapshotHash: drive.snapshotHash, keep: drive.keep, pending: drive.pending }, { ...driveExtras, pending: true });
   assert.equal(migrateDataFolder(appData, { now }).migrated, 'none', 'Later starts leave everything alone');
 });
 
@@ -62,7 +65,9 @@ test('a locked Waqt folder is copied, checked and kept as Waqt.migrated-<time>, 
   assert.equal(result.legacy, kept);
   assert.deepEqual(snapshot(kept), before, 'The old folder keeps every file unchanged');
   assert.deepEqual(withoutDrive(snapshot(folder)), withoutDrive(before));
-  assert.equal(JSON.parse(fs.readFileSync(path.join(folder, 'drive-backup.json'), 'utf8')).lastLocalPath, path.join(folder, 'backups', 'Waqt-backup-2026-01-01T00-00-00-000Z'));
+  const drive = JSON.parse(fs.readFileSync(path.join(folder, 'drive-backup.json'), 'utf8'));
+  assert.equal(drive.lastLocalPath, path.join(folder, 'backups', 'Waqt-backup-2026-01-01T00-00-00-000Z'));
+  assert.deepEqual([drive.skipped, drive.snapshotAt, drive.snapshotHash], [driveExtras.skipped, driveExtras.snapshotAt, driveExtras.snapshotHash]);
   assert.equal(fs.existsSync(folder + '.migrating'), false);
 });
 

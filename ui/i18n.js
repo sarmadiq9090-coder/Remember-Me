@@ -1,4 +1,4 @@
-let uiLanguage = 'ar';
+let uiLanguage = 'ar', uiDigits = 'auto';
 const originalText = new WeakMap();
 const originalAttrs = new WeakMap();
 const english = new Map(Object.entries({
@@ -18,8 +18,8 @@ const english = new Map(Object.entries({
   'اكتب ملاحظتك الأولى': 'Write your first note', 'التذكيرات والخلفية': 'Reminders and background', 'صوت عند وصول التذكير': 'Play a reminder sound',
   'صوت واحد عند ظهور تنبيه جديد.': 'One sound when a new alert appears.', 'التشغيل مع ويندوز': 'Start with Windows', 'يفتح ذكرني في الخلفية عند تسجيل الدخول.': 'Opens Remember Me in the background when you sign in.',
   'مكان التنبيه': 'Alert position', 'أسفل الشاشة الرئيسية، فوق شريط المهام.': 'At the bottom of the main screen, above the taskbar.', 'الجهة اليمنى': 'Right side', 'الجهة اليسرى': 'Left side',
-  'اللغة': 'Language', 'اختر لغة واجهة البرنامج.': 'Choose the app interface language.', 'العربية': 'Arabic', 'English': 'English',
-  'شاهد التنبيه بنفسك': 'Preview the alert', 'جرّب شكله وأزرار الإنجاز والتأجيل.': 'Try its layout, complete button, and snooze options.', 'تجربة التنبيه': 'Preview alert',
+  'المظهر': 'Appearance', 'فاتح أو داكن، أو حسب إعداد ويندوز.': 'Light or dark, or the same as Windows.', 'حسب ويندوز': 'Same as Windows', 'فاتح': 'Light', 'داكن': 'Dark', 'اللغة': 'Language', 'اختر لغة واجهة البرنامج.': 'Choose the app interface language.', 'العربية': 'Arabic', 'English': 'English',
+  'شاهد التنبيه بنفسك': 'Preview the alert', 'التقويم والأرقام': 'Calendar and numbers', 'شكل الأرقام': 'Digits', 'في التواريخ والأوقات والعدّادات.': 'In dates, times and counts.', 'حسب اللغة': 'Follow the language', 'عربية ١٢٣': 'Arabic-Indic ١٢٣', 'غربية 123': 'Western 123', 'أول يوم في الأسبوع': 'First day of the week', 'في اختيار أيام التكرار.': 'When choosing repeat days.', 'السبت': 'Saturday', 'الأحد': 'Sunday', 'الاثنين': 'Monday', 'التاريخ الهجري': 'Hijri date', 'يظهر بجانب تاريخ اليوم (أم القرى).': "Shown next to today's date (Umm al-Qura).", 'جرّب شكله وأزرار الإنجاز والتأجيل.': 'Try its layout, complete button, and snooze options.', 'تجربة التنبيه': 'Preview alert',
   'بياناتك، على جهازك': 'Your data, on your device', 'يعمل ذكرني دون حساب أو اتصال بالإنترنت. تُحفظ المهام والملاحظات تلقائيًا مع نسخة احتياطية من آخر حفظ.': 'Remember Me works without an account or internet connection. Tasks and notes are saved automatically with a backup of the previous save.',
   'تصدير نسخة احتياطية': 'Export backup', 'استعادة من نسخة احتياطية': 'Restore from backup', 'فتح مجلد البيانات': 'Open data folder', 'النسخ الاحتياطي إلى Google Drive': 'Backup to Google Drive',
   'نسخة كاملة من المهام والملاحظات والصور والمرفقات. اختر مجلدًا داخل Google Drive المتزامن؛ يرفع تطبيق Google Drive الملفات إلى حسابك، ويحتفظ ذكرني بنسخة محلية أيضًا.': 'A complete copy of tasks, notes, images, and attachments. Choose a synced Google Drive folder; Google Drive uploads it to your account while Remember Me also keeps a local copy.',
@@ -30,17 +30,20 @@ const english = new Map(Object.entries({
   'تفاصيل وملاحظات': 'Details and notes', 'اختياري': 'Optional', 'كل التفاصيل التي تساعدك على البدء…': 'Anything that helps you get started…', 'المرفقات': 'Attachments', 'إضافة ملفات': 'Add files',
   'PDF وExcel وأي ملف تحتاجه • حتى 50 ميغابايت للملف. نحفظ نسخة مع المهمة.': 'PDF, Excel, or any file you need • up to 50 MB each. A copy is saved with the task.',
   'الأولوية': 'Priority', 'عادية': 'Normal', 'متوسطة': 'Medium', 'عالية': 'High', 'ذكّرني بهذه المهمة': 'Remind me about this task', 'بعد 10 دقائق': 'In 10 minutes', 'بعد ساعة': 'In one hour', 'غدًا': 'Tomorrow',
-  'موعد التذكير': 'Reminder time', 'التكرار': 'Repeat', 'مرة واحدة': 'Once', 'كل يوم': 'Daily', 'كل أسبوع': 'Weekly', 'يبقى التنبيه حتى تختار «تم» أو «ذكّرني لاحقًا».': 'The alert stays until you choose Done or Snooze.',
+  'موعد التذكير': 'Reminder time', 'التكرار': 'Repeat', 'مرة واحدة': 'Once', 'كل يوم': 'Daily', 'كل أسبوع': 'Weekly', 'أيام محددة من الأسبوع': 'Chosen weekdays', 'كل عدة أيام': 'Every few days', 'كل شهر': 'Monthly', 'كل سنة': 'Yearly', 'أيام التكرار': 'Repeat on', 'الأحد – الخميس': 'Sunday – Thursday', 'الاثنين – الجمعة': 'Monday – Friday', 'عدد الأيام بين كل تذكير': 'Days between reminders', 'تنبيه مسبق': 'Early notice', 'دون تنبيه مسبق': 'No early notice', 'قبل 5 دقائق': '5 minutes before', 'قبل 10 دقائق': '10 minutes before', 'قبل 15 دقيقة': '15 minutes before', 'قبل 30 دقيقة': '30 minutes before', 'قبل ساعة': '1 hour before', 'قبل يوم': '1 day before', 'يبقى التنبيه حتى تختار «تم» أو «ذكّرني لاحقًا». التنبيه المسبق إشعار هادئ من ويندوز.': 'The alert stays until you choose Done or Snooze. An early notice is a quiet Windows notification.',
   'إلغاء': 'Cancel', 'حفظ المهمة': 'Save task', 'لا تدع الفكرة تفوتك': "Don't let the idea slip away", 'ملاحظة جديدة': 'New note', 'عنوان الملاحظة': 'Note title', 'فكرة تستحق الاحتفاظ بها…': 'An idea worth keeping…',
   'الملاحظة': 'Note', 'اكتب بحرية…': 'Write freely…', 'أرفق PDF أو Excel أو أي ملف بجانب ملاحظتك. نحفظ نسخة مستقلة حتى 50 ميغابايت للملف.': 'Attach a PDF, Excel sheet, or any file to your note. We keep an independent copy up to 50 MB.',
   'لون الملاحظة': 'Note color', 'كريمي': 'Cream', 'أخضر هادئ': 'Soft green', 'أزرق': 'Blue', 'وردي': 'Pink', 'حفظ الملاحظة': 'Save note',
-  'حذف هذا العنصر؟': 'Delete this item?', 'سيُحذف من قائمتك. لا يمكن التراجع عن الحذف.': 'It will be removed from your list. This cannot be undone.', 'حذف': 'Delete',
+  'حذف نهائيًا؟': 'Delete permanently?', 'سيُحذف هذا العنصر من المحذوفات نهائيًا. لا يمكن التراجع عن ذلك.': 'This item will be removed from the trash for good. This cannot be undone.', 'المحذوفات': 'Trash', 'العناصر المحذوفة': 'Deleted items', 'إفراغ المحذوفات': 'Empty trash', 'لا شيء في المحذوفات': 'Nothing in the trash', 'ما تحذفه من مهام وملاحظات يبقى هنا 30 يومًا، ويمكنك استعادته.': 'Tasks and notes you delete stay here for 30 days and can be restored.', 'حذف': 'Delete',
   'تذكير لك': 'A reminder for you', 'حان الموعد': 'It is time', 'مساحة صغيرة لشيء مهم': 'A small space for something important', 'تم، أنجزتها': 'Done, completed',
   'أو ذكّرني لاحقًا': 'Or remind me later', '5 دقائق': '5 minutes', '15 دقيقة': '15 minutes', 'ساعة': '1 hour', '24 ساعة': '24 hours', 'اختر موعدًا آخر': 'Choose another time',
-  'سأبقى هنا حتى تنجزها أو تختار وقتًا آخر.': 'I will stay here until you complete it or choose another time.', 'فتح ذكرني': 'Open Remember Me'
+  'سأبقى هنا حتى تنجزها أو تختار وقتًا آخر.': 'I will stay here until you complete it or choose another time.', 'فتح ذكرني': 'Open Remember Me', 'تراجع': 'Undo', 'أحسنت! لا تذكيرات أخرى الآن.': 'Well done! No more reminders right now.'
 }));
 function tr(ar, en) { return uiLanguage === 'en' ? en : ar; }
-function setLanguage(language) {
+// Accepts a language code, or { language, digits } as the alert window receives it.
+function setLanguage(language, digits) {
+  if (language && typeof language === 'object') ({ language, digits } = language);
+  uiDigits = digits === 'arab' || digits === 'latn' ? digits : 'auto';
   uiLanguage = language === 'en' ? 'en' : 'ar';
   document.documentElement.lang = uiLanguage; document.documentElement.dir = uiLanguage === 'en' ? 'ltr' : 'rtl';
   const alertPage = document.body.classList.contains('alert-body');

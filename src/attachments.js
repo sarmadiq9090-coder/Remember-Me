@@ -72,11 +72,27 @@ async function hashFile(file) {
   for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
   return hash.digest('hex');
 }
+function fileMissing(directory, record) {
+  try { fs.lstatSync(attachmentPath(directory, record)); return false; }
+  catch (error) { if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return true; throw error; }
+}
 // kind is 'automatic' for copies the app makes on its own; only those may ever be rotated away.
-async function exportBackup(state, directory, destination, { kind = 'manual', prefix = 'RememberMe-backup-' } = {}) {
+// An attachment whose file is gone is left out instead of blocking every backup: it is dropped from
+// the copied data.json so the backup stays restorable, and reported in `skipped` (if given) and backup.json.
+async function exportBackup(state, directory, destination, { kind = 'manual', prefix = 'RememberMe-backup-', skipped = [] } = {}) {
   const snapshot = structuredClone(state);
-  const used = new Set([...snapshot.tasks, ...snapshot.notes].flatMap(item => item.attachments || []));
+  const items = [...snapshot.tasks, ...snapshot.notes];
+  const used = new Set(items.flatMap(item => item.attachments || []));
   snapshot.attachments = snapshot.attachments.filter(a => used.has(a.id));
+  const absent = snapshot.attachments.filter(a => fileMissing(directory, a))
+    .map(a => ({ id: a.id, name: a.name, itemTitle: items.find(item => item.attachments?.includes(a.id))?.title || '' }));
+  const missing = new Set(absent.map(a => a.id));
+  skipped.push(...absent);
+  if (missing.size) {
+    snapshot.attachments = snapshot.attachments.filter(a => !missing.has(a.id));
+    for (const item of items) if (item.attachments) item.attachments = item.attachments.filter(id => !missing.has(id));
+  }
+  // Path checks still throw: a traversal or a link is never silently skipped.
   const sources = snapshot.attachments.map(a => resolveAttachment(snapshot, directory, a.id));
   const createdAt = new Date().toISOString();
   const folder = path.join(destination, prefix + createdAt.replace(/[:.]/g, '-'));
@@ -90,7 +106,7 @@ async function exportBackup(state, directory, destination, { kind = 'manual', pr
   }
   const text = JSON.stringify(snapshot, null, 2);
   files['data.json'] = createHash('sha256').update(text, 'utf8').digest('hex');
-  await fsp.writeFile(path.join(folder, BACKUP_INFO), JSON.stringify({ app: 'Remember Me', kind, createdAt, algorithm: 'sha256', files }, null, 2), { encoding: 'utf8', flag: 'wx' });
+  await fsp.writeFile(path.join(folder, BACKUP_INFO), JSON.stringify({ app: 'Remember Me', kind, createdAt, algorithm: 'sha256', files, ...(absent.length ? { skipped: absent } : {}) }, null, 2), { encoding: 'utf8', flag: 'wx' });
   // Write the manifest last: a successful backup always has all referenced files.
   await fsp.writeFile(path.join(folder, 'data.json'), text, { encoding: 'utf8', flag: 'wx' });
   return folder;

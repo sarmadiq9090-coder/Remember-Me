@@ -113,11 +113,12 @@ test('loading normalizes out-of-range fields instead of rejecting the file, and 
   valid.notes.push({ id: 'n1', title: 'ملاحظة', body: 'نص', attachments: [], color: 'green', createdAt: '2026-10-23T06:00:00.000Z', updatedAt: '2026-10-23T06:00:00.000Z' });
   valid.settings = { sound: false, startAtLogin: true, alertSide: 'left', language: 'en' };
   const before = JSON.parse(JSON.stringify(valid));
-  // Only the update question, which v1.4.0 never asked, is added.
-  assert.deepEqual(validateState(JSON.parse(JSON.stringify(valid))), { ...before, settings: { ...before.settings, autoUpdate: null } });
+  const loaded = validateState(JSON.parse(JSON.stringify(valid)));
+  assert.deepEqual({ ...loaded, settings: null }, { ...before, settings: null });
+  assert.deepEqual(loaded.settings, { ...initialState().settings, ...before.settings }, 'Old settings are kept; newer options get their defaults');
 
   const odd = JSON.parse(JSON.stringify(valid));
-  Object.assign(odd.tasks[0], { priority: 'urgent', category: 42, repeat: 'monthly', snoozedAt: 'yesterday' });
+  Object.assign(odd.tasks[0], { priority: 'urgent', category: 42, repeat: 'fortnightly', snoozedAt: 'yesterday' });
   odd.tasks.push({ ...odd.tasks[0], id: 'legacy', repeat: 'weekly', scheduleAt: null });
   odd.notes[0].color = 'neon';
   odd.settings = 'broken';
@@ -128,4 +129,181 @@ test('loading normalizes out-of-range fields instead of rejecting the file, and 
   assert.deepEqual(fixed.settings, initialState().settings);
   assert.throws(() => validateState({ ...before, tasks: [null] }), /المهام/);
   assert.throws(() => validateState({ ...before, version: 2 }), /غير صالح/);
+});
+test('undoing Done restores a one-time task, and a repeat to the occurrence that was completed', () => {
+  const { undoComplete } = require('../src/core');
+  const s = initialState();
+  const once = saveTask(s, { title: 'مرة', dueAt: '2026-10-24T09:00:00.000Z' });
+  const r1 = completeTask(s, once.id, new Date('2026-10-24T09:01:00Z'));
+  undoComplete(s, r1.id, r1.copyId);
+  assert.equal(once.completedAt, null);
+  assert.equal(dueTasks(s, new Date('2026-10-24T09:02:00Z')).length, 1, 'It is due again');
+  completeTask(s, once.id);
+  const daily = saveTask(s, { title: 'يومي', dueAt: '2026-10-24T09:00:00.000Z', repeat: 'daily' });
+  snoozeTask(s, daily.id, '2026-10-24T10:00:00.000Z', new Date('2026-10-24T09:00:00Z'));
+  const before = structuredClone(daily);
+  const r2 = completeTask(s, daily.id, new Date('2026-10-24T10:01:00Z'));
+  assert.notEqual(daily.dueAt, before.dueAt);
+  undoComplete(s, r2.id, r2.copyId);
+  assert.deepEqual([daily.dueAt, daily.scheduleAt, daily.snoozedAt], [before.dueAt, before.scheduleAt, before.snoozedAt]);
+  assert.equal(s.tasks.filter(t => t.sourceId === daily.id).length, 0, 'The history copy is removed');
+  assert.equal(completeTask(s, 'missing'), null);
+});
+
+test('deleted items wait 30 days in the trash, out of every list and alert, and can be restored', () => {
+  const { trashItem, restoreItem, purgeItem, purgeTrash, validateState } = require('../src/core');
+  const s = initialState();
+  const t = saveTask(s, { title: 'محذوفة', dueAt: '2026-10-01T09:00:00.000Z' });
+  s.notes.push({ id: 'n1', title: 'ملاحظة', body: '', attachments: [], color: 'cream' });
+  trashItem(s, 'tasks', t.id, new Date('2026-10-01T10:00:00Z')); trashItem(s, 'notes', 'n1', new Date('2026-10-20T10:00:00Z'));
+  assert.equal(dueTasks(s, new Date('2026-10-02T00:00:00Z')).length, 0, 'A deleted reminder never alerts');
+  assert.throws(() => snoozeTask(s, t.id, '2026-10-03T00:00:00Z', new Date('2026-10-02T00:00:00Z')));
+  assert.equal(completeTask(s, t.id), null);
+  restoreItem(s, 'tasks', t.id);
+  assert.equal(dueTasks(s, new Date('2026-10-02T00:00:00Z')).length, 1);
+  trashItem(s, 'tasks', t.id, new Date('2026-10-01T10:00:00Z'));
+  assert.equal(purgeTrash(s, new Date('2026-10-30T09:00:00Z')), 0, 'Still inside 30 days');
+  assert.equal(purgeTrash(s, new Date('2026-11-01T09:00:00Z')), 1, 'Only the task deleted over 30 days ago goes');
+  assert.deepEqual(s.notes.map(n => n.id), ['n1']);
+  purgeItem(s, 'notes', 'n1');
+  assert.equal(s.notes.length, 0);
+  const loaded = validateState({ ...initialState(), tasks: [{ ...t, deletedAt: 'garbage' }] });
+  assert.equal(loaded.tasks[0].deletedAt, null, 'A malformed deletion date restores the task rather than hiding it');
+  assert.throws(() => trashItem(s, 'settings', 'x'));
+});
+test('digit style, first weekday and Hijri settings default to the previous behaviour and reject unknown values', () => {
+  const { validateState } = require('../src/core');
+  const base = initialState();
+  assert.deepEqual([base.settings.digits, base.settings.weekStart, base.settings.hijri], ['auto', 'auto', false]);
+  const ok = validateState({ ...base, settings: { ...base.settings, digits: 'latn', weekStart: 1, hijri: true } }).settings;
+  assert.deepEqual([ok.digits, ok.weekStart, ok.hijri], ['latn', 1, true]);
+  const bad = validateState({ ...base, settings: { ...base.settings, digits: 'roman', weekStart: 3, hijri: 'yes' } }).settings;
+  assert.deepEqual([bad.digits, bad.weekStart, bad.hijri], ['auto', 'auto', false]);
+});
+test('a repeated Done or snooze for an occurrence that already moved on changes nothing', () => {
+  const s = initialState();
+  const t = saveTask(s, { title: 'daily', dueAt: new Date(2026, 9, 23, 9).toISOString(), repeat: 'daily' });
+  const seen = t.dueAt, now = new Date(2026, 9, 23, 9, 5);
+  assert.ok(completeTask(s, t.id, now, { expectedDueAt: seen }));
+  assert.equal(completeTask(s, t.id, now, { expectedDueAt: seen }), null, 'A double click is a no-op');
+  assert.equal(s.tasks.filter(x => x.completedAt).length, 1, 'Exactly one completed copy');
+  assert.deepEqual([new Date(t.dueAt).getDate(), new Date(t.dueAt).getHours()], [24, 9], 'The due time advanced by exactly one day');
+  const next = t.dueAt;
+  assert.equal(snoozeTask(s, t.id, new Date(2026, 9, 23, 12).toISOString(), now, { expectedDueAt: seen }), false);
+  assert.equal(t.dueAt, next);
+  assert.equal(snoozeTask(s, t.id, new Date(2026, 9, 24, 12).toISOString(), now, { expectedDueAt: next }), true);
+  assert.equal(completeTask(s, t.id, now, { expectedDueAt: next }), null, 'Done for the snoozed-away time is stale');
+  // Older callers send no expected time and keep working.
+  assert.ok(completeTask(s, t.id, now));
+  assert.equal(s.tasks.filter(x => x.completedAt).length, 2);
+  const once = saveTask(s, { title: 'once', dueAt: '2026-10-23T08:00:00Z' });
+  assert.ok(completeTask(s, once.id, now, { expectedDueAt: '2026-10-23T08:00:00.000Z' }));
+  assert.equal(snoozeTask(s, once.id, '2026-10-30T08:00:00Z', now, { expectedDueAt: '2026-10-23T08:00:00.000Z' }), false, 'A snooze queued behind Done is ignored');
+  assert.throws(() => snoozeTask(s, once.id, '2026-10-30T08:00:00Z', now), /نشطًا/);
+  const undated = saveTask(s, { title: 'undated' });
+  assert.ok(completeTask(s, undated.id, now, { expectedDueAt: null }));
+});
+test('turning on or changing a repeat anchors it to the snoozed time the editor shows', () => {
+  const s = initialState();
+  const once = saveTask(s, { title: 'once', dueAt: new Date(2026, 9, 23, 9).toISOString() });
+  snoozeTask(s, once.id, new Date(2026, 9, 23, 14).toISOString(), new Date(2026, 9, 23, 9));
+  saveTask(s, { ...once, repeat: 'daily' });
+  assert.equal(once.scheduleAt, new Date(2026, 9, 23, 14).toISOString());
+  assert.equal(once.snoozedAt, null);
+  completeTask(s, once.id, new Date(2026, 9, 23, 14, 1));
+  assert.deepEqual([new Date(once.dueAt).getDate(), new Date(once.dueAt).getHours()], [24, 14]);
+
+  const daily = saveTask(s, { title: 'daily', dueAt: new Date(2026, 9, 23, 9).toISOString(), repeat: 'daily' });
+  snoozeTask(s, daily.id, new Date(2026, 9, 23, 11).toISOString(), new Date(2026, 9, 23, 9));
+  saveTask(s, { ...daily, body: 'only the text' });
+  assert.equal(daily.scheduleAt, new Date(2026, 9, 23, 9).toISOString(), 'A body edit keeps the anchor');
+  assert.ok(daily.snoozedAt);
+  saveTask(s, { ...daily, repeat: 'weekly' });
+  assert.equal(daily.scheduleAt, new Date(2026, 9, 23, 11).toISOString(), 'A new repeat type re-anchors');
+  completeTask(s, daily.id, new Date(2026, 9, 23, 11, 1));
+  assert.deepEqual([new Date(daily.dueAt).getDate(), new Date(daily.dueAt).getHours()], [30, 11]);
+});
+test('saving an editor opened before a snooze or Done in the alert keeps the new time and applies the text', () => {
+  const s = initialState(), at = (d, h, m = 0) => new Date(2026, 9, d, h, m);
+  const t = saveTask(s, { title: 'once', dueAt: at(23, 9).toISOString() }, at(22, 8));
+  const editor = { ...t }; // what the editor opened with
+  snoozeTask(s, t.id, at(23, 9, 15).toISOString(), at(23, 9));
+  saveTask(s, { ...editor, body: 'edited in the editor', timeEdited: false }, at(23, 9, 1));
+  assert.deepEqual([t.dueAt, t.body], [at(23, 9, 15).toISOString(), 'edited in the editor']);
+  assert.ok(t.snoozedAt, 'The snooze is kept');
+  assert.equal(t.scheduleAt, at(23, 9).toISOString());
+
+  const daily = saveTask(s, { title: 'daily', dueAt: at(23, 9).toISOString(), repeat: 'daily' }, at(22, 8));
+  const opened = { ...daily };
+  completeTask(s, daily.id, at(23, 9, 5));
+  saveTask(s, { ...opened, title: 'daily, renamed', timeEdited: false }, at(23, 9, 6));
+  assert.equal(new Date(daily.dueAt).getDate(), 24, 'Stays on tomorrow’s occurrence');
+  assert.equal(daily.title, 'daily, renamed');
+  assert.equal(s.tasks.filter(x => x.sourceId === daily.id).length, 1, 'No second completion');
+
+  const done = saveTask(s, { title: 'one-time', dueAt: at(23, 10).toISOString() }, at(22, 8));
+  const before = { ...done };
+  completeTask(s, done.id, at(23, 10, 1));
+  saveTask(s, { ...before, body: 'not lost', timeEdited: true, dueAt: at(23, 12).toISOString() }, at(23, 10, 2));
+  assert.equal(done.body, 'not lost', 'Text edits land on the completed record');
+  assert.ok(done.completedAt);
+  assert.equal(done.dueAt, at(23, 10).toISOString());
+  assert.throws(() => saveTask(s, { ...done, body: 'x' }), /أعد فتح/, 'Older callers still cannot edit a completed task');
+
+  // An edit that does change the time still moves the task and its anchor, even after a snooze.
+  const moved = saveTask(s, { title: 'moved', dueAt: at(23, 9).toISOString(), repeat: 'daily' }, at(22, 8));
+  const seen = { ...moved };
+  snoozeTask(s, moved.id, at(23, 9, 30).toISOString(), at(23, 9));
+  saveTask(s, { ...seen, dueAt: at(23, 11).toISOString(), timeEdited: true }, at(23, 9, 1));
+  assert.deepEqual([moved.dueAt, moved.scheduleAt, moved.snoozedAt], [at(23, 11).toISOString(), at(23, 11).toISOString(), null]);
+  // Saved without anything happening in between, the time is applied as before.
+  saveTask(s, { ...moved, dueAt: at(23, 12).toISOString(), timeEdited: true }, at(23, 9, 2));
+  assert.equal(moved.scheduleAt, at(23, 12).toISOString());
+});
+test('the preview alert shows only on its own and never comes back after a real reminder', () => {
+  const { alertQueue } = require('../src/core');
+  const s = initialState(), now = new Date('2026-10-23T10:00:00Z');
+  const preview = { id: '__preview', title: 'preview', dueAt: now.toISOString() };
+  assert.deepEqual(alertQueue(s, preview, now), { alerts: [preview], preview }, 'With no real reminder the preview shows as before');
+  assert.deepEqual(alertQueue(s, null, now), { alerts: [], preview: null });
+  const real = saveTask(s, { title: 'real', dueAt: '2026-10-23T09:00:00Z' });
+  const queue = alertQueue(s, preview, now);
+  assert.deepEqual([queue.alerts.map(t => t.id), queue.preview], [[real.id], null], 'A real reminder replaces the preview and clears it');
+  completeTask(s, real.id, now);
+  assert.deepEqual(alertQueue(s, queue.preview, now).alerts, [], 'After Done the alert closes; the preview does not appear late');
+});
+test('skipping an occurrence moves a repeating task on without recording a completion', () => {
+  const { skipOccurrence } = require('../src/core');
+  const s = initialState(), now = new Date(2026, 9, 23, 8);
+  const t = saveTask(s, { title: 'daily', dueAt: new Date(2026, 9, 23, 9).toISOString(), repeat: 'daily' });
+  const seen = t.dueAt;
+  assert.equal(skipOccurrence(s, t.id, seen, now), true);
+  assert.equal(t.dueAt, new Date(2026, 9, 24, 9).toISOString());
+  assert.equal(t.scheduleAt, t.dueAt);
+  assert.equal(s.tasks.filter(x => x.completedAt).length, 0, 'No completed copy');
+  assert.equal(skipOccurrence(s, t.id, seen, now), false, 'A stale expected time is a no-op');
+  assert.equal(t.dueAt, new Date(2026, 9, 24, 9).toISOString());
+  snoozeTask(s, t.id, new Date(2026, 9, 24, 11).toISOString(), new Date(2026, 9, 24, 9));
+  assert.equal(skipOccurrence(s, t.id, t.dueAt, new Date(2026, 9, 24, 9, 1)), true);
+  assert.deepEqual([t.dueAt, t.snoozedAt], [new Date(2026, 9, 25, 9).toISOString(), null], 'A snoozed occurrence skips to the series time');
+  const once = saveTask(s, { title: 'once', dueAt: new Date(2026, 9, 23, 9).toISOString() });
+  assert.throws(() => skipOccurrence(s, once.id, once.dueAt, now), /المتكررة/);
+  completeTask(s, once.id, now);
+  assert.throws(() => skipOccurrence(s, once.id, undefined, now), /المتكررة/);
+});
+test('moving one occurrence with onlyThisTime keeps the series at its usual time', () => {
+  const s = initialState();
+  const monday = new Date(2026, 9, 26, 9); // Monday 09:00
+  const t = saveTask(s, { title: 'weekly meeting', dueAt: monday.toISOString(), repeat: 'weekly' });
+  saveTask(s, { ...t, dueAt: new Date(2026, 9, 26, 11).toISOString(), onlyThisTime: true });
+  assert.deepEqual([t.dueAt, t.scheduleAt], [new Date(2026, 9, 26, 11).toISOString(), monday.toISOString()]);
+  completeTask(s, t.id, new Date(2026, 9, 26, 11, 5));
+  assert.equal(t.dueAt, new Date(2026, 10, 2, 9).toISOString(), 'The following Monday at 09:00');
+  saveTask(s, { ...t, dueAt: new Date(2026, 10, 2, 11).toISOString() });
+  assert.equal(t.scheduleAt, new Date(2026, 10, 2, 11).toISOString(), 'Without the flag the series moves');
+  saveTask(s, { ...t, dueAt: new Date(2026, 10, 2, 12).toISOString(), repeat: 'daily', onlyThisTime: true });
+  assert.equal(t.scheduleAt, new Date(2026, 10, 2, 12).toISOString(), 'A changed repeat re-anchors whatever the flag says');
+  const once = saveTask(s, { title: 'once', dueAt: monday.toISOString() });
+  saveTask(s, { ...once, dueAt: new Date(2026, 9, 26, 11).toISOString(), onlyThisTime: true });
+  assert.equal(once.scheduleAt, once.dueAt, 'The flag means nothing for a one-time task');
 });
