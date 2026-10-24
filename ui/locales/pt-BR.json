@@ -148,6 +148,7 @@
   "Exit": "Sair",
   "Exit and stop reminders": "Sair e parar os lembretes",
   "Export backup": "Exportar backup",
+  "FILE@badge": "ARQ",
   "First day of the week": "Primeiro dia da semana",
   "For 1 hour": "Por 1 hora",
   "For example: Review the weekly plan": "Por exemplo: revisar o plano da semana",
@@ -482,9 +483,9 @@
     "one": "{count} backup automático antigo será excluído.",
     "other": "{count} backups automáticos antigos serão excluídos."
   },
-  "{count} unused attachments ({size} MB) will be deleted.": {
-    "one": "{count} anexo não usado ({size} MB) será excluído.",
-    "other": "{count} anexos não usados ({size} MB) serão excluídos."
+  "{count} unused attachments ({size}) will be deleted.": {
+    "one": "{count} anexo não usado ({size}) será excluído.",
+    "other": "{count} anexos não usados ({size}) serão excluídos."
   },
   "{day}, {time}": "{day}, {time}",
   "{index} of {count}": "{index} de {count}"

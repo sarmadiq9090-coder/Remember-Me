@@ -146,6 +146,7 @@
   "Exit": "退出",
   "Exit and stop reminders": "退出并停止提醒",
   "Export backup": "导出备份",
+  "FILE@badge": "文件",
   "First day of the week": "每周第一天",
   "For 1 hour": "1 小时",
   "For example: Review the weekly plan": "例如：回顾每周计划",
@@ -471,8 +472,8 @@
   "{count} older automatic backups will be deleted.": {
     "other": "将删除 {count} 份较旧的自动备份。"
   },
-  "{count} unused attachments ({size} MB) will be deleted.": {
-    "other": "将删除 {count} 个未使用的附件（{size} MB）。"
+  "{count} unused attachments ({size}) will be deleted.": {
+    "other": "将删除 {count} 个未使用的附件（{size}）。"
   },
   "{day}, {time}": "{day} {time}",
   "{index} of {count}": "{index}/{count}"

@@ -1,5 +1,6 @@
 'use strict';
 const { storageUsage, removeOrphans, opensAsProgram, importFiles, resolveAttachment, MAX_ATTACHMENTS } = require('../../data/attachments');
+const { formatSize } = require('../../../ui/lib/translate');
 
 module.exports = ctx => {
   const { tr } = ctx, { dialog, shell } = ctx.electron;
@@ -36,9 +37,9 @@ module.exports = ctx => {
     cleanOrphans: { run: async () => {
       const usage = await storageUsage(ctx.store.state, folder());
       if (!usage.orphans) return usage;
-      const size = (usage.orphanBytes / 1048576).toFixed(1);
+      const size = formatSize(usage.orphanBytes, ctx.localeTag());
       const { response } = await dialog.showMessageBox(ctx.mainWindow, { type: 'warning', title: tr("Clean up attachments"),
-        message: tr("{count} unused attachments ({size} MB) will be deleted.", { count: usage.orphans, size }),
+        message: tr("{count} unused attachments ({size}) will be deleted.", { count: usage.orphans, size }),
         detail: tr("No task or note uses these files, including completed tasks. Backups keep their own copies."),
         buttons: [tr("Cancel"), tr("Delete")], defaultId: 0, cancelId: 0 });
       if (response !== 1) return undefined;

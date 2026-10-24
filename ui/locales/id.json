@@ -146,6 +146,7 @@
   "Exit": "Keluar",
   "Exit and stop reminders": "Keluar dan hentikan pengingat",
   "Export backup": "Ekspor cadangan",
+  "FILE@badge": "FILE",
   "First day of the week": "Hari pertama dalam seminggu",
   "For 1 hour": "Selama 1 jam",
   "For example: Review the weekly plan": "Misalnya: Tinjau rencana mingguan",
@@ -471,8 +472,8 @@
   "{count} older automatic backups will be deleted.": {
     "other": "{count} cadangan otomatis lama akan dihapus."
   },
-  "{count} unused attachments ({size} MB) will be deleted.": {
-    "other": "{count} lampiran yang tidak dipakai ({size} MB) akan dihapus."
+  "{count} unused attachments ({size}) will be deleted.": {
+    "other": "{count} lampiran yang tidak dipakai ({size}) akan dihapus."
   },
   "{day}, {time}": "{day}, {time}",
   "{index} of {count}": "{index} dari {count}"

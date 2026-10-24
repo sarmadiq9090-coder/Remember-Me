@@ -154,6 +154,7 @@
   "Exit": "خروج",
   "Exit and stop reminders": "خروج وإيقاف التذكيرات",
   "Export backup": "تصدير نسخة احتياطية",
+  "FILE@badge": "ملف",
   "First day of the week": "أول يوم في الأسبوع",
   "For 1 hour": "لمدة ساعة",
   "For example: Review the weekly plan": "مثلًا: مراجعة خطة الأسبوع",
@@ -518,12 +519,12 @@
     "many": "ستُحذف {count} نسخة تلقائية أقدم.",
     "other": "ستُحذف {count} نسخة تلقائية أقدم."
   },
-  "{count} unused attachments ({size} MB) will be deleted.": {
-    "one": "سيُحذف مرفق واحد غير مستخدم ({size} ميغابايت).",
-    "two": "سيُحذف مرفقان غير مستخدمين ({size} ميغابايت).",
-    "few": "ستُحذف {count} مرفقات غير مستخدمة ({size} ميغابايت).",
-    "many": "سيُحذف {count} مرفقًا غير مستخدم ({size} ميغابايت).",
-    "other": "سيُحذف {count} مرفق غير مستخدم ({size} ميغابايت)."
+  "{count} unused attachments ({size}) will be deleted.": {
+    "one": "سيُحذف مرفق واحد غير مستخدم ({size}).",
+    "two": "سيُحذف مرفقان غير مستخدمين ({size}).",
+    "few": "ستُحذف {count} مرفقات غير مستخدمة ({size}).",
+    "many": "سيُحذف {count} مرفقًا غير مستخدم ({size}).",
+    "other": "سيُحذف {count} مرفق غير مستخدم ({size})."
   },
   "{day}, {time}": "{day}، {time}",
   "{index} of {count}": "{index} من {count}"

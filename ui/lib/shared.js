@@ -94,8 +94,8 @@ async function api(action, payload) { const result = await window.waqt.call(acti
 // The tag field is filled with tr(", "), which every locale translates to one of these.
 const TAG_SEPARATORS = /[,;،؛、，､；]/;
 function parseTags(text) { return text.split(TAG_SEPARATORS).map(t => t.trim()).filter(Boolean); }
-function fileSize(bytes) { return bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1048576).toFixed(1)} MB`; }
-function fileBadge(name) { const ext = name.includes('.') ? name.split('.').pop().toUpperCase() : 'FILE'; return ext.slice(0, 5); }
+function fileSize(bytes) { return formatSize(bytes, locale()); }
+function fileBadge(name) { const ext = name.includes('.') ? name.split('.').pop().toUpperCase() : tr('FILE@badge'); return ext.slice(0, 5); }
 function isImageFile(record) { return /\.(png|jpe?g|webp|gif|bmp|ico|avif)$/i.test(record.name); }
 function photoMarkup(record) {
   return `<button type="button" class="inline-photo" data-file-id="${esc(record.id)}" title="${tr("Open")} ${esc(record.name)}"><img data-preview-id="${esc(record.id)}" alt="${esc(record.name)}" decoding="async"><span class="photo-placeholder">${tr("Loading image…")}</span><span class="photo-caption"><bdi>${esc(record.name)}</bdi></span></button>`;

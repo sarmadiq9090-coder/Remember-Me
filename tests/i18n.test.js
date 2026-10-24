@@ -84,3 +84,13 @@ test('user text in a sentence is isolated, so its direction cannot reorder the p
   assert.equal(text, 'أُنجزت «' + String.fromCharCode(0x2068) + 'Call Bob!' + String.fromCharCode(0x2069) + '»');
   assert.equal(isolate(undefined), String.fromCharCode(0x2068, 0x2069));
 });
+
+test('file sizes use the unit names and decimal mark of the locale, with Western digits', () => {
+  const { formatSize } = require('../ui/lib/translate');
+  assert.equal(formatSize(1572864, 'en-US-u-nu-latn'), '1.5 MB');
+  assert.equal(formatSize(1572864, 'de-DE-u-nu-latn'), '1,5 MB');
+  assert.equal(formatSize(1536, 'fr-FR-u-nu-latn').replace(/\s/g, ' '), '1,5 ko');
+  assert.match(formatSize(1572864, 'ru-RU-u-nu-latn'), /^1,5\sМБ$/);
+  assert.match(formatSize(5, 'ar-IQ-u-nu-latn'), /^5 /);
+  assert.doesNotMatch(formatSize(1572864, 'ar-IQ-u-nu-latn'), /[٠-٩]/);
+});

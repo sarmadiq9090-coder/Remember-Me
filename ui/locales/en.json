@@ -148,6 +148,7 @@
   "Exit": "Exit",
   "Exit and stop reminders": "Exit and stop reminders",
   "Export backup": "Export backup",
+  "FILE@badge": "FILE",
   "First day of the week": "First day of the week",
   "For 1 hour": "For 1 hour",
   "For example: Review the weekly plan": "For example: Review the weekly plan",
@@ -482,9 +483,9 @@
     "one": "{count} older automatic backup will be deleted.",
     "other": "{count} older automatic backups will be deleted."
   },
-  "{count} unused attachments ({size} MB) will be deleted.": {
-    "one": "{count} unused attachment ({size} MB) will be deleted.",
-    "other": "{count} unused attachments ({size} MB) will be deleted."
+  "{count} unused attachments ({size}) will be deleted.": {
+    "one": "{count} unused attachment ({size}) will be deleted.",
+    "other": "{count} unused attachments ({size}) will be deleted."
   },
   "{day}, {time}": "{day}, {time}",
   "{index} of {count}": "{index} of {count}"

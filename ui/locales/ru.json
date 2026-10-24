@@ -152,6 +152,7 @@
   "Exit": "Выход",
   "Exit and stop reminders": "Выйти и остановить напоминания",
   "Export backup": "Экспорт резервной копии",
+  "FILE@badge": "ФАЙЛ",
   "First day of the week": "Первый день недели",
   "For 1 hour": "На 1 час",
   "For example: Review the weekly plan": "Например: просмотреть план на неделю",
@@ -509,11 +510,11 @@
     "many": "Будут удалены {count} старых автокопий.",
     "other": "Будут удалены {count} старой автокопии."
   },
-  "{count} unused attachments ({size} MB) will be deleted.": {
-    "one": "Будет удалено {count} неиспользуемое вложение ({size} МБ).",
-    "few": "Будут удалены {count} неиспользуемых вложения ({size} МБ).",
-    "many": "Будут удалены {count} неиспользуемых вложений ({size} МБ).",
-    "other": "Будут удалены {count} неиспользуемого вложения ({size} МБ)."
+  "{count} unused attachments ({size}) will be deleted.": {
+    "one": "Будет удалено {count} неиспользуемое вложение ({size}).",
+    "few": "Будут удалены {count} неиспользуемых вложения ({size}).",
+    "many": "Будут удалены {count} неиспользуемых вложений ({size}).",
+    "other": "Будут удалены {count} неиспользуемого вложения ({size})."
   },
   "{day}, {time}": "{day}, {time}",
   "{index} of {count}": "{index} из {count}"

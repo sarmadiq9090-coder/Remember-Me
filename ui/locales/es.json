@@ -148,6 +148,7 @@
   "Exit": "Salir",
   "Exit and stop reminders": "Salir y detener los recordatorios",
   "Export backup": "Exportar copia",
+  "FILE@badge": "ARCH",
   "First day of the week": "Primer día de la semana",
   "For 1 hour": "Durante 1 hora",
   "For example: Review the weekly plan": "Por ejemplo: revisar el plan semanal",
@@ -482,9 +483,9 @@
     "one": "Se eliminará {count} copia automática antigua.",
     "other": "Se eliminarán {count} copias automáticas antiguas."
   },
-  "{count} unused attachments ({size} MB) will be deleted.": {
-    "one": "Se eliminará {count} adjunto sin usar ({size} MB).",
-    "other": "Se eliminarán {count} adjuntos sin usar ({size} MB)."
+  "{count} unused attachments ({size}) will be deleted.": {
+    "one": "Se eliminará {count} adjunto sin usar ({size}).",
+    "other": "Se eliminarán {count} adjuntos sin usar ({size})."
   },
   "{day}, {time}": "{day}, {time}",
   "{index} of {count}": "{index} de {count}"

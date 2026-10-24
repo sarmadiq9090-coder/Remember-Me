@@ -148,6 +148,7 @@
   "Exit": "Beenden",
   "Exit and stop reminders": "Beenden und Erinnerungen stoppen",
   "Export backup": "Sicherung exportieren",
+  "FILE@badge": "DATEI",
   "First day of the week": "Erster Wochentag",
   "For 1 hour": "Für 1 Stunde",
   "For example: Review the weekly plan": "Zum Beispiel: Wochenplan durchgehen",
@@ -482,9 +483,9 @@
     "one": "{count} ältere automatische Sicherung wird gelöscht.",
     "other": "{count} ältere automatische Sicherungen werden gelöscht."
   },
-  "{count} unused attachments ({size} MB) will be deleted.": {
-    "one": "{count} ungenutzter Anhang ({size} MB) wird gelöscht.",
-    "other": "{count} ungenutzte Anhänge ({size} MB) werden gelöscht."
+  "{count} unused attachments ({size}) will be deleted.": {
+    "one": "{count} ungenutzter Anhang ({size}) wird gelöscht.",
+    "other": "{count} ungenutzte Anhänge ({size}) werden gelöscht."
   },
   "{day}, {time}": "{day}, {time}",
   "{index} of {count}": "{index} von {count}"

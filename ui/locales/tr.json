@@ -147,6 +147,7 @@
   "Exit": "Çıkış",
   "Exit and stop reminders": "Çık ve hatırlatıcıları durdur",
   "Export backup": "Yedeği dışa aktar",
+  "FILE@badge": "DOSYA",
   "First day of the week": "Haftanın ilk günü",
   "For 1 hour": "1 saatliğine",
   "For example: Review the weekly plan": "Örneğin: Haftalık planı gözden geçir",
@@ -474,8 +475,8 @@
   "{count} older automatic backups will be deleted.": {
     "other": "{count} eski otomatik yedek silinecek."
   },
-  "{count} unused attachments ({size} MB) will be deleted.": {
-    "other": "Kullanılmayan {count} ek ({size} MB) silinecek."
+  "{count} unused attachments ({size}) will be deleted.": {
+    "other": "Kullanılmayan {count} ek ({size}) silinecek."
   },
   "{day}, {time}": "{day} {time}",
   "{index} of {count}": "{index}/{count}"

@@ -147,6 +147,7 @@
   "Exit": "बाहर निकलें",
   "Exit and stop reminders": "बाहर निकलें और रिमाइंडर रोकें",
   "Export backup": "बैकअप निर्यात करें",
+  "FILE@badge": "फ़ाइल",
   "First day of the week": "सप्ताह का पहला दिन",
   "For 1 hour": "1 घंटे के लिए",
   "For example: Review the weekly plan": "उदाहरण: साप्ताहिक योजना देखें",
@@ -480,9 +481,9 @@
     "one": "{count} पुराना स्वचालित बैकअप हटाया जाएगा।",
     "other": "{count} पुराने स्वचालित बैकअप हटाए जाएँगे।"
   },
-  "{count} unused attachments ({size} MB) will be deleted.": {
-    "one": "{count} अप्रयुक्त अटैचमेंट ({size} MB) हटाया जाएगा।",
-    "other": "{count} अप्रयुक्त अटैचमेंट ({size} MB) हटाए जाएँगे।"
+  "{count} unused attachments ({size}) will be deleted.": {
+    "one": "{count} अप्रयुक्त अटैचमेंट ({size}) हटाया जाएगा।",
+    "other": "{count} अप्रयुक्त अटैचमेंट ({size}) हटाए जाएँगे।"
   },
   "{day}, {time}": "{day}, {time}",
   "{index} of {count}": "{count} में से {index}"

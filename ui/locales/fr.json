@@ -148,6 +148,7 @@
   "Exit": "Quitter",
   "Exit and stop reminders": "Quitter et arrêter les rappels",
   "Export backup": "Exporter une sauvegarde",
+  "FILE@badge": "FICH",
   "First day of the week": "Premier jour de la semaine",
   "For 1 hour": "Pendant 1 heure",
   "For example: Review the weekly plan": "Par exemple : revoir le plan de la semaine",
@@ -482,9 +483,9 @@
     "one": "{count} ancienne sauvegarde automatique sera supprimée.",
     "other": "{count} anciennes sauvegardes automatiques seront supprimées."
   },
-  "{count} unused attachments ({size} MB) will be deleted.": {
-    "one": "{count} pièce jointe inutilisée ({size} Mo) sera supprimée.",
-    "other": "{count} pièces jointes inutilisées ({size} Mo) seront supprimées."
+  "{count} unused attachments ({size}) will be deleted.": {
+    "one": "{count} pièce jointe inutilisée ({size}) sera supprimée.",
+    "other": "{count} pièces jointes inutilisées ({size}) seront supprimées."
   },
   "{day}, {time}": "{day} à {time}",
   "{index} of {count}": "{index} sur {count}"

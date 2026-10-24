@@ -146,6 +146,7 @@
   "Exit": "終了",
   "Exit and stop reminders": "終了してリマインダーを止める",
   "Export backup": "バックアップを書き出す",
+  "FILE@badge": "ファイル",
   "First day of the week": "週の始まり",
   "For 1 hour": "1時間",
   "For example: Review the weekly plan": "例: 週の計画を見直す",
@@ -471,8 +472,8 @@
   "{count} older automatic backups will be deleted.": {
     "other": "古い自動バックアップ {count} 件が削除されます。"
   },
-  "{count} unused attachments ({size} MB) will be deleted.": {
-    "other": "未使用の添付ファイル {count} 件（{size} MB）が削除されます。"
+  "{count} unused attachments ({size}) will be deleted.": {
+    "other": "未使用の添付ファイル {count} 件（{size}）が削除されます。"
   },
   "{day}, {time}": "{day} {time}",
   "{index} of {count}": "{index}/{count}"
