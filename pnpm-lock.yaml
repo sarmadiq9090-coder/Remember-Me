@@ -12,6 +12,9 @@ importers:
         specifier: 6.8.10
         version: 6.8.10
     devDependencies:
+      '@electron/fuses':
+        specifier: 1.8.0
+        version: 1.8.0
       '@electron/packager':
         specifier: ^20.3.0
         version: 20.3.0

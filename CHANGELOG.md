@@ -76,7 +76,9 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 - A daylight-saving change moves only the one occurrence that falls in the skipped hour, not every later one. [#23]
 - Automatic local and Google Drive backups keep running after the PC's clock moves backwards. [#23]
 - Restoring a backup keeps this PC's own settings (start with Windows, automatic updates, a pause) and refreshes the tray, alert position and theme. [#23]
-- **TODO:** the remaining fixes from QC round 1.
+- An early notice no longer pops up right after you snooze, finish, skip or move a task into its lead time, and resuming after a pause brings no burst of notices. [#25]
+- Clicking an early notice, also later in Action Center, opens the app reliably. [#25]
+- While an update downloads, the windows refresh only every 10% instead of every second, and the alert is never redrawn for it. [#25]
 
 ### Security
 
@@ -87,6 +89,7 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 - Updates come only over HTTPS from this repository's GitHub Releases, are checked against the release's SHA-512, and are never pre-releases or downgrades. [#10]
 - About can open only six fixed GitHub addresses; the window can't ask for any other link. [#22]
 - The main process never runs code inside the app's pages, and a lint rule keeps it that way. [#16] [#17]
+- The installed `Remember Me.exe` can't be started as a Node.js interpreter or attached to a debugger, and refuses to run if its app files were changed (Electron fuses and asar integrity). [#25]
 
 ### Removed
 
@@ -96,6 +99,7 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 
 - [ARCHITECTURE.md](ARCHITECTURE.md), ESLint (`pnpm lint`) and a smoke test of the packaged app in CI. [#15]
 - A code signing policy, a release checklist ([RELEASING.md](RELEASING.md)) and winget manifests. [#11] [#12] [#13]
+- The release workflow builds with a read-only token and publishes, attests and verifies in a separate job, only for version tags; all GitHub Actions are pinned to commit SHAs. [#25]
 
 ### Upgrading
 
@@ -118,3 +122,4 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 [#17]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/17
 [#22]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/22
 [#23]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/23
+[#25]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/25

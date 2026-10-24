@@ -208,8 +208,15 @@ function dueTasks(state, now = new Date()) {
     .sort((a, b) => Date.parse(a.dueAt) - Date.parse(b.dueAt));
 }
 // Open tasks whose early notification time has come but whose due time has not.
+// Tasks whose early notice is due now. A notice moment at or before the task's last change is
+// skipped: snoozing, completing a repeat late or editing the time into the lead window must not
+// announce at once what the user has just seen and moved.
 function upcomingTasks(state, now = new Date()) {
-  return state.tasks.filter(t => !t.completedAt && !t.deletedAt && t.remindBefore && t.dueAt && Date.parse(t.dueAt) > now.getTime() && Date.parse(t.dueAt) - t.remindBefore * 60000 <= now.getTime());
+  return state.tasks.filter(t => {
+    if (t.completedAt || t.deletedAt || !t.remindBefore || !t.dueAt || Date.parse(t.dueAt) <= now.getTime()) return false;
+    const noticeAt = Date.parse(t.dueAt) - t.remindBefore * 60000;
+    return noticeAt <= now.getTime() && !(noticeAt <= Date.parse(t.updatedAt));
+  });
 }
 // The preview alert only shows while no real reminder is due. A real reminder drops it for good,
 // so it never appears later, out of context, after the real one is done.
