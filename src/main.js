@@ -13,6 +13,7 @@ const { createRepeatBeep } = require('./repeat-beep');
 const { Updates, configure: configureUpdater } = require('./updates');
 const { migrateDataFolder } = require('./data-folder');
 const { setLoginItem, refreshLoginItem } = require('./login-item');
+const { UNTIL_RESUMED, isPaused, shownAlerts, createPause } = require('./pause');
 const testMode = process.env.WAQT_TEST === '1';
 // Lets the desktop tests read early notifications without showing them.
 if (testMode) globalThis.waqtTest = { get early() { return earlyLog; } };
@@ -24,7 +25,7 @@ app.setPath('userData', dataFolder.folder);
 // The ID predates the Remember Me name. Keep it: it names the start-with-Windows entry and taskbar
 // group of v1.4.0, and the installer's appId must stay the same for upgrades and updates.
 app.setAppUserModelId('com.waqt.reminder');
-let mainWindow, alertWindow, tray, store, quitting = false, interval, preview = null, driveBackup, backupInterval, updates;
+let mainWindow, alertWindow, tray, store, quitting = false, interval, preview = null, driveBackup, backupInterval, updates, pause;
 const imagePreview = createPreviewService(nativeImage);
 let previousDue = new Set();
 const repeatBeep = createRepeatBeep(() => shell.beep());
@@ -109,6 +110,13 @@ function rebuildTrayMenu() {
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: nativeText('فتح ذكرني', 'Open Remember Me'), click: showMain },
     { label: nativeText('مهمة جديدة', 'New task'), click: openTaskEditor },
+    isPaused(store?.state?.settings?.pausedUntil)
+      ? { label: nativeText('استئناف التذكيرات', 'Resume reminders'), click: () => { pause.resume(); scan(); } }
+      : { label: nativeText('إيقاف التذكيرات مؤقتًا', 'Pause reminders'), submenu: [
+        { label: nativeText('لمدة ساعة', 'For 1 hour'), click: () => pauseFor('hour') },
+        { label: nativeText('حتى الغد الساعة 8:00', 'Until tomorrow, 8:00'), click: () => pauseFor('tomorrow') },
+        { label: nativeText('حتى أستأنفها', 'Until I resume'), click: () => pauseFor('manual') },
+      ] },
     { type: 'separator' },
     { label: nativeText('خروج وإيقاف التذكيرات', 'Exit and stop reminders'), click: async () => {
       const { response } = await dialog.showMessageBox(mainWindow, { type: 'question', title: nativeText('إغلاق ذكرني', 'Close Remember Me'), message: nativeText('ستتوقف التذكيرات حتى تفتح البرنامج مجددًا.', 'Reminders will stop until you open the app again.'), buttons: [nativeText('البقاء في الخلفية', 'Keep running'), nativeText('خروج', 'Exit')], defaultId: 0, cancelId: 0 });
@@ -116,12 +124,22 @@ function rebuildTrayMenu() {
     } }
   ]));
 }
+function pauseFor(choice) { pause.pause(choice); scan(); }
+// "until 11:15", or with the weekday when the pause ends on another day.
+function pauseText(pausedUntil) {
+  if (pausedUntil === UNTIL_RESUMED) return nativeText('حتى تستأنفها', 'until you resume');
+  const end = new Date(pausedUntil), sameDay = end.toDateString() === new Date().toDateString();
+  const time = end.toLocaleString(localeTag(), sameDay ? { hour: 'numeric', minute: '2-digit' } : { weekday: 'long', hour: 'numeric', minute: '2-digit' });
+  return nativeText(`حتى ${time}`, `until ${time}`);
+}
 function activeAlerts() { const queue = alertQueue(store.state, preview); preview = queue.preview; return queue.alerts; }
 // The scheduler must survive any single failure; an exception here would otherwise repeat every second.
 function scan() { try { scanNow(); } catch (error) { console.error('Reminder scan failed:', error); } }
 function scanNow() {
-  announceUpcoming();
-  const tasks = activeAlerts();
+  // While paused nothing pops up or beeps; due reminders stay queued and appear when it ends.
+  const paused = pause.check();
+  if (!paused) announceUpcoming();
+  const queue = activeAlerts(), tasks = shownAlerts(queue, paused);
   const current = new Set(tasks.map(t => t.id));
   const newlyDue = tasks.some(t => !previousDue.has(t.id));
   previousDue = current;
@@ -144,7 +162,8 @@ function scanNow() {
   if (newlyDue) notifyViews();
   const waiting = tasks.length > 0 && tasks[0].id !== '__preview';
   if (tray && waiting !== trayWaiting) { trayWaiting = waiting; tray.setImage(nativeImage.createFromPath(waiting ? path.join(__dirname, '../assets/tray-waiting.png') : icon)); }
-  if (tray) tray.setToolTip(tasks.length ? (language() === 'en' ? `Remember Me • ${tasks.length} reminders waiting` : `ذكرني • ${tasks.length} تذكير بانتظارك`) : nativeText('ذكرني • مهامك في وقتها', 'Remember Me • Your tasks on time'));
+  if (tray) tray.setToolTip(paused ? nativeText(`ذكرني • التذكيرات متوقفة ${pauseText(store.state.settings.pausedUntil)}`, `Remember Me • Reminders paused ${pauseText(store.state.settings.pausedUntil)}`) + (queue.length ? nativeText(` • ${queue.length} بانتظارك`, ` • ${queue.length} waiting`) : '')
+    : tasks.length ? (language() === 'en' ? `Remember Me • ${tasks.length} reminders waiting` : `ذكرني • ${tasks.length} تذكير بانتظارك`) : nativeText('ذكرني • مهامك في وقتها', 'Remember Me • Your tasks on time'));
 }
 function purgeExpiredTrash() {
   const limit = Date.now() - TRASH_DAYS * 86400000;
@@ -168,6 +187,7 @@ async function start() {
   session.defaultSession.setPermissionRequestHandler((contents, permission, callback) => callback(false));
   session.defaultSession.setPermissionCheckHandler(() => false);
   store = new Store(app.getPath('userData'));
+  pause = createPause({ read: () => store.state.settings.pausedUntil, write: value => { store.change(s => { s.settings.pausedUntil = value; }); rebuildTrayMenu(); notifyViews(); } });
   nativeTheme.themeSource = store.state.settings.theme;
   nativeTheme.on('updated', applyTheme);
   driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, notifyViews, { text: nativeText });
