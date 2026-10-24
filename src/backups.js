@@ -8,6 +8,8 @@ const { BACKUP_INFO, attachmentPath, exportBackup, hashFile } = require('./attac
 const arabic = ar => ar;
 // Folder names of the app's own backups. Versions up to 1.4 used the old internal name, Waqt.
 const BACKUP_PREFIXES = ['RememberMe-backup-', 'Waqt-backup-'];
+// Settings that belong to this PC rather than to the data; a restore keeps the current values.
+const MACHINE_SETTINGS = ['autoUpdate', 'startAtLogin', 'pausedUntil'];
 
 // Reads a backup folder and checks it completely before anything is restored from it.
 // Backups made before v1.5 have no backup.json: they are accepted when every file is present
@@ -21,7 +23,7 @@ async function readBackup(folder, { text = arabic } = {}) {
   catch { throw new Error(text('ملف بيانات النسخة الاحتياطية غير صالح.', 'The backup data file is invalid.')); }
   let info = null;
   try { info = JSON.parse(await fsp.readFile(path.join(folder, BACKUP_INFO), 'utf8')); }
-  catch (error) { if (error.code !== 'ENOENT') throw new Error(text('ملف بصمات النسخة الاحتياطية غير صالح.', 'The backup checksum file is invalid.')); }
+  catch (error) { if (error.code !== 'ENOENT') throw new Error(text('ملف بصمات النسخة الاحتياطية غير صالح.', 'The backup checksum file is invalid.'), { cause: error }); }
   if (info && (info.algorithm !== 'sha256' || !info.files || typeof info.files !== 'object')) throw new Error(text('ملف بصمات النسخة الاحتياطية غير صالح.', 'The backup checksum file is invalid.'));
   const damaged = name => new Error(text(`النسخة الاحتياطية تالفة: «${name}» لا يطابق بصمته المحفوظة.`, `The backup is damaged: "${name}" does not match its saved checksum.`));
   if (info && createHash('sha256').update(raw, 'utf8').digest('hex') !== info.files['data.json']) throw damaged('data.json');
@@ -54,7 +56,14 @@ async function restoreBackup(directory, store, backup) {
     await fsp.copyFile(source, target + '.restoring');
     await fsp.rename(target + '.restoring', target);
   }
-  store.replace(backup.state);
+  // Choices about this PC are not part of the data: a backup must not turn update checks back on
+  // without consent, flip start with Windows without updating the Windows entry, or end a pause.
+  const settings = { ...backup.state.settings };
+  for (const key of MACHINE_SETTINGS) {
+    if (key in store.state.settings) settings[key] = store.state.settings[key];
+    else delete settings[key];
+  }
+  store.replace({ ...backup.state, settings });
   return { safety };
 }
 const validKeep = keep => Number.isInteger(keep) && keep >= 0 && keep <= 100;
@@ -81,4 +90,4 @@ async function rotateBackups(parent, keep, protect) {
   for (const folder of expired) await fsp.rm(folder, { recursive: true, force: true });
   return expired;
 }
-module.exports = { BACKUP_PREFIXES, validKeep, readBackup, safetyBackup, restoreBackup, expiredBackups, rotateBackups };
+module.exports = { BACKUP_PREFIXES, MACHINE_SETTINGS, validKeep, readBackup, safetyBackup, restoreBackup, expiredBackups, rotateBackups };

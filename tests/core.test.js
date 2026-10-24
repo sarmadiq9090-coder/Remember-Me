@@ -317,3 +317,9 @@ test('moving one occurrence with onlyThisTime keeps the series at its usual time
   saveTask(s, { ...once, dueAt: new Date(2026, 9, 26, 11).toISOString(), onlyThisTime: true });
   assert.equal(once.scheduleAt, once.dueAt, 'The flag means nothing for a one-time task');
 });
+test('ARCHITECTURE.md describes every default setting of data.json', () => {
+  const doc = fs.readFileSync(path.join(__dirname, '..', 'ARCHITECTURE.md'), 'utf8');
+  const shape = doc.slice(doc.indexOf('settings: {'), doc.indexOf('```', doc.indexOf('settings: {')));
+  const missing = Object.keys(initialState().settings).filter(key => !new RegExp(`\\b${key}\\??:`).test(shape));
+  assert.deepEqual(missing, [], 'Add these settings to the data.json shape in ARCHITECTURE.md');
+});

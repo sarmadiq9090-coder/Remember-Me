@@ -131,7 +131,8 @@ async function alertPage() {
     await alert.locator('#alert-complete').click();
     await alert.getByRole('heading', { name: 'التنبيه الثاني' }).waitFor();
     await alert.locator('#alert-complete').click();
-    await page.waitForTimeout(300);
+    // The alert stays for the 6-second undo window after the last Done, then closes.
+    for (let i = 0; i < 100 && app.windows().some(p => p.url().endsWith('/alert.html')); i++) await page.waitForTimeout(100);
     assert.equal(app.windows().filter(p => p.url().endsWith('/alert.html')).length, 0);
     saved = await call(page, 'state');
     assert.equal(saved.tasks.filter(t => t.completedAt).length, 2);

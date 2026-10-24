@@ -93,6 +93,7 @@ function render() {
     renderStorage();
     renderDriveBackup();
     renderUpdatesCard();
+    renderAboutCard();
   } else {
     let tasks = view === 'today' ? today : view === 'upcoming' ? upcoming : view === 'completed' ? complete : active;
     if (filter === 'high') tasks = tasks.filter(t => t.priority === 'high');
@@ -122,7 +123,7 @@ function startupNotice(dismissible) {
     try { await api('settings', { ...state.settings, startAtLogin: true }); await refresh(); toast(tr('سيعمل ذكرني مع ويندوز من الآن.', 'Remember Me will now start with Windows.')); }
     catch (err) { toast(err.message); } finally { e.target.disabled = false; }
   });
-  card.querySelector('[data-dismiss]')?.addEventListener('click', () => { try { localStorage.setItem('startupBannerDismissed', '1'); } catch {} card.hidden = true; });
+  card.querySelector('[data-dismiss]')?.addEventListener('click', () => { try { localStorage.setItem('startupBannerDismissed', '1'); } catch { /* storage unavailable: it shows again next time */ } card.hidden = true; });
   return card;
 }
 const startupCard = startupNotice(false), startupBanner = startupNotice(true);
@@ -182,7 +183,8 @@ function openTaskEditor(task) {
   toggleReminder();
   $('task-dialog').showModal(); $('task-title').focus();
 }
-window.openTaskEditor = openTaskEditor;
+// The tray's "New task" item.
+window.waqt.onOpenEditor(() => { if (!document.querySelector('dialog[open]')) openTaskEditor(); });
 // 'Only this time' moves one occurrence of a repeating task and keeps the series at its usual time.
 let editingSeries = null;
 const onlyOnce = document.createElement('label');
@@ -294,6 +296,34 @@ function renderUpdatesCard() {
   const updates = state.updates, busy = ['checking', 'downloading', 'installing'].includes(updates.state);
   setMarkup($('updates-card'), `<h2>${tr('التحديثات', 'Updates')}</h2><label class="setting-row"><div><strong>${tr('التحقق من التحديثات تلقائيًا', 'Check for updates automatically')}</strong><p>${tr('يتحقق من GitHub مرة يوميًا وينزّل الإصدار الجديد في الخلفية. لا يُرسَل أي شيء آخر.', 'Checks GitHub once a day and downloads new versions in the background. Nothing else is sent.')}</p></div><input class="switch" id="setting-updates" type="checkbox"></label><div class="setting-row"><p id="update-status">${esc(updateStatus(updates))}</p><button class="soft-button" data-update="checkUpdates"${busy ? ' disabled' : ''}>${tr('التحقق الآن', 'Check now')}</button></div>`);
   $('setting-updates').checked = state.settings.autoUpdate === true;
+}
+// Settings → About. Links are sent as IDs from main's fixed list (src/about.js), never as URLs.
+const ABOUT_LINKS = [
+  ['github', 'user', ['من تطوير سرمد', 'Developed by Sarmad'], ['github.com/sarmadiq9090-coder', 'github.com/sarmadiq9090-coder']],
+  ['repo', 'code', ['الشيفرة المصدرية على GitHub', 'Source code on GitHub'], ['github.com/sarmadiq9090-coder/Remember-Me', 'github.com/sarmadiq9090-coder/Remember-Me']],
+  ['releases', 'list', ['ما الجديد', "What's new"], ['ملاحظات كل إصدار', 'Release notes for every version']],
+  ['issues', 'flag', ['الإبلاغ عن مشكلة', 'Report a problem'], ['أبلغ عن خطأ أو اقترح فكرة', 'Report a bug or suggest an idea']],
+  ['privacy', 'shield', ['الخصوصية', 'Privacy'], ['لا حساب ولا تتبّع، وبياناتك على جهازك', 'No account, no tracking, your data stays on your PC']],
+  ['license', 'file', ['الترخيص: MIT', 'License: MIT'], ['مجاني ومفتوح المصدر', 'Free and open source']],
+];
+function renderAboutCard() {
+  const updates = state.updates, busy = ['checking', 'downloading', 'installing'].includes(updates.state);
+  const links = ABOUT_LINKS.map(([id, iconName, title, detail]) => `<button type="button" class="about-link" data-link="${id}"><span class="about-link-icon" data-icon="${iconName}"></span><span class="about-link-text"><strong>${tr(...title)}</strong><small dir="auto">${tr(...detail)}</small></span><span class="about-link-open" data-icon="external"></span></button>`).join('');
+  setMarkup($('about-card'), `<div class="about-head"><img class="about-icon" src="../assets/icon.png" alt=""><div><span class="eyebrow">${tr('حول البرنامج', 'About')}</span><h2>${tr('ذكرني', 'Remember Me')}</h2><p class="about-version">${esc(tr(`الإصدار ${updates.version}`, `Version ${updates.version}`))}</p><p>${tr('مهام وملاحظات وتذكيرات تبقى على جهازك.', 'Tasks, notes and reminders that stay on your PC.')}</p></div></div><div class="about-links">${links}</div><div class="setting-row"><p class="about-update-status">${esc(updateStatus(updates))}</p><button class="soft-button" data-update="checkUpdates"${busy ? ' disabled' : ''}>${tr('التحقق من التحديثات', 'Check for updates')}</button></div><div class="setting-row"><div><strong>${tr('معلومات التشخيص', 'Diagnostic info')}</strong><p>${tr('الإصدارات واللغة والمظهر فقط، لإرفاقها مع بلاغ. لا تتضمن مهامك أو ملاحظاتك أو ملفاتك.', 'Versions, language and theme only, to add to a problem report. Never your tasks, notes or files.')}</p></div><button class="soft-button" id="copy-diagnostics"><span data-icon="copy"></span> ${tr('نسخ معلومات التشخيص', 'Copy diagnostic info')}</button></div><div class="setting-row"><div><strong>${tr('سجل البرنامج', 'App log')}</strong><p>${tr('سجل محلي بأحداث البرنامج وأخطائه، دون عناوين مهامك أو ملاحظاتك أو أسماء ملفاتك. أرفقه مع بلاغك عند الحاجة.', 'A local record of app events and errors, without the titles of your tasks or notes or your file names. Attach it to a problem report if asked.')}</p></div><button class="soft-button" id="open-logs"><span data-icon="file"></span> ${tr('فتح مجلد السجل', 'Open log folder')}</button></div><p class="about-footnote"><bdi>${tr('مبني باستخدام Electron', 'Built with Electron')}</bdi> • <bdi>© 2026 ${tr('سرمد', 'Sarmad')}</bdi></p>`);
+}
+$('about-card').addEventListener('click', async e => {
+  const link = e.target.closest('[data-link]');
+  try {
+    if (link) await api('openLink', { link: link.dataset.link });
+    else if (e.target.closest('#open-logs')) await api('openLogs');
+    else if (e.target.closest('#copy-diagnostics')) { await api('copyDiagnostics'); toast(tr('نُسخت معلومات التشخيص. ألصقها في بلاغك.', 'Diagnostic info copied. Paste it into your report.')); }
+  } catch (error) { toast(error.message); }
+});
+async function showAbout() {
+  if (!state) await refresh();
+  setView('settings');
+  $('about-card').scrollIntoView({ block: 'start' });
+  $('about-card').focus({ preventScroll: true });
 }
 async function openFile(id) { try { await api('openAttachment', { id }); } catch (error) { toast(error.message); } }
 for (const type of ['task', 'note']) {
@@ -510,6 +540,7 @@ document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.key.toLowerCase() === 'k') { e.preventDefault(); $('search').focus(); }
 });
 window.waqt.onUpdate(refresh);
+window.waqt.onShow(section => { if (section === 'about') showAbout(); });
 refresh().then(() => {
   if (state?.recovered) toast(tr('استُعيدت بياناتك من النسخة الاحتياطية بعد تعذّر قراءة الملف الأصلي.','Your data was restored from backup after the original file could not be read.'));
   else if (state?.driveBackup?.stale) toast(tr('النسخ إلى Google Drive متوقف منذ أكثر من يوم. افتح الإعدادات للتفاصيل.', 'Backups to Google Drive have been stalled for over a day. Open Settings for details.'));

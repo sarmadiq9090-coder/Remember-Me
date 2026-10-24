@@ -84,6 +84,7 @@ v1.4.0 can't update itself: install the next version from Releases once by hand,
 - **Attachments:** while editing a task or note, choose **Add files**. Files are copied into Remember Me's data folder, so moving or deleting the original doesn't break the attachment. Removing an attachment from one item doesn't affect other items.
 - **Opening files:** click an attachment to open it with the default Windows app. Excel files need a compatible app such as Excel.
 - **Settings:** alert sound, start with Windows, alert position (left or right) and interface language.
+- **About:** at the end of Settings, or **About Remember Me** in the tray menu. It shows the version, links to the source code, release notes, problem reports, the privacy notice and the MIT license, and has **Check for updates** and **Open log folder**. **Copy diagnostic info** copies the app, Electron, Chromium and Windows versions plus the interface language and theme, to paste into a problem report. It never includes your tasks, notes, files or folder paths.
 - **Shortcuts:** Ctrl+N creates a task or note, Ctrl+K focuses search.
 
 The bell button at the top shows a **preview alert**. Snoozing a preview only closes it, while reminders you set on tasks are real.
@@ -91,6 +92,8 @@ The bell button at the top shows a **preview alert**. Snoozing a preview only cl
 ## Running in the background
 
 Closing the main window keeps Remember Me running next to the Windows clock. Its icon may be under the hidden-icons arrow. Click it to open the app, or right-click it to quit completely.
+
+To stop reminders for a while, right-click the icon and choose **Pause reminders**: for 1 hour, until tomorrow at 8:00, or until you resume. Nothing pops up or makes a sound during a pause. Reminders that come due wait and appear when it ends, or when you choose **Resume reminders**. A pause continues after a restart.
 
 Turn on **Settings → Start with Windows** to start reminders automatically when you sign in. It's off by default.
 
@@ -146,17 +149,24 @@ pnpm run installer
 
 Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable build in `release/v<version>`, and `pnpm run installer` produces an NSIS installer in `release/installer`.
 
+`pnpm run assets` redraws the icons in `assets/` with Electron: `icon.ico` with 10 sizes from 16 to 256 px (16-32 px use the simpler `icon-small.svg` glyph without rays), `icon.png`, and the tray images `tray.png` and `tray-waiting.png` with `@1.5x` and `@2x` versions. It also writes [`docs/icon-preview.png`](docs/icon-preview.png), every size on a light and a dark taskbar.
+
 ### Tests
 
 - `tests/core.test.js`: scheduling, repeats, snoozing, saving and recovery.
 - `tests/scheduling.test.js`: repeats across daylight-saving time, time-zone changes and the clock moving backwards; 20 reminders in the same minute; a full day of missed reminders among thousands of tasks.
-- `tests/ipc.test.js`: only the app's own pages are accepted, the alert window gets a limited set of actions, and payloads are validated.
+- `tests/ipc.test.js`: only the app's own pages are accepted, the alert window gets a limited set of actions, and payloads are validated, including About links, which must be one of six fixed IDs.
+- `tests/about.test.js`: the About links are exact GitHub addresses, and diagnostic info holds only versions, language and theme.
+- `tests/icons.test.js`: every size in `icon.ico` and the tray images' dimensions.
 - `tests/search.test.js`: Arabic-aware search matching.
+- `tests/pause.test.js`: pausing reminders from the tray, with a fake clock.
 - `tests/winget-manifest.test.js`: the winget manifests written from a release's `SHA256SUMS.txt`.
 - `tests/updates.test.js`: the update consent, background schedule, Check now, the ready banner, and installing after a safety backup.
 - `tests/data-folder.test.js` and `tests/login-item.test.js`: moving the old `Waqt` data folder, including locked and interrupted moves, and pointing start with Windows at the renamed executable.
 - `tests/attachments.test.js`, `tests/backups.test.js` and `tests/drive-backup.test.js`: copying, export, checksums, restore, rotation, migration, validation and Drive-folder recovery.
-- **Desktop tests (Playwright):** `tests/desktop-smoke.cjs`, `tests/attachments-desktop.cjs` and `tests/photos-drive-desktop.cjs` drive the real Windows app with temporary data. They need Playwright (and JSZip for attachments), or the `WAQT_PLAYWRIGHT` and `WAQT_JSZIP` paths.
+- `tests/formatting.test.js` and `tests/logger.test.js`: Western digits in dates and times, and a log that rotates and never records task or note content.
+- **Desktop tests (Playwright):** `tests/desktop-smoke.cjs`, `tests/attachments-desktop.cjs` and `tests/photos-drive-desktop.cjs` drive the real Windows app with temporary data. Run the smoke test with `pnpm test:desktop`; set `WAQT_EXECUTABLE` to a packaged `Waqt.exe` to test a build instead of the sources. Playwright is a devDependency; the attachments suite also needs JSZip (or the `WAQT_PLAYWRIGHT` and `WAQT_JSZIP` paths). `.github/workflows/desktop.yml` packages the app and runs the smoke test on every pull request.
+- `pnpm lint` runs ESLint (`eslint.config.cjs`); CI runs it after the unit tests.
 
 ### Releasing
 

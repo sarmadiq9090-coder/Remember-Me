@@ -1,0 +1,14 @@
+Remember Me: privacy and license
+
+PRIVACY
+
+Remember Me will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
+
+- Tasks, notes, attachments and settings are stored only on your device. Remember Me has no account, analytics or telemetry.
+- Backups are copied only to folders you choose. For a Google Drive folder, Google's own Drive app does the syncing, under Google's privacy policy.
+- Links you click, such as the Google Drive download page, open in your default browser.
+- If you allow automatic updates, or choose Check now, Remember Me contacts GitHub Releases for this repository to check for and download new versions. That's a standard HTTPS request, covered by GitHub's privacy statement (https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement), and none of your data is included. You can turn this off at any time in Settings > Updates.
+
+Uninstalling Remember Me keeps your data in %APPDATA%\Remember Me.
+
+LICENSE

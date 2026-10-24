@@ -1,0 +1,41 @@
+name: Desktop
+
+# Packages the app and drives the real Windows build with Playwright (tests/desktop-smoke.cjs).
+# It is a separate workflow so it can be made manual-only if it ever proves flaky.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run package
+        env:
+          WAQT_BUILD_FOLDER: ci
+      - name: Run the smoke test against the packaged app
+        shell: pwsh
+        run: |
+          $env:WAQT_EXECUTABLE = (Get-ChildItem release/ci/*/*.exe | Select-Object -First 1).FullName
+          node tests/desktop-smoke.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desktop-screenshots
+          path: screenshots/
+          if-no-files-found: ignore
