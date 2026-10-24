@@ -25,11 +25,11 @@ function toast(message, undo) {
 }
 async function refresh() {
   try {
-    state = await api('state'); uiDigits = state.settings.digits;
+    state = await api('state');
     // Deleted items only appear in the trash view; every other view works on the rest.
     trash = [...state.tasks.filter(t => t.deletedAt).map(item => ({ kind: 'Task', item })), ...state.notes.filter(n => n.deletedAt).map(item => ({ kind: 'Note', item }))].sort((a, b) => Date.parse(b.item.deletedAt) - Date.parse(a.item.deletedAt));
     state.tasks = state.tasks.filter(t => !t.deletedAt); state.notes = state.notes.filter(n => !n.deletedAt);
-    setLanguage(state.settings.language, state.settings.digits); render();
+    setLanguage(state.settings.language); render();
   } catch (e) { toast(e.message); }
 }
 function todayEnd() { const d = new Date(); d.setHours(23, 59, 59, 999); return d.getTime(); }
@@ -59,7 +59,7 @@ function render() {
   $('breadcrumb').textContent = names[0];
   $('page-title').innerHTML = `${names[1]}<span class="title-dot">.</span>`;
   $('page-description').textContent = names[2];
-  $('date-label').textContent = new Date().toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + (state.settings.hijri ? ' • ' + new Date().toLocaleDateString(locale(true), { day: 'numeric', month: 'long', year: 'numeric' }) : '');
+  $('date-label').textContent = new Date().toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   $('dashboard').hidden = view !== 'today';
   $('tasks-section').hidden = ['notes', 'settings', 'trash'].includes(view);
   $('trash-section').hidden = view !== 'trash';
@@ -84,10 +84,8 @@ function render() {
     $('setting-side').value = state.settings.alertSide;
     $('setting-language').value = state.settings.language;
     renderRemindAgain();
-    $('setting-digits').value = state.settings.digits;
     $('setting-theme').value = state.settings.theme;
     $('setting-week').value = String(state.settings.weekStart);
-    $('setting-hijri').checked = state.settings.hijri;
     $('data-path').textContent = state.dataPath;
     renderStorage();
     renderDriveBackup();
@@ -191,7 +189,7 @@ $('task-due').closest('label').after(onlyOnce);
 function toggleOnlyOnce() { onlyOnce.hidden = !(editingSeries && $('task-reminder').checked && $('task-repeat').value === originalTaskRepeat); }
 $('task-repeat').addEventListener('change', toggleOnlyOnce);
 // Week order follows the interface: Saturday first in Arabic, Sunday first in English.
-function weekOrder() { const chosen = state?.settings?.weekStart; const start = [0, 1, 6].includes(chosen) ? chosen : uiLanguage === 'en' ? 0 : 6; return Array.from({ length: 7 }, (_, i) => (start + i) % 7); }
+function weekOrder() { const chosen = state?.settings?.weekStart; const start = [0, 1, 6].includes(chosen) ? chosen : 6; return Array.from({ length: 7 }, (_, i) => (start + i) % 7); }
 function weekdayName(day, style = 'short') { return new Date(2026, 9, 25 + day).toLocaleDateString(locale(), { weekday: style }); }
 let repeatDays = [];
 function renderRepeatDays() {
@@ -403,9 +401,9 @@ function renderRemindAgain() {
   $('setting-remind-again').value = String(state.settings.remindAgain || 0);
 }
 function settingsPayload() {
-  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, digits: $('setting-digits').value, weekStart: $('setting-week').value === 'auto' ? 'auto' : Number($('setting-week').value), hijri: $('setting-hijri').checked, theme: $('setting-theme').value, remindAgain: Number($('setting-remind-again').value) };
+  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: Number($('setting-week').value), theme: $('setting-theme').value, remindAgain: Number($('setting-remind-again').value) };
 }
-for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-digits', 'setting-week', 'setting-hijri', 'setting-theme', 'setting-remind-again']) $(id).addEventListener('change', async () => {
+for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-week', 'setting-theme', 'setting-remind-again']) $(id).addEventListener('change', async () => {
   try { await api('settings', settingsPayload()); await refresh(); toast(tr('حُفظت الإعدادات.','Settings saved.')); }
   catch (err) { toast(err.message); } await refresh();
 });

@@ -93,7 +93,8 @@ function notifyViews() {
 }
 function language() { return store?.state?.settings?.language === 'en' ? 'en' : 'ar'; }
 // The same locale the windows use, including a chosen digit style.
-function localeTag() { const digits = store?.state?.settings?.digits; return (language() === 'en' ? 'en-US' : 'ar-IQ') + (digits === 'arab' || digits === 'latn' ? '-u-nu-' + digits : ''); }
+// Dates and times always use Western digits (0-9), in Arabic too, so the layout never shifts.
+function localeTag() { return (language() === 'en' ? 'en-US' : 'ar-IQ') + '-u-nu-latn'; }
 function nativeText(ar, en) { return language() === 'en' ? en : ar; }
 function rebuildTrayMenu() {
   if (!tray) return;
@@ -182,7 +183,7 @@ async function start() {
       switch (action) {
         case 'state': value = { ...store.state, dataPath: app.getPath('userData'), packaged: app.isPackaged, recovered: store.recovered, driveBackup: driveBackup.status(), updates: updates.status() }; break;
         case 'alerts': value = activeAlerts().map(t => ({ ...t, files: (t.attachments || []).map(id => store.state.attachments.find(a => a.id === id)).filter(Boolean) })); break;
-        case 'language': value = { language: language(), digits: store.state.settings.digits }; break;
+        case 'language': value = { language: language() }; break;
         case 'saveTask': store.change(s => saveTask(s, payload)); break;
         case 'complete':
           if (payload.id === '__preview') preview = null;
@@ -280,7 +281,7 @@ async function start() {
         case 'settings': {
           const old = store.state.settings;
           const settings = { sound: !!payload.sound, startAtLogin: !!payload.startAtLogin, alertSide: payload.alertSide === 'left' ? 'left' : 'right', language: payload.language === 'en' ? 'en' : 'ar',
-            digits: ['arab', 'latn'].includes(payload.digits) ? payload.digits : 'auto', weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 'auto', hijri: !!payload.hijri, theme: ['light', 'dark'].includes(payload.theme) ? payload.theme : 'system',
+            weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 6, theme: ['light', 'dark'].includes(payload.theme) ? payload.theme : 'system',
             remindAgain: REMIND_AGAIN.includes(payload.remindAgain) ? payload.remindAgain : 0 };
           if (old.startAtLogin !== settings.startAtLogin) setLogin(settings.startAtLogin);
           try { store.change(s => { s.settings = { ...s.settings, ...settings }; }); }

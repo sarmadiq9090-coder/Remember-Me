@@ -29,13 +29,10 @@ const icons = {
 function icon(name) { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.note}</svg>`; }
 function hydrateIcons(root = document) { root.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon); }); }
 function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-// Locale for every date, time and number, with the chosen digits and optionally the Hijri calendar.
-function locale(hijri = false) {
-  const extensions = [...(hijri ? ['ca-islamic-umalqura'] : []), ...(uiDigits === 'auto' ? [] : ['nu-' + uiDigits])];
-  return (uiLanguage === 'en' ? 'en-US' : 'ar-IQ') + (extensions.length ? '-u-' + extensions.join('-') : '');
-}
-// Counts keep plain digits unless a digit style was chosen explicitly.
-function num(value) { return uiDigits === 'auto' ? String(value) : Number(value).toLocaleString(locale()); }
+// Locale for every date, time and number. Digits are always Western (0-9), in Arabic too
+// (ar-IQ would otherwise use Arabic-Indic digits), so labels keep their width and layout.
+function locale() { return (uiLanguage === 'en' ? 'en-US' : 'ar-IQ') + '-u-nu-latn'; }
+function num(value) { return String(value); }
 function localDateValue(date) { const d = new Date(date); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }
 function isToday(value) { return value && new Date(value).toDateString() === new Date().toDateString(); }
 function timeLabel(value) { return new Date(value).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }); }
