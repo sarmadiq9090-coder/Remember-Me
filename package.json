@@ -16,6 +16,7 @@
     "assets": "electron tools/build-assets.cjs",
     "lint": "eslint .",
     "test:desktop": "node tests/desktop-smoke.cjs",
+    "test:release-qa": "node tests/release-qa/run.cjs",
     "package": "node tools/package.mjs",
     "installer": "node tools/installer.cjs"
   },
