@@ -8,7 +8,7 @@
 @media (prefers-color-scheme:dark){input::placeholder,textarea::placeholder{color:#a7a7b4}}
 @media (prefers-color-scheme:dark){a{color:inherit}}
 @media (prefers-color-scheme:dark){kbd{border:1px solid #382f54}}
-@media (prefers-color-scheme:dark){.sidebar{background:#15171e;border-left:1px solid var(--border)}}
+@media (prefers-color-scheme:dark){.sidebar{background:#15171e}}
 @media (prefers-color-scheme:dark){.brand small{color:var(--muted)}}
 @media (prefers-color-scheme:dark){.brand-icon{background:var(--purple);color:white;box-shadow:0 5px 12px #7960ca25}}
 @media (prefers-color-scheme:dark){.primary{background:var(--purple);color:#fff;box-shadow:0 3px 5px #7960ca12}}
@@ -142,7 +142,6 @@
 @media (prefers-color-scheme:dark){#drive-status{color:#a79ab4}}
 @media (prefers-color-scheme:dark){#drive-status.backup-error{color:#b47775}}
 @media (prefers-color-scheme:dark){#drive-local{color:#aab5a6}}
-@media (prefers-color-scheme:dark){[dir=ltr] .sidebar{border-left:0;border-right:1px solid var(--border)}}
 @media (prefers-color-scheme:dark){.nav-item.needs-attention::after{background:#d9534f}}
 @media (prefers-color-scheme:dark){.repeat-days button{border:1px solid var(--border);background:#15171e}}
 @media (prefers-color-scheme:dark){.repeat-days button[aria-pressed=true]{background:var(--purple-light);border-color:#ac93e4;color:var(--purple)}}
@@ -151,7 +150,7 @@
 @media (prefers-color-scheme:dark){.alert-body{background:#15171e}}
 @media (prefers-color-scheme:dark){.alert-shell{border:1px solid #3c2860;border-top:4px solid #9c83ce}}
 @media (prefers-color-scheme:dark){.alert-logo{background:#8a6dc1;color:white}}
-@media (prefers-color-scheme:dark){.alert-brand>span:last-child{color:#aca2b9;border-right:1px solid #3f2958}}
+@media (prefers-color-scheme:dark){.alert-brand>span:last-child{color:#aca2b9}}
 @media (prefers-color-scheme:dark){.alert-pulse{color:#9b83bd;border:1px solid #452a5a;background:#201629}}
 @media (prefers-color-scheme:dark){.bell-orbit{background:#23192f;color:#a087c5;border:8px solid #3a175d}}
 @media (prefers-color-scheme:dark){.bell-orbit i{background:#cbb5e4;border:2px solid #2e3342}}
