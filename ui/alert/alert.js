@@ -11,6 +11,8 @@ async function refreshAlert() {
     const look = await api('language');
     await setLanguage(look); applyPalette(look.palette); weekStart = look.weekStart;
     tasks = await api('alerts');
+    // Shown before rendering: nothing in a hidden page can take the focus.
+    showPage();
     // After the last Done the window stays briefly so it can be undone; show that instead of an empty card.
     document.body.classList.toggle('all-done', !tasks.length);
     $('alert-all-done').hidden = !!tasks.length;

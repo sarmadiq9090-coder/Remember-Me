@@ -38,6 +38,8 @@ async function refresh() {
     await setLanguage(state.settings.language);
     // While a palette choice is being saved, an older refresh must not switch the page back.
     if (!appearanceSaving) applyPalette(state.settings.palette);
+    // Shown before rendering: nothing in a hidden page can take the focus.
+    showPage();
     render();
     // The tray's New task, or Open task in the alert, asked for an editor.
     if (state.openTask && !document.querySelector('dialog[open]')) {
