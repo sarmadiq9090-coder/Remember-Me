@@ -102,6 +102,28 @@ function validateState(data) {
   data.settings.language = data.settings.language === 'en' ? 'en' : 'ar';
   return data;
 }
+// Antivirus scanners, the search indexer and sync clients briefly lock new files on Windows.
+const LOCKED = new Set(['EPERM', 'EACCES', 'EBUSY']);
+function renameWithRetry(from, to, attempts = 10) {
+  for (let i = 1; ; i++) {
+    try { return fs.renameSync(from, to); }
+    catch (error) {
+      if (!LOCKED.has(error.code) || i >= attempts) throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25 * i);
+    }
+  }
+}
+function writeDurable(file, text) {
+  const temporary = file + '.tmp';
+  const fd = fs.openSync(temporary, 'w');
+  try { fs.writeFileSync(fd, text, 'utf8'); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+  renameWithRetry(temporary, file);
+}
+function copyDurable(from, to) {
+  fs.copyFileSync(from, to);
+  const fd = fs.openSync(to, 'r+');
+  try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+}
 class Store {
   constructor(directory) {
     this.file = path.join(directory, 'data.json');
@@ -113,8 +135,7 @@ class Store {
       try {
         this.state = validateState(JSON.parse(fs.readFileSync(this.file + '.bak', 'utf8')));
         fs.copyFileSync(this.file, this.file + '.damaged-' + Date.now());
-        fs.writeFileSync(this.file + '.recovered', JSON.stringify(this.state, null, 2), 'utf8');
-        fs.renameSync(this.file + '.recovered', this.file);
+        writeDurable(this.file, JSON.stringify(this.state, null, 2));
         this.recovered = true;
       } catch { throw new Error('تعذّر قراءة البيانات والنسخة الاحتياطية. احتفظنا بالملفات دون تغيير في: ' + directory); }
     }
@@ -123,11 +144,8 @@ class Store {
     const draft = structuredClone(this.state);
     const result = fn(draft);
     validateState(draft);
-    const temporary = this.file + '.tmp';
-    const fd = fs.openSync(temporary, 'w');
-    try { fs.writeFileSync(fd, JSON.stringify(draft, null, 2), 'utf8'); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
-    if (fs.existsSync(this.file)) fs.copyFileSync(this.file, this.file + '.bak');
-    fs.renameSync(temporary, this.file);
+    if (fs.existsSync(this.file)) copyDurable(this.file, this.file + '.bak');
+    writeDurable(this.file, JSON.stringify(draft, null, 2));
     this.state = draft;
     return result;
   }

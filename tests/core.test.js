@@ -85,3 +85,22 @@ test('multiple overdue tasks are queued in time order and unscheduled tasks neve
   saveTask(s, { title: 'unscheduled' });
   assert.deepEqual(dueTasks(s, new Date('2026-10-23T12:00:00Z')).map(t => t.title), ['earlier', 'later']);
 });
+test('saving retries a rename blocked briefly by antivirus or indexing, and keeps a durable backup', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-core-'));
+  const rename = fs.renameSync;
+  try {
+    const store = new Store(dir);
+    store.change(s => saveTask(s, { title: 'أولى' }));
+    let blocked = 0;
+    fs.renameSync = (...args) => { if (blocked++ < 2) throw Object.assign(new Error('locked'), { code: 'EPERM' }); return rename(...args); };
+    store.change(s => saveTask(s, { title: 'ثانية' }));
+    assert.equal(blocked, 3);
+    assert.equal(new Store(dir).state.tasks.length, 2);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'data.json.bak'), 'utf8')).tasks.length, 1);
+    fs.renameSync = () => { throw Object.assign(new Error('locked'), { code: 'EPERM' }); };
+    assert.throws(() => store.change(s => saveTask(s, { title: 'ثالثة' })), /locked/);
+    fs.renameSync = rename;
+    assert.equal(store.state.tasks.length, 2, 'A failed save must not change in-memory state');
+    assert.equal(new Store(dir).state.tasks.length, 2);
+  } finally { fs.renameSync = rename; fs.rmSync(dir, { recursive: true, force: true }); }
+});
