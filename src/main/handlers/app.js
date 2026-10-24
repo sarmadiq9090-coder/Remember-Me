@@ -1,5 +1,6 @@
 'use strict';
-const { nextOccurrence, dueTasks } = require('../../core/tasks');
+const { dueTasks } = require('../../core/tasks');
+const { nextOccurrence } = require('../../core/repeat');
 const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale } = require('../../../ui/translate');
 
 module.exports = ctx => ({

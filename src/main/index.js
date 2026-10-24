@@ -1,7 +1,7 @@
 'use strict';
 const { app, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, nativeTheme, clipboard } = require('electron');
 const path = require('node:path');
-const { Store } = require('../core/tasks');
+const { Store } = require('../core/store');
 const { createPreviewService } = require('../data/image-preview');
 const { DriveBackup } = require('../data/drive-backup');
 const { safetyBackup } = require('../data/backups');

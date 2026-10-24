@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { Store, saveTask } = require('../src/core/tasks');
+const { saveTask } = require('../src/core/tasks');
+const { Store } = require('../src/core/store');
 const { importFiles, exportBackup, attachmentPath, BACKUP_INFO } = require('../src/data/attachments');
 const { readBackup, restoreBackup } = require('../src/data/backups');
 

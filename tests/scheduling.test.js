@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { initialState, saveTask, completeTask, snoozeTask, dueTasks, Store } = require('../src/core/tasks');
+const { initialState, saveTask, completeTask, snoozeTask, dueTasks } = require('../src/core/tasks');
+const { Store } = require('../src/core/store');
 // node --test runs each file in its own process, so changing TZ here does not leak into other tests.
 const originalTZ = process.env.TZ;
 after(() => { if (originalTZ === undefined) delete process.env.TZ; else process.env.TZ = originalTZ; });
