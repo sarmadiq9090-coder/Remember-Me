@@ -16,7 +16,8 @@ for (const [language, source] of [['en_US', 'privacy-en.txt'], ['ar_SA', 'privac
 }
 build({
   projectDir: root,
-  prepackaged: path.join(root, 'release', `v${version}`, 'Remember Me-win32-x64'),
+  // The same folder tools/package.mjs wrote, so a WAQT_BUILD_FOLDER build is never swapped for an older one.
+  prepackaged: path.join(root, 'release', process.env.WAQT_BUILD_FOLDER || `v${version}`, 'Remember Me-win32-x64'),
   targets: Platform.WINDOWS.createTarget('nsis', Arch.x64),
   // Never upload: the release workflow publishes the files itself.
   publish: 'never',
