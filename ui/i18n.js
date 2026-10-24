@@ -1,4 +1,4 @@
-let uiLanguage = 'ar', uiDigits = 'auto';
+let uiLanguage = 'ar';
 const originalText = new WeakMap();
 const originalAttrs = new WeakMap();
 const english = new Map(Object.entries({
@@ -19,7 +19,7 @@ const english = new Map(Object.entries({
   'صوت واحد عند ظهور تنبيه جديد.': 'One sound when a new alert appears.', 'التشغيل مع ويندوز': 'Start with Windows', 'يفتح ذكرني في الخلفية عند تسجيل الدخول.': 'Opens Remember Me in the background when you sign in.',
   'مكان التنبيه': 'Alert position', 'أسفل الشاشة الرئيسية، فوق شريط المهام.': 'At the bottom of the main screen, above the taskbar.', 'الجهة اليمنى': 'Right side', 'الجهة اليسرى': 'Left side',
   'المظهر': 'Appearance', 'فاتح أو داكن، أو حسب إعداد ويندوز.': 'Light or dark, or the same as Windows.', 'حسب ويندوز': 'Same as Windows', 'فاتح': 'Light', 'داكن': 'Dark', 'اللغة': 'Language', 'اختر لغة واجهة البرنامج.': 'Choose the app interface language.', 'العربية': 'Arabic', 'English': 'English',
-  'شاهد التنبيه بنفسك': 'Preview the alert', 'التقويم والأرقام': 'Calendar and numbers', 'شكل الأرقام': 'Digits', 'في التواريخ والأوقات والعدّادات.': 'In dates, times and counts.', 'حسب اللغة': 'Follow the language', 'عربية ١٢٣': 'Arabic-Indic ١٢٣', 'غربية 123': 'Western 123', 'أول يوم في الأسبوع': 'First day of the week', 'في اختيار أيام التكرار.': 'When choosing repeat days.', 'السبت': 'Saturday', 'الأحد': 'Sunday', 'الاثنين': 'Monday', 'يظهر بجانب تاريخ اليوم (أم القرى).': "Shown next to today's date (Umm al-Qura).", 'جرّب شكله وأزرار الإنجاز والتأجيل.': 'Try its layout, complete button, and snooze options.', 'تجربة التنبيه': 'Preview alert',
+  'شاهد التنبيه بنفسك': 'Preview the alert', 'التقويم': 'Calendar', 'حسب اللغة': 'Follow the language', 'أول يوم في الأسبوع': 'First day of the week', 'في اختيار أيام التكرار.': 'When choosing repeat days.', 'السبت': 'Saturday', 'الأحد': 'Sunday', 'الاثنين': 'Monday', 'يظهر بجانب تاريخ اليوم (أم القرى).': "Shown next to today's date (Umm al-Qura).", 'جرّب شكله وأزرار الإنجاز والتأجيل.': 'Try its layout, complete button, and snooze options.', 'تجربة التنبيه': 'Preview alert',
   'بياناتك، على جهازك': 'Your data, on your device', 'يعمل ذكرني دون حساب أو اتصال بالإنترنت. تُحفظ المهام والملاحظات تلقائيًا مع نسخة احتياطية من آخر حفظ.': 'Remember Me works without an account or internet connection. Tasks and notes are saved automatically with a backup of the previous save.',
   'تصدير نسخة احتياطية': 'Export backup', 'استعادة من نسخة احتياطية': 'Restore from backup', 'فتح مجلد البيانات': 'Open data folder', 'النسخ الاحتياطي إلى Google Drive': 'Backup to Google Drive',
   'نسخة كاملة من المهام والملاحظات والصور والمرفقات. اختر مجلدًا داخل Google Drive المتزامن؛ يرفع تطبيق Google Drive الملفات إلى حسابك، ويحتفظ ذكرني بنسخة محلية أيضًا.': 'A complete copy of tasks, notes, images, and attachments. Choose a synced Google Drive folder; Google Drive uploads it to your account while Remember Me also keeps a local copy.',
@@ -40,10 +40,9 @@ const english = new Map(Object.entries({
   'سأبقى هنا حتى تنجزها أو تختار وقتًا آخر.': 'I will stay here until you complete it or choose another time.', 'فتح ذكرني': 'Open Remember Me', 'تراجع': 'Undo', 'أحسنت! لا تذكيرات أخرى الآن.': 'Well done! No more reminders right now.'
 }));
 function tr(ar, en) { return uiLanguage === 'en' ? en : ar; }
-// Accepts a language code, or { language, digits } as the alert window receives it.
-function setLanguage(language, digits) {
-  if (language && typeof language === 'object') ({ language, digits } = language);
-  uiDigits = digits === 'arab' || digits === 'latn' ? digits : 'auto';
+// Accepts a language code, or { language } as the alert window receives it.
+function setLanguage(language) {
+  if (language && typeof language === 'object') ({ language } = language);
   uiLanguage = language === 'en' ? 'en' : 'ar';
   document.documentElement.lang = uiLanguage; document.documentElement.dir = uiLanguage === 'en' ? 'ltr' : 'rtl';
   const alertPage = document.body.classList.contains('alert-body');

@@ -25,11 +25,11 @@ function toast(message, undo) {
 }
 async function refresh() {
   try {
-    state = await api('state'); uiDigits = state.settings.digits;
+    state = await api('state');
     // Deleted items only appear in the trash view; every other view works on the rest.
     trash = [...state.tasks.filter(t => t.deletedAt).map(item => ({ kind: 'Task', item })), ...state.notes.filter(n => n.deletedAt).map(item => ({ kind: 'Note', item }))].sort((a, b) => Date.parse(b.item.deletedAt) - Date.parse(a.item.deletedAt));
     state.tasks = state.tasks.filter(t => !t.deletedAt); state.notes = state.notes.filter(n => !n.deletedAt);
-    setLanguage(state.settings.language, state.settings.digits); render();
+    setLanguage(state.settings.language); render();
   } catch (e) { toast(e.message); }
 }
 function todayEnd() { const d = new Date(); d.setHours(23, 59, 59, 999); return d.getTime(); }
@@ -83,7 +83,6 @@ function render() {
     $('setting-side').value = state.settings.alertSide;
     $('setting-language').value = state.settings.language;
     renderRemindAgain();
-    $('setting-digits').value = state.settings.digits;
     $('setting-theme').value = state.settings.theme;
     $('setting-week').value = String(state.settings.weekStart);
     $('data-path').textContent = state.dataPath;
@@ -374,9 +373,9 @@ function renderRemindAgain() {
   $('setting-remind-again').value = String(state.settings.remindAgain || 0);
 }
 function settingsPayload() {
-  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, digits: $('setting-digits').value, weekStart: $('setting-week').value === 'auto' ? 'auto' : Number($('setting-week').value), theme: $('setting-theme').value, remindAgain: Number($('setting-remind-again').value) };
+  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: $('setting-week').value === 'auto' ? 'auto' : Number($('setting-week').value), theme: $('setting-theme').value, remindAgain: Number($('setting-remind-again').value) };
 }
-for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-digits', 'setting-week', 'setting-theme', 'setting-remind-again']) $(id).addEventListener('change', async () => {
+for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-week', 'setting-theme', 'setting-remind-again']) $(id).addEventListener('change', async () => {
   try { await api('settings', settingsPayload()); await refresh(); toast(tr('حُفظت الإعدادات.','Settings saved.')); }
   catch (err) { toast(err.message); } await refresh();
 });

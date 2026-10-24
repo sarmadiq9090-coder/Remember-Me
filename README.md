@@ -35,7 +35,7 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 - **Arabic and English interfaces:** a full right-to-left Arabic UI and a left-to-right English UI, switchable in Settings. Mixed-language text keeps its reading order.
 - **Local-first data:** atomic saves, an automatic `.bak` copy and automatic recovery if the data file is damaged.
 - **Backups:** export a full backup with all attachments and checksums, restore one from Settings after it's verified, or copy daily backups into a synced Google Drive folder.
-- **Dark mode and display options:** light, dark or follow Windows; Arabic-Indic or Western digits; and choose the first day of the week.
+- **Dark mode and display options:** light, dark or follow Windows, and choose the first day of the week.
 - **Multi-monitor aware:** the alert sits above the taskbar wherever it is (bottom, top, left or right) and adapts to scaled and secondary displays.
 - **Runs in the background:** closing the window keeps Remember Me in the notification area, and it can start with Windows.
 
