@@ -160,7 +160,7 @@ Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable
 
 ### Releasing
 
-Bump `version` in `package.json` and push a matching tag, such as `v1.4.1`. `.github/workflows/release.yml` runs the tests, builds the installer and publishes it to Releases with `SHA256SUMS.txt`, build provenance, and the `latest.yml` and `.blockmap` files the app's updater reads. Running the workflow by hand only builds the files and publishes nothing. [RELEASING.md](RELEASING.md) has the full checklist, and [docs/distribution](docs/distribution) has the winget manifests and a draft application for free code signing from SignPath Foundation.
+Bump `version` in `package.json` and push a matching tag, such as `v1.4.1`. `.github/workflows/release.yml` runs the tests, builds the installer and publishes it to Releases with `SHA256SUMS.txt`, build provenance, and the `latest.yml` and `.blockmap` files the app's updater reads. Running the workflow by hand only builds the files and publishes nothing. [RELEASING.md](RELEASING.md) has the full checklist, and [docs/distribution/winget](docs/distribution/winget/README.md) the winget manifests.
 
 ## Code signing policy
 
