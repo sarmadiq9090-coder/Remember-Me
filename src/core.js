@@ -7,6 +7,8 @@ const { attachmentIds, validateAttachment } = require('./attachments');
 function initialState() {
   return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'ar', digits: 'auto', weekStart: 'auto', hijri: false, theme: 'system' } };
 }
+// Minutes between repeated alert sounds; 0 is off. Data from before the setting has no value, meaning off.
+const REMIND_AGAIN = [0, 2, 5, 15];
 function title(value) {
   if (typeof value !== 'string' || !value.trim() || value.trim().length > 200) throw new Error('اكتب عنوانًا من 1 إلى 200 حرف.');
   return value.trim();
@@ -62,9 +64,13 @@ function saveTask(state, input, now = new Date()) {
     const changed = fields.dueAt !== task.dueAt;
     // A new time, or a repeat switched on or changed, anchors the series at the time the editor shows,
     // which for a snoozed task is the snoozed time rather than the original one.
-    const anchor = changed || (fields.repeat !== 'none' && fields.repeat !== task.repeat);
+    const repeatChanged = fields.repeat !== 'none' && fields.repeat !== task.repeat;
+    // onlyThisTime moves one occurrence of an unchanged series and keeps its anchor and rule, as a snooze does.
+    const onlyThisTime = input.onlyThisTime === true && fields.repeat !== 'none' && !repeatChanged && !!task.scheduleAt;
+    const anchor = !onlyThisTime && (changed || repeatChanged);
+    if (onlyThisTime) { if ('repeatFrom' in rule && task.repeatFrom) rule.repeatFrom = task.repeatFrom; if (changed) task.snoozedAt = null; }
     // A new time or a new repeat mode restarts monthly/yearly counting from the new due date.
-    if ('repeatFrom' in rule && (changed || fields.repeat !== task.repeat)) rule.repeatFrom = fields.dueAt;
+    else if ('repeatFrom' in rule && (changed || fields.repeat !== task.repeat)) rule.repeatFrom = fields.dueAt;
     Object.assign(task, fields, { updatedAt: now.toISOString() });
     applyRule(task, rule);
     setEarly(task, input.remindBefore);
@@ -160,6 +166,18 @@ function purgeTrash(state, now = new Date(), all = false) {
   state.tasks = state.tasks.filter(keep); state.notes = state.notes.filter(keep);
   return before - state.tasks.length - state.notes.length;
 }
+// Moves a repeating task to its next occurrence without recording a completion.
+// Returns false when expectedDueAt shows the occurrence was already handled.
+function skipOccurrence(state, id, expectedDueAt, now = new Date()) {
+  const task = state.tasks.find(t => t.id === id && !t.completedAt && !t.deletedAt);
+  if (!task || task.repeat === 'none' || !task.scheduleAt) throw new Error('يمكن تخطي المهام المتكررة النشطة فقط.');
+  if (stale(task, expectedDueAt)) return false;
+  task.dueAt = nextOccurrence(task.scheduleAt, task.repeat, now, task);
+  task.scheduleAt = task.dueAt;
+  task.snoozedAt = null;
+  task.updatedAt = now.toISOString();
+  return true;
+}
 // Returns false when expectedDueAt shows the reminder was already handled.
 function snoozeTask(state, id, until, now = new Date(), { expectedDueAt } = {}) {
   const task = state.tasks.find(t => t.id === id && !t.completedAt && !t.deletedAt);
@@ -229,6 +247,7 @@ function validateState(data) {
   if (!['auto', 0, 1, 6].includes(data.settings.weekStart)) data.settings.weekStart = 'auto';
   data.settings.alertSide = data.settings.alertSide === 'left' ? 'left' : 'right';
   data.settings.language = data.settings.language === 'en' ? 'en' : 'ar';
+  if (data.settings.remindAgain !== undefined && !REMIND_AGAIN.includes(data.settings.remindAgain)) data.settings.remindAgain = 0;
   return data;
 }
 // Antivirus scanners, the search indexer and sync clients briefly lock new files on Windows.
@@ -284,4 +303,4 @@ class Store {
     this.state = draft;
   }
 }
-module.exports = { EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, alertQueue, nextOccurrence, validateState, Store, writeDurable, renameWithRetry };
+module.exports = { REMIND_AGAIN, EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, skipOccurrence, snoozeTask, dueTasks, alertQueue, nextOccurrence, validateState, Store, writeDurable, renameWithRetry };

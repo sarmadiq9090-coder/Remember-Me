@@ -1,14 +1,14 @@
 'use strict';
 const path = require('node:path');
 const { fileURLToPath } = require('node:url');
-const ACTIONS = new Set(['state', 'alerts', 'language', 'saveTask', 'complete', 'snooze', 'reopen', 'deleteTask', 'saveNote', 'deleteNote',
+const ACTIONS = new Set(['state', 'alerts', 'language', 'saveTask', 'complete', 'skip', 'snooze', 'reopen', 'deleteTask', 'saveNote', 'deleteNote',
   'attachFiles', 'openAttachment', 'imagePreview', 'chooseDriveFolder', 'driveBackupNow', 'driveAutomatic', 'driveKeep', 'driveHelp', 'openDriveFolder',
   'undoComplete', 'undoable', 'restoreTask', 'restoreNote', 'purgeTask', 'purgeNote', 'emptyTrash',
   'settings', 'preview', 'export', 'restore', 'storage', 'cleanOrphans', 'dataFolder', 'open']);
 // The always-on-top alert only needs to read its queue and act on the reminder it shows.
-const ALERT_ACTIONS = new Set(['alerts', 'language', 'complete', 'undoComplete', 'undoable', 'snooze', 'open', 'openAttachment', 'imagePreview']);
-const ID_ACTIONS = new Set(['complete', 'undoComplete', 'snooze', 'reopen', 'deleteTask', 'deleteNote', 'restoreTask', 'restoreNote', 'purgeTask', 'purgeNote', 'openAttachment', 'imagePreview']);
-const DUE_ACTIONS = new Set(['complete', 'snooze']);
+const ALERT_ACTIONS = new Set(['alerts', 'language', 'complete', 'skip', 'undoComplete', 'undoable', 'snooze', 'open', 'openAttachment', 'imagePreview']);
+const ID_ACTIONS = new Set(['complete', 'skip', 'undoComplete', 'snooze', 'reopen', 'deleteTask', 'deleteNote', 'restoreTask', 'restoreNote', 'purgeTask', 'purgeNote', 'openAttachment', 'imagePreview']);
+const DUE_ACTIONS = new Set(['complete', 'skip', 'snooze']);
 const arabic = ar => ar;
 function isId(value) { return typeof value === 'string' && value.length > 0 && value.length <= 100; }
 function isDate(value) { return typeof value === 'string' && value.length <= 40 && Number.isFinite(Date.parse(value)); }
