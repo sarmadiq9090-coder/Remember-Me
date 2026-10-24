@@ -59,7 +59,10 @@ async function alertPage() {
     assert.ok((await page.locator('#settings-section').textContent()).includes('Language'));
     await page.locator('#settings-preview').click();
     let languageAlert = await alertPage();
-    assert.equal(await languageAlert.locator('[data-minutes="1440"]').textContent(), '24 hours');
+    assert.match(await languageAlert.locator('[data-preset="tomorrow"] span').textContent(), /^Tomorrow d/);
+    assert.equal(await languageAlert.locator('#alert-complete').evaluate(el => el === document.activeElement), true, 'Done has the focus');
+    assert.equal(await languageAlert.locator('[role=alertdialog]').count(), 1);
+    await languageAlert.screenshot({ path: path.join(root, 'screenshots/reminder-en.png') });
     await languageAlert.locator('#alert-complete').click();
     await page.locator('#setting-language').selectOption('ar');
     await page.waitForFunction(() => document.documentElement.dir === 'rtl');
@@ -108,16 +111,18 @@ async function alertPage() {
     assert.ok(!alert.isClosed(), 'Closing a pending reminder must not dismiss it');
     await new Promise(r => setTimeout(r, 2200));
     assert.equal(await alert.locator('#alert-title').textContent(), 'اختبار التنبيه الفعلي');
-    assert.equal(await alert.locator('[data-minutes="1440"]').textContent(), '24 ساعة');
+    assert.match(await alert.locator('[data-preset="tomorrow"] span').textContent(), /^غدًا d/);
     await alert.screenshot({ path: path.join(root, 'screenshots/reminder.png') });
-    await alert.locator('[data-minutes="1440"]').click();
+    await alert.locator('[data-preset="tomorrow"]').click();
     await page.waitForTimeout(250);
     let saved = await call(page, 'state');
     let task = saved.tasks.find(t => t.title === 'اختبار التنبيه الفعلي');
-    assert.ok(Date.parse(task.dueAt) > Date.now() + 86300000, '24-hour snooze must persist');
+    const morning = new Date(); morning.setDate(morning.getDate() + 1); morning.setHours(9, 0, 0, 0);
+    assert.equal(Date.parse(task.dueAt), morning.getTime(), 'Tomorrow 9 AM snooze must persist');
     // Accelerate the persisted snooze so the actual scheduler can be verified again.
     await call(page, 'saveTask', { ...task, dueAt: new Date(Date.now() + 1000).toISOString() });
     alert = await alertPage();
+    await alert.locator('[data-preset="pick"]').click();
     await alert.locator('#snooze-until').fill('2020-01-01T10:00');
     await alert.locator('#snooze-form button').click();
     await alert.locator('#alert-error').filter({ hasText: 'لاحقًا' }).waitFor();
@@ -129,15 +134,18 @@ async function alertPage() {
     saved = await call(page, 'state'); task = saved.tasks.find(t => t.id === task.id);
     assert.ok(Date.parse(task.dueAt) > Date.now() + 7000000, 'Custom snooze must persist');
     // Leave two overdue reminders on disk and relaunch to test catch-up and queue.
-    await call(page, 'saveTask', { ...task, dueAt: new Date(Date.now() - 2000).toISOString() });
-    await call(page, 'saveTask', { title: 'التنبيه الثاني', dueAt: new Date(Date.now() - 1000).toISOString() });
+    await call(page, 'saveTask', { ...task, dueAt: new Date(Date.now() - 27 * 3600000).toISOString() });
+    await call(page, 'saveTask', { title: 'التنبيه الثاني مع عنوان طويل جدًا يمتد على أكثر من سطر حتى يظهر القص في نافذة التنبيه', body: 'ملاحظة قصيرة.', priority: 'high', dueAt: new Date(Date.now() - 26 * 3600000).toISOString() });
     await app.close();
     page = await launch();
     assert.equal((await call(page, 'state')).notes[0].body, 'ملاحظة معدلة ومحفوظة بعد إعادة التشغيل.');
     alert = await alertPage();
-    assert.ok((await alert.locator('#alert-queue').textContent()).includes('2'));
+    assert.ok((await alert.locator('#alert-position').textContent()).includes('2'));
+    assert.equal(await alert.locator('#alert-shell.overdue').count(), 1, 'Overdue reminders are marked');
+    await alert.screenshot({ path: path.join(root, 'screenshots/reminder-queue.png') });
     await alert.locator('#alert-complete').click();
-    await alert.getByRole('heading', { name: 'التنبيه الثاني' }).waitFor();
+    await alert.getByRole('heading', { name: /^التنبيه الثاني/ }).waitFor();
+    await alert.screenshot({ path: path.join(root, 'screenshots/reminder-long.png') });
     await alert.locator('#alert-complete').click();
     await page.waitForTimeout(300);
     assert.equal(app.windows().filter(p => p.url().endsWith('/alert.html')).length, 0);

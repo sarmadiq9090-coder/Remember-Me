@@ -151,31 +151,30 @@
 @media (prefers-color-scheme:dark){#update-status{color:#a79ab4}}
 @media (prefers-color-scheme:dark){.tag-chip{background:var(--purple-light);color:var(--purple)}}
 @media (prefers-color-scheme:dark){.alert-body{background:#15171e}}
-@media (prefers-color-scheme:dark){.alert-shell{border:1px solid #3c2860;border-top:4px solid #9c83ce}}
-@media (prefers-color-scheme:dark){.alert-logo{background:#8a6dc1;color:white}}
-@media (prefers-color-scheme:dark){.alert-brand>span:last-child{color:#aca2b9}}
-@media (prefers-color-scheme:dark){.alert-pulse{color:#9b83bd;border:1px solid #452a5a;background:#201629}}
-@media (prefers-color-scheme:dark){.bell-orbit{background:#23192f;color:#a087c5;border:8px solid #3a175d}}
-@media (prefers-color-scheme:dark){.bell-orbit i{background:#cbb5e4;border:2px solid #2e3342}}
-@media (prefers-color-scheme:dark){.alert-eyebrow{color:#ae9ebd}}
-@media (prefers-color-scheme:dark){.alert-content #alert-note{color:#ada3b8}}
-@media (prefers-color-scheme:dark){.alert-time{color:#b0a3b8}}
-@media (prefers-color-scheme:dark){.snooze-heading{color:#afa3b8}}
-@media (prefers-color-scheme:dark){.snooze-heading span{background:#271b33}}
-@media (prefers-color-scheme:dark){.snooze-options button{border:1px solid #3f275a;background:#201425;color:#ac9bc0}}
-@media (prefers-color-scheme:dark){#snooze-form label{color:#ad9fbc}}
-@media (prefers-color-scheme:dark){.custom-snooze button{background:#251b32;border:1px solid #3f265d;color:#9f88bc}}
-@media (prefers-color-scheme:dark){.alert-persistence{color:#b0a1ba}}
-@media (prefers-color-scheme:dark){.alert-open{border-top:1px solid #402b51;color:#ae9ac0}}
-@media (prefers-color-scheme:dark){#alert-error{color:#bd7777}}
-@media (prefers-color-scheme:dark){.alert-eyebrow{color:#ae9cbf}}
-@media (prefers-color-scheme:dark){.alert-content #alert-note{color:#aea0bb}}
-@media (prefers-color-scheme:dark){.alert-time{color:#af9dbd}}
-@media (prefers-color-scheme:dark){.snooze-heading{color:#b19ebd}}
-@media (prefers-color-scheme:dark){.snooze-options button{color:#ab93bd}}
-@media (prefers-color-scheme:dark){#snooze-form label{color:#af9fbc}}
-@media (prefers-color-scheme:dark){.alert-persistence{color:#b19cbf}}
-@media (prefers-color-scheme:dark){.alert-open{color:#b09bc0}}
+@media (prefers-color-scheme:dark){.alert-shell{border:1px solid #3c2860;border-top:4px solid #7960ca}}
+@media (prefers-color-scheme:dark){.alert-shell.overdue{border-top-color:#c4473d}}
+@media (prefers-color-scheme:dark){.alert-queue{color:#b6b8c1}}
+@media (prefers-color-scheme:dark){.alert-queue button{color:#c5bfd1}}
+@media (prefers-color-scheme:dark){.alert-queue button:hover{background:#221a30}}
+@media (prefers-color-scheme:dark){.chip{background:#211a30;color:#a193d3}}
+@media (prefers-color-scheme:dark){.chip.red{background:#2f1b19;color:#e49792}}
+@media (prefers-color-scheme:dark){.chip.amber{background:#362d1d;color:#ffdea6}}
+@media (prefers-color-scheme:dark){.alert-when{color:#d7d9e5}}
+@media (prefers-color-scheme:dark){.overdue .alert-when b{color:#ec908b}}
+@media (prefers-color-scheme:dark){.alert-note{color:#b6b8c1}}
+@media (prefers-color-scheme:dark){.alert-file{border:1px solid #382f54;background:#171324;color:#cac3dd}}
+@media (prefers-color-scheme:dark){.alert-nudge{color:#ffdea6}}
+@media (prefers-color-scheme:dark){.alert-label{color:#b6b8c1}}
+@media (prefers-color-scheme:dark){.snooze-grid button{border:1px solid #382f54;background:#171324;color:#cac3dd}}
+@media (prefers-color-scheme:dark){.snooze-grid button:hover{background:#1f182d;border-color:#3b2667}}
+@media (prefers-color-scheme:dark){.snooze-grid kbd,.alert-skip kbd{color:#b6b8c1;border-color:#3e3654}}
+@media (prefers-color-scheme:dark){.custom-snooze button{background:#211a30;border:1px solid #382164;color:#a193d3}}
+@media (prefers-color-scheme:dark){.alert-skip{color:#a193d3}}
+@media (prefers-color-scheme:dark){#alert-error{color:#ec908b}}
+@media (prefers-color-scheme:dark){.alert-footer{border-top:1px solid #33334a}}
+@media (prefers-color-scheme:dark){.alert-footer button{color:#a193d3}}
+@media (prefers-color-scheme:dark){.alert-footer button:hover{background:#1d1629}}
+@media (prefers-color-scheme:dark){.alert-footer button[hidden]+button{border:0}}
 @media (prefers-color-scheme:dark){.alert-undo{background:#192f22;color:#b8e0cb}}
 @media (prefers-color-scheme:dark){.alert-undo button{color:#b8e0cb}}
 @media (prefers-color-scheme:dark){.alert-all-done{color:#b0a4ce}}

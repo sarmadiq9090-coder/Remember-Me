@@ -1,12 +1,24 @@
 <!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"><title>Remember Me • Reminder</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="alert.css"><link rel="stylesheet" href="dark.css"></head><body class="alert-body">
-<div class="alert-shell"><div class="alert-header"><div class="alert-brand"><img class="alert-brand-mark" src="../assets/icon.png" alt="Remember Me logo"><strong>Remember Me</strong><span>A reminder for you</span></div><span class="alert-pulse">It is time</span></div>
+<div class="alert-shell" id="alert-shell" role="alertdialog" aria-labelledby="alert-title" aria-describedby="alert-time alert-note">
+<header class="alert-header"><img class="alert-brand-mark" src="../assets/icon.png" alt=""><strong>Remember Me</strong>
+<div class="alert-queue" id="alert-queue" hidden><button type="button" id="alert-prev" title="Previous reminder" aria-label="Previous reminder"><span data-icon="chevronBack"></span></button><span id="alert-position" translate="no"></span><button type="button" id="alert-next" title="Next reminder@queue" aria-label="Next reminder@queue"><span data-icon="chevronForward"></span></button></div></header>
 <div id="alert-undo" class="alert-undo" role="status" hidden><span id="alert-undo-text" translate="no"></span><button type="button" id="alert-undo-button">Undo</button></div>
-<div class="alert-content"><p id="alert-all-done" class="alert-all-done" hidden>Well done! No more reminders right now.</p><div class="bell-orbit"><span data-icon="bell"></span><i></i></div><p class="alert-eyebrow" id="alert-queue">A small space for something important</p><h1 id="alert-title" translate="no" dir="auto"></h1><p id="alert-note" translate="no" dir="auto"></p><div class="alert-time"><span data-icon="clock"></span><span id="alert-time"></span></div>
-<div id="alert-files" translate="no" class="alert-files" hidden></div><button class="primary alert-done" id="alert-complete"><span data-icon="check"></span> Done, completed</button>
-<div class="snooze-heading"><span></span><p>Or remind me later</p><span></span></div>
-<div class="snooze-options"><button data-minutes="5">5 minutes</button><button data-minutes="15">15 minutes</button><button data-minutes="60">1 hour</button><button data-minutes="1440">24 hours</button></div>
-<form id="snooze-form"><label for="snooze-until">Choose another time</label><div class="custom-snooze"><input type="datetime-local" id="snooze-until" required aria-label="New reminder time"><button type="submit" title="Snooze until the chosen time" aria-label="Snooze until the chosen time"><span data-icon="arrowLeft"></span></button></div></form>
-<p id="alert-error" role="alert"></p><p class="alert-persistence"><span data-icon="shield"></span> I will stay here until you complete it or choose another time.</p></div>
-<button class="alert-open" id="alert-open">Open Remember Me <span data-icon="arrowLeft"></span></button></div><script src="translate.js"></script><script src="i18n.js"></script><script src="shared.js"></script><script src="alert.js"></script></body></html>
-
-
+<main class="alert-content">
+<p id="alert-all-done" class="alert-all-done" hidden>Well done! No more reminders right now.</p>
+<div class="alert-chips" id="alert-chips" translate="no"></div>
+<h1 id="alert-title" translate="no" dir="auto"></h1>
+<p class="alert-when" id="alert-time" translate="no"></p>
+<p class="alert-note" id="alert-note" translate="no" dir="auto" hidden></p>
+<div id="alert-files" class="alert-files" translate="no" hidden></div>
+<p class="alert-nudge" id="alert-nudge" translate="no" hidden></p>
+<button class="primary alert-done" id="alert-complete" title="I will stay here until you complete it or choose another time."><span class="alert-done-label"><span data-icon="check"></span> <span>Done</span></span><small id="alert-next-time" translate="no" hidden></small></button>
+<p class="alert-label">Remind me again</p>
+<div class="snooze-grid" id="snooze-grid" translate="no"></div>
+<form id="snooze-form" class="custom-snooze" hidden><input type="datetime-local" id="snooze-until" required aria-label="New reminder time"><button type="submit" title="Snooze until the chosen time" aria-label="Snooze until the chosen time"><span data-icon="arrowLeft"></span></button></form>
+<button type="button" class="text-button alert-skip" id="alert-skip" hidden>Skip this time <kbd>S</kbd></button>
+<p id="alert-error" role="alert"></p>
+</main>
+<footer class="alert-footer"><button type="button" id="alert-snooze-all" translate="no" hidden></button><button type="button" id="alert-open">Open task</button></footer>
+</div>
+<div id="alert-live" class="visually-hidden" aria-live="assertive" translate="no"></div>
+<script src="translate.js"></script><script src="i18n.js"></script><script src="shared.js"></script><script src="alert-format.js"></script><script src="alert.js"></script></body></html>
