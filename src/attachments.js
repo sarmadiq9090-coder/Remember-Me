@@ -2,9 +2,10 @@
 const fs = require('node:fs');
 const fsp = fs.promises;
 const path = require('node:path');
-const { randomUUID } = require('node:crypto');
+const { randomUUID, createHash } = require('node:crypto');
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_ATTACHMENTS = 20;
+const BACKUP_INFO = 'backup.json';
 const idPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 function attachmentIds(value = []) {
   if (!Array.isArray(value) || value.length > MAX_ATTACHMENTS || value.some(id => typeof id !== 'string' || !idPattern.test(id))) throw new Error('المرفقات غير صالحة. يمكنك إضافة 20 ملفًا لكل عنصر.');
@@ -66,21 +67,73 @@ function resolveAttachment(state, directory, id) {
   if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('مسار المرفق غير صالح.');
   return { file, record };
 }
-async function exportBackup(state, directory, destination) {
+async function hashFile(file) {
+  const hash = createHash('sha256');
+  for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
+  return hash.digest('hex');
+}
+// kind is 'automatic' for copies the app makes on its own; only those may ever be rotated away.
+async function exportBackup(state, directory, destination, { kind = 'manual', prefix = 'Waqt-backup-' } = {}) {
   const snapshot = structuredClone(state);
   const used = new Set([...snapshot.tasks, ...snapshot.notes].flatMap(item => item.attachments || []));
   snapshot.attachments = snapshot.attachments.filter(a => used.has(a.id));
   const sources = snapshot.attachments.map(a => resolveAttachment(snapshot, directory, a.id));
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const folder = path.join(destination, 'Waqt-backup-' + timestamp);
+  const createdAt = new Date().toISOString();
+  const folder = path.join(destination, prefix + createdAt.replace(/[:.]/g, '-'));
   await fsp.mkdir(folder, { recursive: false });
+  const files = {};
   for (const { file, record } of sources) {
     const target = attachmentPath(folder, record);
     await fsp.mkdir(path.dirname(target), { recursive: true });
     await fsp.copyFile(file, target, fs.constants.COPYFILE_EXCL);
+    files[`attachments/${record.id}/${record.name}`] = await hashFile(target);
   }
+  const text = JSON.stringify(snapshot, null, 2);
+  files['data.json'] = createHash('sha256').update(text, 'utf8').digest('hex');
+  await fsp.writeFile(path.join(folder, BACKUP_INFO), JSON.stringify({ app: 'Remember Me', kind, createdAt, algorithm: 'sha256', files }, null, 2), { encoding: 'utf8', flag: 'wx' });
   // Write the manifest last: a successful backup always has all referenced files.
-  await fsp.writeFile(path.join(folder, 'data.json'), JSON.stringify(snapshot, null, 2), { encoding: 'utf8', flag: 'wx' });
+  await fsp.writeFile(path.join(folder, 'data.json'), text, { encoding: 'utf8', flag: 'wx' });
   return folder;
 }
-module.exports = { MAX_ATTACHMENTS, attachmentIds, opensAsProgram, validateAttachment, attachmentPath, importFiles, resolveAttachment, exportBackup };
+async function folderSize(folder) {
+  let total = 0;
+  for (const entry of await fsp.readdir(folder, { withFileTypes: true }).catch(() => [])) {
+    const item = path.join(folder, entry.name);
+    if (entry.isDirectory()) total += await folderSize(item);
+    else if (entry.isFile()) total += (await fsp.stat(item)).size;
+  }
+  return total;
+}
+// Attachment records no task or note uses (removed from an item, or added to a draft that was
+// never saved), and attachment folders with no record at all. Backups hold their own copies.
+async function findOrphans(state, directory) {
+  const used = new Set([...state.tasks, ...state.notes].flatMap(item => item.attachments || []));
+  const known = new Set(state.attachments.map(a => a.id));
+  const records = state.attachments.filter(a => !used.has(a.id));
+  const root = path.join(directory, 'attachments');
+  const strays = (await fsp.readdir(root, { withFileTypes: true }).catch(() => [])).filter(e => e.isDirectory() && idPattern.test(e.name) && !known.has(e.name)).map(e => e.name);
+  let bytes = 0;
+  for (const id of [...records.map(a => a.id), ...strays]) bytes += await folderSize(path.join(root, id));
+  return { records: records.map(a => a.id), strays, count: records.length + strays.length, bytes };
+}
+async function storageUsage(state, directory) {
+  const orphans = await findOrphans(state, directory);
+  return { attachments: await folderSize(path.join(directory, 'attachments')), backups: await folderSize(path.join(directory, 'backups')), orphans: orphans.count, orphanBytes: orphans.bytes };
+}
+// Drops unused records first, so data.json never points at a deleted file, then deletes the folders.
+async function removeOrphans(store, directory) {
+  const orphans = await findOrphans(store.state, directory);
+  let removed = [];
+  if (orphans.records.length) store.change(s => {
+    // Re-check against the state being saved, in case an item started using a file meanwhile.
+    const used = new Set([...s.tasks, ...s.notes].flatMap(item => item.attachments || []));
+    removed = orphans.records.filter(id => !used.has(id));
+    s.attachments = s.attachments.filter(a => !removed.includes(a.id));
+  });
+  for (const id of [...removed, ...orphans.strays]) {
+    if (store.state.attachments.some(a => a.id === id)) continue;
+    await fsp.rm(path.join(directory, 'attachments', id), { recursive: true, force: true });
+  }
+  return orphans;
+}
+module.exports = { findOrphans, storageUsage, removeOrphans, MAX_ATTACHMENTS, BACKUP_INFO, attachmentIds, opensAsProgram, hashFile, validateAttachment, attachmentPath, importFiles, resolveAttachment, exportBackup };

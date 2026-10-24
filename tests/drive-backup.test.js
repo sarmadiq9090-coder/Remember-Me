@@ -22,6 +22,7 @@ test('Drive backup contains text and images locally and in the selected sync fol
   assert.ok(fs.existsSync(path.join(result.lastLocalPath, 'data.json')));
   assert.equal(JSON.parse(fs.readFileSync(path.join(result.lastDrivePath, 'data.json'))).tasks[0].body, 'نص مع الصورة');
   assert.deepEqual(fs.readFileSync(path.join(result.lastDrivePath, 'attachments', image.id, image.name)), fs.readFileSync(path.join(__dirname, '../assets/icon.png')));
+  assert.equal(JSON.parse(fs.readFileSync(path.join(result.lastDrivePath, 'backup.json'))).kind, 'automatic', 'Checksums travel with the Drive copy');
   await backup.tick(); assert.equal(fs.readdirSync(sync).length, 1);
   const loaded = new DriveBackup(data, () => store.state, () => {}, { clock: () => now });
   assert.equal(loaded.status().folder, sync); assert.equal(loaded.status().lastCopiedAt, result.lastCopiedAt);
@@ -62,4 +63,25 @@ test('failed snapshots never report success and invalid recursive targets are re
 test('only raster formats are eligible for inline image previews', () => {
   for (const name of ['a.PNG', 'صورة.jpg', 'a.jpeg', 'a.webp', 'a.gif', 'a.bmp', 'a.avif']) assert.equal(isImage({ name }), true);
   for (const name of ['a.svg', 'a.html', 'a.pdf', 'a.png.exe']) assert.equal(isImage({ name }), false);
+});
+test('a Drive folder missing for over a day is reported as stale until it returns', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-drive-stale-'));
+  const data = path.join(root, 'data'), sync = path.join(root, 'Drive');
+  fs.mkdirSync(sync); const store = new Store(data);
+  let now = Date.parse('2026-10-24T09:00:00Z');
+  const backup = new DriveBackup(data, () => store.state, () => {}, { clock: () => now, text: (ar, en) => en });
+  await backup.configure(sync);
+  backup.setAutomatic(false);
+  fs.renameSync(sync, sync + '.away');
+  await backup.tick();
+  assert.equal(backup.status().unavailableSince, '2026-10-24T09:00:00.000Z', 'Tracked even with automatic backup off');
+  now += 3600000; await backup.tick();
+  assert.equal(backup.status().stale, false);
+  now += 86400000; await backup.tick();
+  assert.equal(backup.status().stale, true);
+  assert.equal(new DriveBackup(data, () => store.state, () => {}, { clock: () => now }).status().stale, true, 'Survives a restart');
+  await assert.rejects(backup.run(), /unavailable/);
+  fs.renameSync(sync + '.away', sync);
+  await backup.tick();
+  assert.deepEqual([backup.status().stale, backup.status().unavailableSince], [false, null]);
 });

@@ -32,7 +32,7 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 - **Smart search (Ctrl+K):** searches tasks and notes, and matches Arabic text regardless of diacritics and common spelling variants.
 - **Arabic and English interfaces:** a full right-to-left Arabic UI and a left-to-right English UI, switchable in Settings. Mixed-language text keeps its reading order.
 - **Local-first data:** atomic saves, an automatic `.bak` copy and automatic recovery if the data file is damaged.
-- **Backups:** export a full backup with all attachments, or copy daily backups into a synced Google Drive folder.
+- **Backups:** export a full backup with all attachments and checksums, restore one from Settings after it's verified, or copy daily backups into a synced Google Drive folder.
 - **Runs in the background:** closing the window keeps Remember Me in the notification area, and it can start with Windows.
 
 ## Install
@@ -84,9 +84,17 @@ Alerts can't appear while the PC is off or asleep, or while the app isn't runnin
 
 Everything is stored locally in `%APPDATA%\Waqt\data.json`, with the previous version kept in `data.json.bak`. Settings shows the exact path and a button to open it. Saves are atomic. If the main file is ever damaged, Remember Me restores the backup automatically and keeps the damaged file for inspection.
 
-**Export backup** creates a new folder with `data.json` and an `attachments` folder containing every file linked to your tasks and notes, including completed tasks.
+**Export backup** creates a new folder with `data.json`, an `attachments` folder containing every file linked to your tasks and notes (including completed tasks), and `backup.json` with a SHA-256 checksum for each file.
 
-To restore a backup manually:
+**Restore from backup** in Settings brings a backup back:
+
+- Remember Me checks every file against its checksum first and shows the number of tasks, notes and attachments for you to confirm.
+- Before replacing anything, it saves a safety copy of your current data in the `backups` folder.
+- Backups made before checksums existed can still be restored. Remember Me only checks that their files are present and the right size, and labels them "unverified".
+
+Settings also shows how much space attachments and backups use, and can clean up attachment files that no task or note uses any more.
+
+To restore a backup manually instead:
 
 1. Quit Remember Me from its notification-area menu.
 2. Keep a copy of your current data.
@@ -104,7 +112,9 @@ Updating from an earlier version keeps your tasks, notes and settings automatica
 3. Choose **Back up now**. A full local copy is saved in `%APPDATA%\Waqt\backups`, then copied with all images and attachments into the Drive folder.
 4. Google Drive uploads it to your account. Check the Drive icon or the Drive website to confirm the upload finished.
 
-**Automatic daily backup** creates a copy every 24 hours while the app is running. If the Drive folder is unavailable, the local copy is kept and the copy to Drive is retried every 15 minutes. No Google Cloud keys or paid add-ons are needed: sign-in and syncing are handled by the official Google Drive app.
+**Automatic daily backup** creates a copy every 24 hours while the app is running. If the Drive folder is unavailable, the local copy is kept and the copy to Drive is retried every 15 minutes. If the folder stays unavailable for more than a day, for example because Drive is signed out, Settings shows a warning.
+
+To save space, you can choose to keep only the latest 5, 10 or 30 automatic backups. By default all of them are kept. Rotation asks for confirmation, and it never deletes backups you exported yourself or safety copies. No Google Cloud keys or paid add-ons are needed: sign-in and syncing are handled by the official Google Drive app.
 
 ## Development
 
@@ -126,7 +136,7 @@ Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable
 - `tests/scheduling.test.js`: repeats across daylight-saving time, time-zone changes and the clock moving backwards; 20 reminders in the same minute; a full day of missed reminders among thousands of tasks.
 - `tests/ipc.test.js`: only the app's own pages are accepted, the alert window gets a limited set of actions, and payloads are validated.
 - `tests/search.test.js`: Arabic-aware search matching.
-- `tests/attachments.test.js` and `tests/drive-backup.test.js`: copying, export, migration, validation and Drive-folder recovery.
+- `tests/attachments.test.js`, `tests/backups.test.js` and `tests/drive-backup.test.js`: copying, export, checksums, restore, rotation, migration, validation and Drive-folder recovery.
 - **Desktop tests (Playwright):** `tests/desktop-smoke.cjs`, `tests/attachments-desktop.cjs` and `tests/photos-drive-desktop.cjs` drive the real Windows app with temporary data. They need Playwright (and JSZip for attachments), or the `WAQT_PLAYWRIGHT` and `WAQT_JSZIP` paths.
 
 ### Releasing
