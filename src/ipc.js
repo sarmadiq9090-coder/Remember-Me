@@ -1,11 +1,12 @@
 'use strict';
 const path = require('node:path');
 const { fileURLToPath } = require('node:url');
+const { LINKS } = require('./about');
 const ACTIONS = new Set(['state', 'alerts', 'language', 'saveTask', 'complete', 'skip', 'snooze', 'reopen', 'deleteTask', 'saveNote', 'deleteNote',
   'attachFiles', 'openAttachment', 'imagePreview', 'chooseDriveFolder', 'driveBackupNow', 'driveAutomatic', 'driveKeep', 'driveHelp', 'openDriveFolder',
   'undoComplete', 'undoable', 'toggleStep', 'restoreTask', 'restoreNote', 'purgeTask', 'purgeNote', 'emptyTrash',
   'locale', 'settings', 'preview', 'export', 'restore', 'storage', 'cleanOrphans', 'dataFolder', 'open',
-  'updateConsent', 'checkUpdates', 'installUpdate', 'dismissUpdate']);
+  'updateConsent', 'checkUpdates', 'installUpdate', 'dismissUpdate', 'openLink', 'copyDiagnostics', 'openLogs']);
 // The always-on-top alert only needs to read its queue and act on the reminder it shows.
 const ALERT_ACTIONS = new Set(['alerts', 'language', 'locale', 'complete', 'skip', 'undoComplete', 'undoable', 'snooze', 'open', 'openAttachment', 'imagePreview']);
 const ID_ACTIONS = new Set(['toggleStep', 'complete', 'skip', 'undoComplete', 'snooze', 'reopen', 'deleteTask', 'deleteNote', 'restoreTask', 'restoreNote', 'purgeTask', 'purgeNote', 'openAttachment', 'imagePreview']);
@@ -22,6 +23,8 @@ function checkRequest(action, payload, { fromAlert = false } = {}) {
   // The due time the user saw: null for an undated task, left out by older callers.
   if (DUE_ACTIONS.has(action) && payload.expectedDueAt !== undefined && payload.expectedDueAt !== null && !isDate(payload.expectedDueAt)) throw new Error('Invalid time.');
   if (action === 'updateConsent' && typeof payload.enabled !== 'boolean') throw new Error('Invalid request data.');
+  // A link ID from the About card's fixed list; the main process picks the URL.
+  if (action === 'openLink' && (typeof payload.link !== 'string' || !LINKS.has(payload.link))) throw new Error('Unknown link.');
   return payload;
 }
 // True only when the request comes from the top-level page the window was created with.

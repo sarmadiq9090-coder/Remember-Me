@@ -149,3 +149,28 @@ test('saving the Drive settings retries a rename locked by antivirus, and a fail
     await assert.rejects(backup.run(), /disk full/);
   } finally { fs.renameSync = rename; }
 });
+test('automatic backups resume when the clock is set back after running ahead', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-drive-clock-'));
+  const data = path.join(root, 'data'), sync = path.join(root, 'Drive');
+  fs.mkdirSync(sync); const store = new Store(data);
+  store.change(s => saveTask(s, { title: 'clock' }));
+  let now = Date.parse('2027-06-01T09:00:00Z'); // set a year ahead by mistake
+  let runs = 0;
+  const backup = new DriveBackup(data, () => store.state, () => {}, { clock: () => now });
+  const perform = backup.perform.bind(backup);
+  backup.perform = () => { runs++; return perform(); };
+  await backup.configure(sync);
+  await backup.tick();
+  assert.equal(runs, 1);
+  assert.equal(backup.status().lastCopiedAt, '2027-06-01T09:00:00.000Z');
+  now = Date.parse('2026-10-24T09:00:00Z'); // corrected
+  await backup.tick();
+  assert.equal(runs, 2, 'A copy dated in the future does not hold back the next one');
+  assert.equal(backup.status().lastCopiedAt, '2026-10-24T09:00:00.000Z');
+  now += 3600000; await backup.tick();
+  assert.equal(runs, 2, 'Then the daily rhythm continues as usual');
+  // A failed attempt stamped in the future does not block the 15-minute retry either.
+  backup.config.pending = true; backup.config.lastAttempt = Date.parse('2027-06-01T09:00:00Z');
+  await backup.tick();
+  assert.equal(runs, 3);
+});

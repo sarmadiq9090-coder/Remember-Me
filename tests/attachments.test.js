@@ -65,7 +65,7 @@ test('programs, scripts, installers and disk images are revealed instead of open
   const { opensAsProgram } = require('../src/attachments');
   for (const name of ['setup.exe', 'SETUP.EXE', 'تقرير.pdf.exe', 'run.Bat', 'a.cmd', 'a.ps1', 'a.psm1', 'a.vbs', 'a.js', 'a.jse', 'a.wsf', 'a.hta', 'a.msi', 'a.msp',
     'a.scr', 'a.lnk', 'a.url', 'a.reg', 'a.cpl', 'a.pif', 'a.jar', 'a.chm', 'a.appx', 'a.msix', 'a.appref-ms', 'a.settingcontent-ms', 'a.library-ms', 'a.scf',
-    'a.iso', 'a.img', 'a.vhdx', 'a.xll', 'a.py', 'a.wsb', 'a.rdp', 'invoice' + String.fromCharCode(0x202e) + 'fdp.exe', 'photo' + String.fromCharCode(0x202e) + 'gpj.txt']) assert.equal(opensAsProgram(name), true, name);
+    'a.iso', 'a.img', 'a.vhdx', 'a.xll', 'a.py', 'a.wsb', 'a.rdp', 'schedule.theme', 'a.THEMEPACK', 'a.deskthemepack', 'a.desktopthemepackfile', 'a.msstyles', 'update.msu', 'a.pyzw', 'a.vsix', 'a.vsto', 'invoice' + String.fromCharCode(0x202e) + 'fdp.exe', 'photo' + String.fromCharCode(0x202e) + 'gpj.txt']) assert.equal(opensAsProgram(name), true, name);
   for (const name of ['خطة.pdf', 'جدول.xlsx', 'a.XLSM', 'a.docx', 'a.txt', 'a.csv', 'a.png', 'exe.pdf', 'archive.zip', 'README', 'a.exe.pdf']) assert.equal(opensAsProgram(name), false, name);
 });
 test('storage usage counts orphaned attachments, and cleanup removes only files no task or note uses', async () => {

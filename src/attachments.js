@@ -13,6 +13,8 @@ function attachmentIds(value = []) {
   return [...new Set(value)];
 }
 function validateAttachment(record) {
+  // Windows forbids control characters in file names, so the pattern has to match them.
+  // eslint-disable-next-line no-control-regex
   if (!record || !idPattern.test(record.id) || typeof record.name !== 'string' || !record.name || record.name.length > 255 || /[<>:"/\\|?*\x00-\x1f]/.test(record.name) || record.name === '.' || record.name === '..' || /[. ]$/.test(record.name) || !Number.isSafeInteger(record.size) || record.size < 0 || record.size > MAX_FILE_SIZE) throw new Error('Invalid attachment data.');
   return record;
 }
@@ -22,7 +24,10 @@ const programExtensions = new Set(('exe com bat cmd ps1 psm1 psd1 ps1xml ps2 ps2
   'vb vbs vbe js jse jar wsf wsh wsc ws sct hta msi msp mst msc cpl pif scr lnk url website scf shb shs reg inf ins isp ' +
   'application appref-ms gadget xbap jnlp chm hlp settingcontent-ms diagcab diagcfg diagpkg appx appxbundle msix msixbundle ' +
   'appinstaller library-ms search-ms searchconnector-ms iso img vhd vhdx wsb rdp dll ocx sys drv xll xlam ppam ade adp mde accde ' +
-  'py pyw pyz pyc').split(' '));
+  'py pyw pyz pyzw pyc msu vsix vsto ' +
+  // Windows applies a theme as soon as it is opened, and its image and sound paths can point at a
+  // network share (leaking the user's NTLM credentials), so themes are not opened either.
+  'theme themepack deskthemepack desktopthemepackfile msstyles').split(' '));
 function opensAsProgram(name) {
   // Bidirectional overrides can disguise an extension on screen ("gpj.exe" shown as "exe.jpg").
   if (/[\u202a-\u202e\u2066-\u2069]/.test(name)) return true;

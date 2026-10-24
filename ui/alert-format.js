@@ -39,5 +39,5 @@
   }
   const api = { SNOOZE_PRESETS, snoozeTime, isOverdue, overdueAge, dueWhen };
   if (typeof module === 'object' && module.exports) module.exports = api;
-  else Object.assign(root, api);
+  else Object.assign(root, { SNOOZE_PRESETS, snoozeTime, isOverdue, overdueAge, dueWhen });
 })(this);

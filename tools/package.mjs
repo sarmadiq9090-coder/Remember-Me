@@ -50,7 +50,10 @@ const paths = await packager({
   platform: 'win32', arch: 'x64', electronVersion: require('electron/package.json').version,
   electronZipDir: process.env.WAQT_ELECTRON_ZIP_DIR || undefined,
   icon: path.join(root, 'assets/icon.ico'), overwrite: true, asar: true, prune: false, ignore, afterExtract: [pruneLocales], afterCopy: [copyRuntimeDependencies],
-  win32metadata: { CompanyName: 'sarmadiq9090-coder', FileDescription: 'Remember Me', ProductName: 'Remember Me', InternalName: 'Remember Me' },
+  // The publisher matches package.json's author (the installer's Publisher and winget), and the
+  // copyright line is LICENSE's own.
+  appCopyright: (await fs.readFile(path.join(root, 'LICENSE'), 'utf8')).match(/^Copyright .+$/m)[0].trim(),
+  win32metadata: { CompanyName: require('../package.json').author, FileDescription: 'Remember Me', ProductName: 'Remember Me', InternalName: 'Remember Me' },
 });
 // electron-updater reads its feed and cache folder from resources/app-update.yml. electron-builder
 // only writes that file when it packages the app itself, so it is written here.

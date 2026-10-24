@@ -101,6 +101,7 @@ function render() {
     renderStorage();
     renderDriveBackup();
     renderUpdatesCard();
+    renderAboutCard();
   } else {
     let tasks = view === 'today' ? today : view === 'upcoming' ? upcoming : view === 'completed' ? complete : active;
     if (filter === 'high') tasks = tasks.filter(t => t.priority === 'high');
@@ -141,7 +142,7 @@ function startupNotice(dismissible) {
     try { await api('settings', { ...state.settings, startAtLogin: true }); await refresh(); toast(tr("Remember Me will now start with Windows.")); }
     catch (err) { toast(err.message); } finally { e.target.disabled = false; }
   });
-  card.querySelector('[data-dismiss]')?.addEventListener('click', () => { try { localStorage.setItem('startupBannerDismissed', '1'); } catch {} card.hidden = true; });
+  card.querySelector('[data-dismiss]')?.addEventListener('click', () => { try { localStorage.setItem('startupBannerDismissed', '1'); } catch { /* storage unavailable: it shows again next time */ } card.hidden = true; });
   return card;
 }
 const startupCard = startupNotice(false), startupBanner = startupNotice(true);
@@ -313,6 +314,34 @@ function renderUpdatesCard() {
   const updates = state.updates, busy = ['checking', 'downloading', 'installing'].includes(updates.state);
   setMarkup($('updates-card'), `<h2>${tr("Updates")}</h2><label class="setting-row"><div><strong>${tr("Check for updates automatically")}</strong><p>${tr("Checks GitHub once a day and downloads new versions in the background. Nothing else is sent.")}</p></div><input class="switch" id="setting-updates" type="checkbox"></label><div class="setting-row"><p id="update-status">${esc(updateStatus(updates))}</p><button class="soft-button" data-update="checkUpdates"${busy ? ' disabled' : ''}>${tr("Check now")}</button></div>`);
   $('setting-updates').checked = state.settings.autoUpdate === true;
+}
+// Settings → About. Links are sent as IDs from main's fixed list (src/about.js), never as URLs.
+const ABOUT_LINKS = [
+  ['github', 'user', msg('Developed by Sarmad'), null, 'github.com/sarmadiq9090-coder'],
+  ['repo', 'code', msg('Source code on GitHub'), null, 'github.com/sarmadiq9090-coder/Remember-Me'],
+  ['releases', 'list', msg("What's new"), msg('Release notes for every version')],
+  ['issues', 'flag', msg('Report a problem'), msg('Report a bug or suggest an idea')],
+  ['privacy', 'shield', msg('Privacy'), msg('No account, no tracking, your data stays on your PC')],
+  ['license', 'file', msg('License: MIT'), msg('Free and open source')],
+];
+function renderAboutCard() {
+  const updates = state.updates, busy = ['checking', 'downloading', 'installing'].includes(updates.state);
+  const links = ABOUT_LINKS.map(([id, iconName, title, detail, raw]) => `<button type="button" class="about-link" data-link="${id}"><span class="about-link-icon" data-icon="${iconName}"></span><span class="about-link-text"><strong>${tr(title)}</strong><small dir="auto">${detail ? tr(detail) : esc(raw)}</small></span><span class="about-link-open" data-icon="external"></span></button>`).join('');
+  setMarkup($('about-card'), `<div class="about-head"><img class="about-icon" src="../assets/icon.png" alt=""><div><span class="eyebrow">${tr('About')}</span><h2>${tr('Remember Me')}</h2><p class="about-version">${esc(tr('Version {version}', { version: updates.version }))}</p><p>${tr('Tasks, notes and reminders that stay on your PC.')}</p></div></div><div class="about-links">${links}</div><div class="setting-row"><p class="about-update-status">${esc(updateStatus(updates))}</p><button class="soft-button" data-update="checkUpdates"${busy ? ' disabled' : ''}>${tr('Check for updates')}</button></div><div class="setting-row"><div><strong>${tr('Diagnostic info')}</strong><p>${tr('Versions, language and theme only, to add to a problem report. Never your tasks, notes or files.')}</p></div><button class="soft-button" id="copy-diagnostics"><span data-icon="copy"></span> ${tr('Copy diagnostic info')}</button></div><div class="setting-row"><div><strong>${tr('App log')}</strong><p>${tr('A local record of app events and errors, without the titles of your tasks or notes or your file names. Attach it to a problem report if asked.')}</p></div><button class="soft-button" id="open-logs"><span data-icon="file"></span> ${tr('Open log folder')}</button></div><p class="about-footnote"><bdi>${tr('Built with Electron')}</bdi> • <bdi>© 2026 ${tr('Sarmad')}</bdi></p>`);
+}
+$('about-card').addEventListener('click', async e => {
+  const link = e.target.closest('[data-link]');
+  try {
+    if (link) await api('openLink', { link: link.dataset.link });
+    else if (e.target.closest('#open-logs')) await api('openLogs');
+    else if (e.target.closest('#copy-diagnostics')) { await api('copyDiagnostics'); toast(tr('Diagnostic info copied. Paste it into your report.')); }
+  } catch (error) { toast(error.message); }
+});
+async function showAbout() {
+  if (!state) await refresh();
+  setView('settings');
+  $('about-card').scrollIntoView({ block: 'start' });
+  $('about-card').focus({ preventScroll: true });
 }
 async function openFile(id) { try { await api('openAttachment', { id }); } catch (error) { toast(error.message); } }
 for (const type of ['task', 'note']) {
@@ -490,6 +519,7 @@ document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.key.toLowerCase() === 'k') { e.preventDefault(); $('search').focus(); }
 });
 window.waqt.onUpdate(refresh);
+window.waqt.onShow(section => { if (section === 'about') showAbout(); });
 refresh().then(() => {
   if (state?.recovered) toast(tr("Your data was restored from backup after the original file could not be read."));
   else if (state?.driveBackup?.stale) toast(tr("Backups to Google Drive have been stalled for over a day. Open Settings for details."));

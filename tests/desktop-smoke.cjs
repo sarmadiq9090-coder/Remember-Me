@@ -54,12 +54,14 @@ async function alertPage() {
       return found;
     });
     assert.deepEqual(arabicLeft, [], 'Arabic text in the English interface');
-    assert.deepEqual(await page.locator('#setting-language option').allTextContents(), ['English', 'العربية'], 'Languages are listed by their own names');
+    const languages = await page.locator('#setting-language option').allTextContents();
+    assert.deepEqual(languages, require('../ui/translate').LOCALES.map(l => l.name), 'Languages are listed by their own names');
+    assert.deepEqual(languages.slice(0, 2), ['English', 'العربية']);
     assert.ok((await page.locator('.brand').textContent()).includes('Remember Me'));
     assert.ok((await page.locator('#settings-section').textContent()).includes('Language'));
     await page.locator('#settings-preview').click();
     let languageAlert = await alertPage();
-    assert.match(await languageAlert.locator('[data-preset="tomorrow"] span').textContent(), /^Tomorrow d/);
+    assert.match(await languageAlert.locator('[data-preset="tomorrow"] span').textContent(), /^Tomorrow \d/);
     assert.equal(await languageAlert.locator('#alert-complete').evaluate(el => el === document.activeElement), true, 'Done has the focus');
     assert.equal(await languageAlert.locator('[role=alertdialog]').count(), 1);
     await languageAlert.screenshot({ path: path.join(root, 'screenshots/reminder-en.png') });
@@ -111,7 +113,7 @@ async function alertPage() {
     assert.ok(!alert.isClosed(), 'Closing a pending reminder must not dismiss it');
     await new Promise(r => setTimeout(r, 2200));
     assert.equal(await alert.locator('#alert-title').textContent(), 'اختبار التنبيه الفعلي');
-    assert.match(await alert.locator('[data-preset="tomorrow"] span').textContent(), /^غدًا d/);
+    assert.match(await alert.locator('[data-preset="tomorrow"] span').textContent(), /^غدًا \d/);
     await alert.screenshot({ path: path.join(root, 'screenshots/reminder.png') });
     await alert.locator('[data-preset="tomorrow"]').click();
     await page.waitForTimeout(250);
@@ -147,7 +149,8 @@ async function alertPage() {
     await alert.getByRole('heading', { name: /^التنبيه الثاني/ }).waitFor();
     await alert.screenshot({ path: path.join(root, 'screenshots/reminder-long.png') });
     await alert.locator('#alert-complete').click();
-    await page.waitForTimeout(300);
+    // The alert stays for the 6-second undo window after the last Done, then closes.
+    for (let i = 0; i < 100 && app.windows().some(p => p.url().endsWith('/alert.html')); i++) await page.waitForTimeout(100);
     assert.equal(app.windows().filter(p => p.url().endsWith('/alert.html')).length, 0);
     saved = await call(page, 'state');
     assert.equal(saved.tasks.filter(t => t.completedAt).length, 2);

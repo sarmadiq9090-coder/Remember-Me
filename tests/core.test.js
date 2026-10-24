@@ -370,3 +370,9 @@ test('snoozes are counted until the occurrence is done, skipped or moved, and Un
   assert.ok(!('snoozeCount' in validateState({ ...initialState(), tasks: [{ ...t, snoozeCount: 'many' }] }).tasks[0]));
   assert.ok(!('snoozeCount' in saveTask(s, { title: 'جديدة' })), 'Old and new tasks without snoozes have no field');
 });
+test('ARCHITECTURE.md describes every default setting of data.json', () => {
+  const doc = fs.readFileSync(path.join(__dirname, '..', 'ARCHITECTURE.md'), 'utf8');
+  const shape = doc.slice(doc.indexOf('settings: {'), doc.indexOf('```', doc.indexOf('settings: {')));
+  const missing = Object.keys(initialState().settings).filter(key => !new RegExp(`\\b${key}\\??:`).test(shape));
+  assert.deepEqual(missing, [], 'Add these settings to the data.json shape in ARCHITECTURE.md');
+});

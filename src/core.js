@@ -5,9 +5,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { attachmentIds, validateAttachment } = require('./attachments');
 const { LOCALES, DEFAULT: DEFAULT_LOCALE } = require('../ui/translate');
+const { validPause } = require('./pause');
 
 function initialState() {
-  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: DEFAULT_LOCALE, weekStart: 6, theme: 'system', autoUpdate: null } };
+  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: DEFAULT_LOCALE, weekStart: 6, theme: 'system', autoUpdate: null, pausedUntil: null } };
 }
 // Minutes between repeated alert sounds; 0 is off. Data from before the setting has no value, meaning off.
 const REMIND_AGAIN = [0, 2, 5, 15];
@@ -27,24 +28,31 @@ const RULE_FIELDS = ['repeatEvery', 'repeatDays', 'repeatFrom'];
 // Minutes before the due time for an optional, quieter early notification.
 const EARLY = [5, 10, 15, 30, 60, 1440];
 function early(value, dueAt) { return dueAt && EARLY.includes(value) ? value : 0; }
-function repeatRule(input, repeat, dueAt) {
-  if (repeat === 'interval') return { repeatEvery: Number.isInteger(input.repeatEvery) ? Math.min(365, Math.max(2, input.repeatEvery)) : 2 };
+// repeatFrom anchors a series: monthly/yearly count from its date, and every mode takes its time of
+// day from it, so an occurrence pushed forward by a DST gap does not move the ones after it. Data from
+// before v1.5 may lack it for the other modes; they then keep the time of their current occurrence.
+function repeatRule(input, repeat, dueAt, anchor) {
+  let from = null;
+  try { from = date(input.repeatFrom); } catch { /* reset below */ }
+  const kept = from ? { repeatFrom: from } : {};
+  if (repeat === 'interval') return { ...kept, repeatEvery: Number.isInteger(input.repeatEvery) ? Math.min(365, Math.max(2, input.repeatEvery)) : 2 };
   if (repeat === 'days') {
     const days = Array.isArray(input.repeatDays) ? [...new Set(input.repeatDays.filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort() : [];
-    return { repeatDays: days.length ? days : [new Date(dueAt).getDay()] };
+    return { ...kept, repeatDays: days.length ? days : [new Date(dueAt).getDay()] };
   }
-  if (repeat === 'monthly' || repeat === 'yearly') { let from = null; try { from = date(input.repeatFrom); } catch { /* reset below */ } return { repeatFrom: from || dueAt }; }
-  return {};
+  if (repeat === 'monthly' || repeat === 'yearly') return { repeatFrom: from || anchor || dueAt };
+  return kept;
 }
 // Keeps only the rule fields the task's repeat mode uses.
 function applyRule(task, rule) { for (const key of RULE_FIELDS) delete task[key]; Object.assign(task, rule); }
-function taskInput(input) {
+// anchor is where a monthly/yearly series counts from when no valid repeatFrom is given.
+function taskInput(input, anchor) {
   const dueAt = date(input.dueAt);
   const repeat = REPEATS.includes(input.repeat) ? input.repeat : 'none';
   if (repeat !== 'none' && !dueAt) throw new Error('Set a time for a repeating task.');
   return { title: title(input.title), body: String(input.body || '').slice(0, 20000),
     priority: ['normal', 'medium', 'high'].includes(input.priority) ? input.priority : 'normal',
-    category: ['personal', 'work', 'study'].includes(input.category) ? input.category : 'personal', dueAt, repeat, rule: repeat === 'none' ? {} : repeatRule(input, repeat, dueAt) };
+    category: ['personal', 'work', 'study'].includes(input.category) ? input.category : 'personal', dueAt, repeat, rule: repeat === 'none' ? {} : repeatRule(input, repeat, dueAt, anchor) };
 }
 // Up to 10 tags of up to 30 characters; "#" prefixes, extra spaces and case duplicates are dropped.
 function normalizeTags(value) {
@@ -100,9 +108,10 @@ function saveTask(state, input, now = new Date()) {
     // onlyThisTime moves one occurrence of an unchanged series and keeps its anchor and rule, as a snooze does.
     const onlyThisTime = input.onlyThisTime === true && fields.repeat !== 'none' && !repeatChanged && !!task.scheduleAt;
     const anchor = !onlyThisTime && (changed || repeatChanged);
-    if (onlyThisTime) { if ('repeatFrom' in rule && task.repeatFrom) rule.repeatFrom = task.repeatFrom; if (changed) task.snoozedAt = null; }
-    // A new time or a new repeat mode restarts monthly/yearly counting from the new due date.
-    else if ('repeatFrom' in rule && (changed || fields.repeat !== task.repeat)) rule.repeatFrom = fields.dueAt;
+    if (onlyThisTime && changed) task.snoozedAt = null;
+    // The editor never sends repeatFrom. A new time or repeat mode restarts the series at the new due
+    // time; anything else (a text edit, "only this time", a snoozed task) keeps the stored anchor.
+    if (fields.repeat !== 'none') rule.repeatFrom = !onlyThisTime && (changed || fields.repeat !== task.repeat) ? fields.dueAt : task.repeatFrom || task.scheduleAt || fields.dueAt;
     Object.assign(task, fields, { updatedAt: now.toISOString() });
     applyRule(task, rule);
     setEarly(task, input.remindBefore);
@@ -110,7 +119,7 @@ function saveTask(state, input, now = new Date()) {
     setChecklist(task, input.checklist ?? task.checklist);
     if (anchor) { task.scheduleAt = fields.dueAt; task.snoozedAt = null; delete task.snoozeCount; }
   } else {
-    if ('repeatFrom' in rule) rule.repeatFrom = fields.dueAt;
+    if (fields.repeat !== 'none') rule.repeatFrom = fields.dueAt;
     task = { ...fields, ...rule, id: randomUUID(), scheduleAt: fields.dueAt, createdAt: now.toISOString(), updatedAt: now.toISOString(), completedAt: null, snoozedAt: null };
     setEarly(task, input.remindBefore);
     setTags(task, input.tags);
@@ -137,20 +146,24 @@ function nextOccurrence(value, repeat, now, rule = {}) {
     while (next <= now || next <= current) next = monthsLater(start, months += step);
     return next.toISOString();
   }
+  // Each occurrence is a calendar day plus the series' time of day, rebuilt every time: when a
+  // spring-forward gap pushes one occurrence an hour later, the next one is back at the usual time.
+  const time = new Date(rule.repeatFrom || value);
+  const on = (from, days) => new Date(from.getFullYear(), from.getMonth(), from.getDate() + days, time.getHours(), time.getMinutes(), time.getSeconds(), time.getMilliseconds());
   if (repeat === 'days') {
     const days = rule.repeatDays?.length ? rule.repeatDays : [current.getDay()];
-    let next = new Date(current);
-    // After a long gap, restart from yesterday at the same local time instead of walking every day.
-    if (now - next > 8 * DAY) next = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, current.getHours(), current.getMinutes(), current.getSeconds(), current.getMilliseconds());
-    do next.setDate(next.getDate() + 1); while (!days.includes(next.getDay()) || next <= now);
+    // After a long gap, restart from yesterday instead of walking every day.
+    const from = now - current > 8 * DAY ? new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1) : current;
+    let offset = 0, next;
+    do next = on(from, ++offset); while (!days.includes(next.getDay()) || next <= now || next <= current);
     return next.toISOString();
   }
-  const next = new Date(value);
   const step = repeat === 'weekly' ? 7 : repeat === 'interval' ? rule.repeatEvery || 2 : 1;
-  next.setDate(next.getDate() + step);
-  const days = Math.max(0, Math.floor((now.getTime() - next.getTime()) / 86400000));
-  next.setDate(next.getDate() + Math.floor(days / step) * step);
-  while (next <= now) next.setDate(next.getDate() + step);
+  let offset = step;
+  const behind = Math.floor((now - on(current, offset)) / DAY);
+  if (behind > 0) offset += Math.floor(behind / step) * step;
+  let next = on(current, offset);
+  while (next <= now || next <= current) next = on(current, offset += step);
   return next.toISOString();
 }
 // expectedDueAt is the due time the user saw when acting. A call made for an occurrence that has
@@ -279,7 +292,10 @@ function validateState(data) {
   const ids = new Set();
   for (const task of data.tasks) {
     // Out-of-range fields are normalized rather than rejected, so one odd value never hides the whole file.
-    const { body, priority, category, dueAt, repeat, rule } = taskInput(task);
+    // A monthly/yearly task without a valid repeatFrom counts from its series anchor, not from a snoozed due time.
+    let anchor = null;
+    try { anchor = date(task.scheduleAt); } catch { /* falls back to dueAt */ }
+    const { body, priority, category, dueAt, repeat, rule } = taskInput(task, anchor);
     Object.assign(task, { body, priority, category, dueAt, repeat });
     applyRule(task, rule);
     if (typeof task.id !== 'string' || ids.has(task.id)) throw new Error('Invalid task data.');
@@ -315,6 +331,8 @@ function validateState(data) {
   if (data.settings.remindAgain !== undefined && !REMIND_AGAIN.includes(data.settings.remindAgain)) data.settings.remindAgain = 0;
   // null until the user answers the one-time question about automatic updates.
   if (data.settings.autoUpdate !== true && data.settings.autoUpdate !== false) data.settings.autoUpdate = null;
+  // A pause from the tray survives a restart; anything that isn't one means no pause.
+  data.settings.pausedUntil = validPause(data.settings.pausedUntil);
   return data;
 }
 // Antivirus scanners, the search indexer and sync clients briefly lock new files on Windows.
@@ -346,7 +364,7 @@ class Store {
     this.recovered = false;
     if (!fs.existsSync(this.file)) { this.state = initialState(); return; }
     try { this.state = validateState(JSON.parse(fs.readFileSync(this.file, 'utf8'))); }
-    catch (err) {
+    catch {
       try {
         this.state = validateState(JSON.parse(fs.readFileSync(this.file + '.bak', 'utf8')));
         fs.copyFileSync(this.file, this.file + '.damaged-' + Date.now());

@@ -159,7 +159,8 @@ test('repeat rules stay consistent when a task is edited, completed or loaded', 
   saveTask(s, { ...t, dueAt: new Date(2026, 2, 20, 9).toISOString() });
   assert.equal(t.repeatFrom, t.dueAt, 'A new date restarts the monthly count');
   saveTask(s, { ...t, repeat: 'daily' });
-  assert.ok(!('repeatFrom' in t) && !('repeatDays' in t) && !('repeatEvery' in t), 'Daily tasks carry no rule fields');
+  assert.ok(!('repeatDays' in t) && !('repeatEvery' in t), 'Daily tasks carry no monthly, weekday or interval fields');
+  assert.equal(t.repeatFrom, t.dueAt, 'Every repeat keeps the anchor its time of day comes from');
   saveTask(s, { ...t, repeat: 'monthly' });
   completeTask(s, t.id, new Date(2026, 2, 20, 9, 30));
   const history = s.tasks.find(x => x.completedAt);
@@ -167,7 +168,7 @@ test('repeat rules stay consistent when a task is edited, completed or loaded', 
   assert.equal(new Date(t.dueAt).getHours(), 9, 'Monthly keeps the hour across the March DST change');
   const loaded = validateState(JSON.parse(JSON.stringify({ ...s, tasks: [{ ...t, repeat: 'days', repeatDays: [] }, { ...t, id: 'b', repeat: 'interval', repeatEvery: 'x' }] })));
   assert.deepEqual(loaded.tasks[0].repeatDays, [new Date(t.dueAt).getDay()]);
-  assert.ok(!('repeatFrom' in loaded.tasks[0]));
+  assert.equal(loaded.tasks[0].repeatFrom, t.repeatFrom, 'A valid anchor is kept when the mode changes on load');
   assert.equal(loaded.tasks[1].repeatEvery, 2);
 });
 
@@ -215,4 +216,65 @@ test('skip and only-this-time follow every repeat mode, and skip ignores trashed
   assert.deepEqual([bill.dueAt, bill.scheduleAt, bill.repeatFrom], [new Date(2027, 1, 2, 9).toISOString(), new Date(2027, 0, 31, 9).toISOString(), new Date(2027, 0, 31, 9).toISOString()]);
   completeTask(s, bill.id, new Date(2027, 1, 2, 9, 5));
   assert.equal(new Date(bill.dueAt).toDateString(), new Date(2027, 1, 28).toDateString(), 'The next occurrence is the usual end-of-month one');
+});
+
+test('editing only the text of a monthly or yearly task keeps its anchor, even after a snooze', () => {
+  process.env.TZ = 'Asia/Baghdad';
+  const s = initialState();
+  const editorSave = (task, changes) => saveTask(s, { id: task.id, title: task.title, body: task.body, priority: task.priority, dueAt: task.dueAt, repeat: task.repeat, attachments: task.attachments, ...changes });
+  const rent = saveTask(s, { title: 'rent', dueAt: new Date(2027, 0, 31, 9).toISOString(), repeat: 'monthly' });
+  completeTask(s, rent.id, new Date(2027, 0, 31, 9, 5));
+  assert.equal(new Date(rent.dueAt).toDateString(), new Date(2027, 1, 28).toDateString());
+  editorSave(rent, { title: 'rent, renamed in February' });
+  assert.equal(rent.repeatFrom, new Date(2027, 0, 31, 9).toISOString());
+  completeTask(s, rent.id, new Date(2027, 1, 28, 9, 5));
+  assert.equal(new Date(rent.dueAt).toDateString(), new Date(2027, 2, 31).toDateString(), 'Back on the 31st, not the 28th');
+
+  const bill = saveTask(s, { title: 'bill', dueAt: new Date(2027, 2, 15, 9).toISOString(), repeat: 'monthly' });
+  snoozeTask(s, bill.id, new Date(2027, 2, 16, 10).toISOString(), new Date(2027, 2, 15, 9));
+  editorSave(bill, { title: 'bill, typo fixed' });
+  assert.equal(bill.repeatFrom, new Date(2027, 2, 15, 9).toISOString(), 'Not the snooze time');
+  completeTask(s, bill.id, new Date(2027, 2, 16, 10, 5));
+  assert.deepEqual([new Date(bill.dueAt).getDate(), new Date(bill.dueAt).getHours()], [15, 9]);
+
+  const birthday = saveTask(s, { title: 'birthday', dueAt: new Date(2028, 1, 29, 8).toISOString(), repeat: 'yearly' });
+  editorSave(birthday, { body: 'buy a gift' });
+  const years = [];
+  for (let i = 0; i < 4; i++) { completeTask(s, birthday.id, new Date(birthday.dueAt)); years.push(new Date(birthday.dueAt).getDate()); }
+  assert.deepEqual(years, [28, 28, 28, 29], 'Feb 29 comes back in 2032');
+
+  // A loaded monthly task without a valid repeatFrom counts from its series anchor, not a snoozed due time.
+  const { validateState } = require('../src/core');
+  const loaded = validateState(JSON.parse(JSON.stringify({ ...s, tasks: [{ ...bill, repeatFrom: 'broken', dueAt: new Date(2027, 3, 16, 10).toISOString() }] })));
+  assert.equal(loaded.tasks[0].repeatFrom, bill.scheduleAt);
+});
+
+test('repeats return to their usual time after a daylight-saving gap', () => {
+  const run = (zone, start, repeat, extra, count) => {
+    process.env.TZ = zone;
+    const s = initialState();
+    const t = saveTask(s, { title: repeat, dueAt: start().toISOString(), repeat, ...extra });
+    const seen = [];
+    for (let i = 0; i < count; i++) { completeTask(s, t.id, new Date(Date.parse(t.dueAt) + 60000)); const d = new Date(t.dueAt); seen.push(`${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`); }
+    return seen;
+  };
+  // Egypt moves from 00:00 to 01:00 on Friday, April 30 2027: 00:30 does not exist that night.
+  assert.deepEqual(run('Africa/Cairo', () => new Date(2027, 3, 28, 0, 30), 'daily', {}, 4), ['4/29 0:30', '4/30 1:30', '5/1 0:30', '5/2 0:30']);
+  assert.deepEqual(run('Africa/Cairo', () => new Date(2027, 3, 28, 0, 30), 'days', { repeatDays: [0, 1, 2, 3, 4, 5, 6] }, 4), ['4/29 0:30', '4/30 1:30', '5/1 0:30', '5/2 0:30']);
+  // New York moves from 02:00 to 03:00 on Sunday, March 14 2027.
+  assert.deepEqual(run('America/New_York', () => new Date(2027, 2, 13, 2, 30), 'daily', {}, 3), ['3/14 3:30', '3/15 2:30', '3/16 2:30']);
+  assert.deepEqual(run('America/New_York', () => new Date(2027, 2, 7, 2, 30), 'weekly', {}, 2), ['3/14 3:30', '3/21 2:30']);
+  assert.deepEqual(run('America/New_York', () => new Date(2027, 2, 12, 2, 30), 'interval', { repeatEvery: 2 }, 3), ['3/14 3:30', '3/16 2:30', '3/18 2:30']);
+});
+
+test('repeating tasks saved before v1.5 have no anchor and still repeat at their time', () => {
+  const { validateState } = require('../src/core');
+  process.env.TZ = 'Europe/Berlin';
+  const old = { ...initialState(), tasks: [{ id: 'old', title: 'old daily', body: '', priority: 'normal', category: 'personal', dueAt: new Date(2026, 9, 20, 7).toISOString(), scheduleAt: new Date(2026, 9, 20, 7).toISOString(), repeat: 'daily', attachments: [], createdAt: new Date(2026, 9, 1).toISOString(), updatedAt: new Date(2026, 9, 1).toISOString(), completedAt: null, snoozedAt: null }] };
+  const s = validateState(JSON.parse(JSON.stringify(old)));
+  assert.ok(!('repeatFrom' in s.tasks[0]), 'Loading does not add fields');
+  completeTask(s, 'old', new Date(2026, 9, 25, 12));
+  assert.deepEqual([new Date(s.tasks[0].dueAt).getDate(), new Date(s.tasks[0].dueAt).getHours()], [26, 7]);
+  saveTask(s, { ...s.tasks[0], title: 'renamed' });
+  assert.equal(s.tasks[0].repeatFrom, s.tasks[0].scheduleAt, 'The first edit anchors it at its series time');
 });

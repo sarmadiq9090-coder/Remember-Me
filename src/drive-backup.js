@@ -4,6 +4,7 @@ const fsp = fs.promises;
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { writeDurable } = require('./core');
+const { silent } = require('./logger');
 const { exportBackup, BACKUP_INFO } = require('./attachments');
 const { validKeep, expiredBackups, rotateBackups } = require('./backups');
 
@@ -17,6 +18,7 @@ class DriveBackup {
     this.onChange = onChange;
     this.clock = options.clock || (() => Date.now());
     this.exporter = options.exporter || exportBackup;
+    this.log = options.log || silent;
     this.running = null;
     this.config = { folder: '', automatic: true, lastCopiedAt: null, lastLocalPath: '', lastDrivePath: '', pending: false, error: '', lastAttempt: 0, keep: 0, unavailableSince: null, skipped: [], snapshotAt: null, snapshotHash: '' };
     if (fs.existsSync(this.file)) {
@@ -96,7 +98,7 @@ class DriveBackup {
       const state = this.getState();
       const fingerprint = createHash('sha256').update(JSON.stringify(state), 'utf8').digest('hex');
       const reusable = this.config.pending && this.config.lastLocalPath && fs.existsSync(path.join(this.config.lastLocalPath, 'data.json'))
-        && this.config.snapshotHash === fingerprint && this.clock() - Date.parse(this.config.snapshotAt) < 86400000;
+        && this.config.snapshotHash === fingerprint && this.age(this.config.snapshotAt) < 86400000;
       if (!reusable) {
         const parent = path.join(this.directory, 'backups');
         await fsp.mkdir(parent, { recursive: true });
@@ -115,9 +117,11 @@ class DriveBackup {
       this.config.error = '';
       this.save();
       // Old copies are only removed after a new one is complete; a failure here never fails the backup.
-      await this.rotate().catch(() => {});
+      await this.rotate().catch(error => this.log.warn('backup-rotation-failed', error));
+      this.log.info('drive-backup', { reused: !!reusable, skipped: this.config.skipped.length });
       return this.status();
     } catch (error) {
+      this.log.warn('drive-backup-failed', error);
       this.config.error = error.message || 'Could not copy the files to the Google Drive folder.';
       // The key and values let the settings page show a saved error in the current language.
       this.config.errorKey = error.key || null; this.config.errorParams = error.params || null;
@@ -143,9 +147,15 @@ class DriveBackup {
   async tick() {
     this.watchAvailability();
     if (!this.config.automatic || !this.config.folder || this.running) return;
+    const due = this.config.pending || this.age(this.config.lastCopiedAt) >= 86400000;
+    if (due && this.age(this.config.lastAttempt) >= 900000) await this.run().catch(() => {});
+  }
+  // Milliseconds since a stored time. Missing times, and times in the future (the clock was ahead and
+  // has been corrected), count as long ago, so a backup is never held back until the clock catches up.
+  age(stamp) {
+    const time = typeof stamp === 'number' ? stamp : Date.parse(stamp);
     const now = this.clock();
-    const due = this.config.pending || !this.config.lastCopiedAt || now - Date.parse(this.config.lastCopiedAt) >= 86400000;
-    if (due && (!this.config.lastAttempt || now - this.config.lastAttempt >= 900000)) await this.run().catch(() => {});
+    return stamp && Number.isFinite(time) && time <= now ? now - time : Infinity;
   }
 }
 module.exports = { DriveBackup };

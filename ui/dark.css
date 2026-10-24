@@ -150,6 +150,15 @@
 @media (prefers-color-scheme:dark){.update-notice p{color:#aba2b8}}
 @media (prefers-color-scheme:dark){#update-status{color:#a79ab4}}
 @media (prefers-color-scheme:dark){.tag-chip{background:var(--purple-light);color:var(--purple)}}
+@media (prefers-color-scheme:dark){.about-head p{color:#ada1ba}}
+@media (prefers-color-scheme:dark){.about-head .about-version{color:#7960ca}}
+@media (prefers-color-scheme:dark){.about-link{background:#1c1526;border:1px solid #3a245a;color:var(--ink)}}
+@media (prefers-color-scheme:dark){.about-link:hover{border-color:#3f2665;background:#21182d}}
+@media (prefers-color-scheme:dark){.about-link-icon{color:#8b71b7}}
+@media (prefers-color-scheme:dark){.about-link-text small{color:#ada3b8}}
+@media (prefers-color-scheme:dark){.about-link-open{color:#ac9fbb}}
+@media (prefers-color-scheme:dark){.about-update-status{color:#a79ab4}}
+@media (prefers-color-scheme:dark){.about-footnote{color:#ada3b8}}
 @media (prefers-color-scheme:dark){.alert-body{background:#15171e}}
 @media (prefers-color-scheme:dark){.alert-shell{border:1px solid #3c2860;border-top:4px solid #7960ca}}
 @media (prefers-color-scheme:dark){.alert-shell.overdue{border-top-color:#c4473d}}

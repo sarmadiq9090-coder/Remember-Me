@@ -51,3 +51,21 @@ test('skip is allowed from the alert, needs an ID and validates the expected tim
   assert.throws(() => checkRequest('skip', {}, { fromAlert: true }), /Invalid item ID/);
   assert.throws(() => checkRequest('skip', { id: 'a', expectedDueAt: 'later' }), /Invalid time/);
 });
+
+test('openLink takes a link ID from the fixed list, never a URL, and not from the alert', () => {
+  for (const link of ['github', 'repo', 'releases', 'issues', 'privacy', 'license']) assert.deepEqual(checkRequest('openLink', { link }), { link });
+  for (const link of [undefined, null, '', 'https://github.com/sarmadiq9090-coder', 'file:///C:/Windows/System32/calc.exe', 'data:text/html,x', '__proto__', 'constructor', 'toString', 'GITHUB', ['github'], { toString: () => 'github' }, 7]) {
+    assert.throws(() => checkRequest('openLink', { link }), /Unknown link/, String(link));
+  }
+  assert.throws(() => checkRequest('openLink', { link: 'mailto:x' }), /Unknown link/);
+  assert.throws(() => checkRequest('openLink', { link: 'github' }, { fromAlert: true }), /Request not allowed/);
+  assert.throws(() => checkRequest('copyDiagnostics', {}, { fromAlert: true }), /Request not allowed/);
+  assert.throws(() => checkRequest('openLogs', {}, { fromAlert: true }), /Request not allowed/);
+});
+
+test('ARCHITECTURE.md lists every IPC action', () => {
+  const doc = require('node:fs').readFileSync(path.join(__dirname, '..', 'ARCHITECTURE.md'), 'utf8');
+  const { ACTIONS } = require('../src/ipc');
+  const missing = [...ACTIONS, ...ALERT_ACTIONS].filter(action => !doc.includes('`' + action + '`'));
+  assert.deepEqual(missing, [], 'Add these actions to the IPC table in ARCHITECTURE.md');
+});
