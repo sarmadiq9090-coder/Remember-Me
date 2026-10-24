@@ -128,3 +128,26 @@ test('loading normalizes out-of-range fields instead of rejecting the file, and 
   assert.throws(() => validateState({ ...before, tasks: [null] }), /المهام/);
   assert.throws(() => validateState({ ...before, version: 2 }), /غير صالح/);
 });
+test('a repeated Done or snooze for an occurrence that already moved on changes nothing', () => {
+  const s = initialState();
+  const t = saveTask(s, { title: 'daily', dueAt: new Date(2026, 9, 23, 9).toISOString(), repeat: 'daily' });
+  const seen = t.dueAt, now = new Date(2026, 9, 23, 9, 5);
+  assert.equal(completeTask(s, t.id, now, { expectedDueAt: seen }), true);
+  assert.equal(completeTask(s, t.id, now, { expectedDueAt: seen }), false, 'A double click is a no-op');
+  assert.equal(s.tasks.filter(x => x.completedAt).length, 1, 'Exactly one completed copy');
+  assert.deepEqual([new Date(t.dueAt).getDate(), new Date(t.dueAt).getHours()], [24, 9], 'The due time advanced by exactly one day');
+  const next = t.dueAt;
+  assert.equal(snoozeTask(s, t.id, new Date(2026, 9, 23, 12).toISOString(), now, { expectedDueAt: seen }), false);
+  assert.equal(t.dueAt, next);
+  assert.equal(snoozeTask(s, t.id, new Date(2026, 9, 24, 12).toISOString(), now, { expectedDueAt: next }), true);
+  assert.equal(completeTask(s, t.id, now, { expectedDueAt: next }), false, 'Done for the snoozed-away time is stale');
+  // Older callers send no expected time and keep working.
+  assert.equal(completeTask(s, t.id, now), true);
+  assert.equal(s.tasks.filter(x => x.completedAt).length, 2);
+  const once = saveTask(s, { title: 'once', dueAt: '2026-10-23T08:00:00Z' });
+  assert.equal(completeTask(s, once.id, now, { expectedDueAt: '2026-10-23T08:00:00.000Z' }), true);
+  assert.equal(snoozeTask(s, once.id, '2026-10-30T08:00:00Z', now, { expectedDueAt: '2026-10-23T08:00:00.000Z' }), false, 'A snooze queued behind Done is ignored');
+  assert.throws(() => snoozeTask(s, once.id, '2026-10-30T08:00:00Z', now), /نشطًا/);
+  const undated = saveTask(s, { title: 'undated' });
+  assert.equal(completeTask(s, undated.id, now, { expectedDueAt: null }), true);
+});

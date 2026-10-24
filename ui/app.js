@@ -190,17 +190,27 @@ $('task-form').addEventListener('submit', async e => {
     $('task-dialog').close(); await refresh(); toast(tr('حُفظت المهمة. خطوة جديدة في مكانها.','Task saved. Your next step is in place.'));
   } catch (err) { $('task-error').textContent = err.message; } finally { submit.disabled = false; }
 });
+let quickBusy = false;
 $('quick-form').addEventListener('submit', async e => {
   e.preventDefault(); const input = $('quick-title');
+  // A second Enter while the first add is still saving would create the task twice.
+  if (quickBusy) return; quickBusy = true; if (e.submitter) e.submitter.disabled = true;
   try { await api('saveTask', { title: input.value }); input.value = ''; if (view === 'upcoming') view = 'all'; await refresh(); toast(tr('أُضيفت المهمة. يمكنك فتحها لإضافة موعد.','Task added. Open it to add a due time.')); } catch (err) { toast(err.message); }
+  finally { quickBusy = false; if (e.submitter) e.submitter.disabled = false; }
 });
+const busyRows = new Set();
 $('task-list').addEventListener('click', async e => {
   const file = e.target.closest('[data-file-id]'); if (file) return openFile(file.dataset.fileId);
   const button = e.target.closest('[data-action]'), row = e.target.closest('[data-id]'); if (!button || !row) return;
   const id = row.dataset.id, action = button.dataset.action;
   if (action === 'edit') return openTaskEditor(state.tasks.find(t => t.id === id));
   if (action === 'delete') return askDelete('Task', id);
-  try { await api(action, { id }); await refresh(); toast(action === 'complete' ? tr('تمت المهمة. أحسنت، كل خطوة تُحسب!','Task completed. Well done—every step counts!') : tr('أُعيدت المهمة دون موعد. افتحها لتعيين تذكير جديد.','Task reopened without a due date. Open it to set a reminder.')); } catch (err) { toast(err.message); }
+  // One request per row at a time; the due time lets the main process ignore a repeat for the same occurrence.
+  if (busyRows.has(id)) return; busyRows.add(id); button.disabled = true;
+  try {
+    const applied = await api(action, action === 'complete' ? { id, expectedDueAt: state.tasks.find(t => t.id === id)?.dueAt ?? null } : { id }); await refresh();
+    if (applied !== false) toast(action === 'complete' ? tr('تمت المهمة. أحسنت، كل خطوة تُحسب!','Task completed. Well done—every step counts!') : tr('أُعيدت المهمة دون موعد. افتحها لتعيين تذكير جديد.','Task reopened without a due date. Open it to set a reminder.'));
+  } catch (err) { toast(err.message); } finally { busyRows.delete(id); button.disabled = false; }
 });
 $('task-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('task-edit-target')) { e.preventDefault(); e.target.click(); } });
 $('note-form').addEventListener('submit', async e => {

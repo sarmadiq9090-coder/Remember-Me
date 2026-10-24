@@ -49,9 +49,16 @@ function nextOccurrence(value, repeat, now) {
   while (next <= now) next.setDate(next.getDate() + step);
   return next.toISOString();
 }
-function completeTask(state, id, now = new Date()) {
+// expectedDueAt is the due time the user saw when acting. A call made for an occurrence that has
+// already moved on (a double click, two windows) changes nothing. Leaving it out skips the check.
+function stale(task, expectedDueAt) {
+  if (expectedDueAt === undefined) return false;
+  return (expectedDueAt === null ? null : date(expectedDueAt)) !== task.dueAt;
+}
+// Returns false when the call was ignored.
+function completeTask(state, id, now = new Date(), { expectedDueAt } = {}) {
   const task = state.tasks.find(t => t.id === id);
-  if (!task || task.completedAt) return;
+  if (!task || task.completedAt || stale(task, expectedDueAt)) return false;
   if (task.repeat !== 'none' && task.scheduleAt) {
     state.tasks.push({ ...task, id: randomUUID(), repeat: 'none', sourceId: task.id, completedAt: now.toISOString() });
     task.dueAt = nextOccurrence(task.scheduleAt, task.repeat, now);
@@ -59,15 +66,19 @@ function completeTask(state, id, now = new Date()) {
     task.snoozedAt = null;
     task.updatedAt = now.toISOString();
   } else task.completedAt = now.toISOString();
+  return true;
 }
-function snoozeTask(state, id, until, now = new Date()) {
+// Returns false when expectedDueAt shows the reminder was already handled.
+function snoozeTask(state, id, until, now = new Date(), { expectedDueAt } = {}) {
   const task = state.tasks.find(t => t.id === id && !t.completedAt);
-  if (!task) throw new Error('هذا التذكير لم يعد نشطًا.');
+  if (!task) { if (expectedDueAt !== undefined) return false; throw new Error('هذا التذكير لم يعد نشطًا.'); }
+  if (stale(task, expectedDueAt)) return false;
   const next = date(until);
   if (!next || Date.parse(next) <= now.getTime()) throw new Error('اختر وقتًا لاحقًا للتذكير.');
   task.dueAt = next;
   task.snoozedAt = now.toISOString();
   task.updatedAt = now.toISOString();
+  return true;
 }
 function dueTasks(state, now = new Date()) {
   return state.tasks.filter(t => !t.completedAt && t.dueAt && Date.parse(t.dueAt) <= now.getTime())

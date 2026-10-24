@@ -123,11 +123,12 @@ async function start() {
         case 'saveTask': store.change(s => saveTask(s, payload)); break;
         case 'complete':
           if (payload.id === '__preview') preview = null;
-          else store.change(s => completeTask(s, payload.id));
+          // value is false when the reminder was already handled (a double click or another window).
+          else value = store.change(s => completeTask(s, payload.id, new Date(), { expectedDueAt: payload.expectedDueAt }));
           break;
         case 'snooze':
           if (payload.id === '__preview') { if (!payload.until || Date.parse(payload.until) <= Date.now()) throw new Error('اختر وقتًا لاحقًا.'); preview = null; }
-          else store.change(s => snoozeTask(s, payload.id, payload.until));
+          else value = store.change(s => snoozeTask(s, payload.id, payload.until, new Date(), { expectedDueAt: payload.expectedDueAt }));
           break;
         case 'reopen': store.change(s => { const t = s.tasks.find(t => t.id === payload.id); if (t) { t.completedAt = null; t.dueAt = null; t.scheduleAt = null; t.repeat = 'none'; t.snoozedAt = null; } }); break;
         case 'deleteTask': store.change(s => { s.tasks = s.tasks.filter(t => t.id !== payload.id); }); break;

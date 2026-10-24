@@ -32,3 +32,13 @@ test('only the window’s own bundled page may call the main process', () => {
   assert.equal(fromPage(pathToFileURL(path.join(ui, 'alert.html')).href, index), false);
   for (const url of [undefined, '', 'about:blank', 'https://example.com/ui/index.html', 'devtools://devtools/bundled/index.html', 'not a url']) assert.equal(fromPage(url, index), false, String(url));
 });
+
+test('Done and snooze may carry the due time the user saw, and nothing else in its place', () => {
+  assert.doesNotThrow(() => checkRequest('complete', { id: 'a', expectedDueAt: '2026-10-23T09:00:00.000Z' }, { fromAlert: true }));
+  assert.doesNotThrow(() => checkRequest('snooze', { id: 'a', until: '2026-10-23T10:00:00.000Z', expectedDueAt: null }));
+  assert.doesNotThrow(() => checkRequest('complete', { id: 'a' }), 'Older callers send no expected time');
+  for (const expectedDueAt of ['soon', 5, {}, [], true, '2026-10-23T09:00:00.000Z'.repeat(3)]) {
+    assert.throws(() => checkRequest('complete', { id: 'a', expectedDueAt }), /موعد/, String(expectedDueAt));
+    assert.throws(() => checkRequest('snooze', { id: 'a', expectedDueAt }, { text: (ar, en) => en }), /Invalid time/);
+  }
+});
