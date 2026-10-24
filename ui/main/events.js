@@ -69,7 +69,8 @@ $('task-steps').addEventListener('click', e => { const b = e.target.closest('[da
 $('task-steps').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset.stepText) { e.preventDefault(); $('add-step').click(); } });
 $('task-list').addEventListener('change', async e => {
   const box = e.target.closest('[data-toggle-step]'), row = e.target.closest('[data-id]'); if (!box || !row) return;
-  try { await api('toggleStep', { id: row.dataset.id, stepId: box.dataset.toggleStep }); await refresh(); } catch (err) { toast(err.message); }
+  // On failure the box goes back by hand: an unchanged list is not rebuilt by the next refresh.
+  try { await api('toggleStep', { id: row.dataset.id, stepId: box.dataset.toggleStep }); await refresh(); } catch (err) { box.checked = !box.checked; toast(err.message); }
 });
 const busyRows = new Set();
 $('task-list').addEventListener('click', async e => {
@@ -80,13 +81,14 @@ $('task-list').addEventListener('click', async e => {
   if (action === 'edit') return openTaskEditor(state.tasks.find(t => t.id === id));
   if (action === 'delete') return moveToTrash('Task', id);
   // One request per row at a time; the due time lets the main process ignore a repeat for the same occurrence.
-  if (busyRows.has(id)) return; busyRows.add(id); button.disabled = true;
+  if (busyRows.has(id)) return; busyRows.add(id);
+  const mark = focusMark(); button.disabled = true;
   try {
     // For 'complete', done is null when the occurrence was already handled; skip returns false then. No toast either way.
     const done = await api(action, action === 'reopen' ? { id } : { id, expectedDueAt: state.tasks.find(t => t.id === id)?.dueAt ?? null }); await refresh();
     const next = state.tasks.find(t => t.id === id)?.dueAt;
-    if (action === 'reopen' || done) toast(action === 'complete' ? tr("Task completed. Well done—every step counts!") : action === 'skip' ? tr("Skipped this time. Next: {value}", { value: dateLabel(next) }) : tr("Task reopened without a due date. Open it to set a reminder."), action === 'complete' && done ? () => api('undoComplete', done) : undefined);
-  } catch (err) { toast(err.message); } finally { busyRows.delete(id); button.disabled = false; }
+    if (action === 'reopen' || done) toast(action === 'complete' ? tr("Task completed. Well done—every step counts!") : action === 'skip' ? tr("Skipped this time. Next: {value}", { value: dateLabel(next) }) : tr("Task reopened without a due date. Open it to set a reminder."), action === 'complete' && done ? () => api('undoComplete', done) : undefined, mark);
+  } catch (err) { toast(err.message); } finally { busyRows.delete(id); button.disabled = false; restoreFocus(mark); }
 });
 $('task-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('task-edit-target')) { e.preventDefault(); e.target.click(); } });
 $('note-form').addEventListener('submit', async e => {

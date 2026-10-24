@@ -22,7 +22,7 @@ function openTaskEditor(task) {
   if (editingSeries) $('task-only-once-label').textContent = tr("Only this time (keep the series at {value})", { value: timeLabel(editingSeries) });
   $('task-dialog-title').textContent = task?.id ? tr("Task details") : tr("Space for a new task");
   toggleReminder();
-  $('task-dialog').showModal(); $('task-title').focus();
+  showDialog($('task-dialog')); $('task-title').focus();
 }
 // 'Only this time' moves one occurrence of a repeating task and keeps the series at its usual time.
 let editingSeries = null;
@@ -35,9 +35,10 @@ $('task-repeat').addEventListener('change', toggleOnlyOnce);
 // Week order follows the interface: Saturday first in Arabic, Sunday first in English.
 let repeatDays = [];
 let steps = [];
-// Steps keep their ids while editing so ticks survive renaming or reordering.
+// Steps keep their ids while editing so ticks survive renaming or reordering. Removing a step moves focus to
+// the next step's remove button, or to Add step.
 function renderSteps() {
-  $('task-steps').innerHTML = steps.map((step, i) => `<li><input type="checkbox" data-step-done="${i}" ${step.done ? 'checked' : ''} aria-label="${tr("Done")}"><input type="text" dir="auto" maxlength="200" data-step-text="${i}" value="${esc(step.text)}" placeholder="${tr("Step")} ${i + 1}"><button type="button" class="icon-button" data-step-remove="${i}" aria-label="${tr("Remove step")}">${icon('x')}</button></li>`).join('');
+  replaceMarkup($('task-steps'), steps.map((step, i) => `<li><input type="checkbox" data-step-done="${i}" ${step.done ? 'checked' : ''} aria-label="${tr("Done")}"><input type="text" dir="auto" maxlength="200" data-step-text="${i}" value="${esc(step.text)}" placeholder="${tr("Step")} ${i + 1}"><button type="button" class="icon-button" data-step-remove="${i}" aria-label="${tr("Remove step")}">${icon('x')}</button></li>`).join(''), $('add-step'));
 }
 function stepsMarkup(t) {
   if (!t.checklist?.length) return '';
@@ -45,7 +46,8 @@ function stepsMarkup(t) {
   return `<ul class="step-list" aria-label="${tr("Steps")} ${num(done)}/${num(t.checklist.length)}">${t.checklist.map(s => `<li><label><input type="checkbox" data-toggle-step="${esc(s.id)}" ${s.done ? 'checked' : ''} ${t.completedAt ? 'disabled' : ''}><span dir="auto" class="${s.done ? 'step-done' : ''}">${esc(s.text)}</span></label></li>`).join('')}</ul>`;
 }
 function renderRepeatDays() {
-  $('repeat-days').innerHTML = weekOrder(state.settings.weekStart).map(d => `<button type="button" data-day="${d}" aria-pressed="${repeatDays.includes(d)}" title="${esc(weekdayName(d, 'long'))}">${esc(weekdayName(d))}</button>`).join('');
+  // The pressed day keeps the focus, so several days can be picked without tabbing through the form again.
+  setMarkup($('repeat-days'), weekOrder(state.settings.weekStart).map(d => `<button type="button" data-day="${d}" aria-pressed="${repeatDays.includes(d)}" title="${esc(weekdayName(d, 'long'))}">${esc(weekdayName(d))}</button>`).join(''));
 }
 function toggleRepeat() {
   $('repeat-days-field').hidden = $('task-repeat').value !== 'days';
@@ -58,5 +60,5 @@ function openNoteEditor(note) {
   $('note-id').value = note?.id || ''; $('note-title').value = note?.title || ''; $('note-body').value = note?.body || '';
   renderNoteLook(); setNoteLook(note?.color || 'cream', note?.style || 'plain'); $('note-dialog-title').textContent = note ? tr('Note details') : tr('New note');
   noteAttachments = [...(note?.attachments || [])]; renderEditorFiles('note');
-  $('note-dialog').showModal(); $('note-title').focus();
+  showDialog($('note-dialog')); $('note-title').focus();
 }

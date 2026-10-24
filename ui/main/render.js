@@ -57,7 +57,7 @@ function render() {
     tasks = [...tasks].sort((a, b) => $('sort').value === 'priority' ? rank[a.priority] - rank[b.priority] : $('sort').value === 'newest' ? Date.parse(b.createdAt) - Date.parse(a.createdAt) : $('sort').value === 'title' ? a.title.localeCompare(b.title, locale()) : (Date.parse(a.dueAt) || Infinity) - (Date.parse(b.dueAt) || Infinity));
     $('list-title').innerHTML = `${names[3]} <span id="list-count">${num(tasks.length)}</span>`;
     $('quick-form').hidden = view === 'completed';
-    $('task-list').innerHTML = tasks.map(task => taskCard(task)).join('');
+    setMarkup($('task-list'), tasks.map(task => taskCard(task)).join(''), $('page-title'));
     $('task-empty').hidden = !!tasks.length;
     const emptyTitle = $('task-empty').querySelector('h3'), emptyText = $('task-empty').querySelector('p');
     emptyTitle.textContent = query || filter !== 'all' ? tr("No matching tasks") : view === 'completed' ? tr("Every achievement will appear here") : view === 'upcoming' ? tr("The coming days await your plans") : tr("A fresh space for a gentle start");
@@ -72,8 +72,14 @@ function allTags() { const tags = new Map(); for (const t of state.tasks) for (c
 function renderTagFilters() {
   const tags = allTags();
   if (filter.startsWith('tag:') && !tags.includes(filter.slice(4))) filter = 'all';
-  $('filters').querySelectorAll('[data-filter^="tag:"]').forEach(b => b.remove());
-  $('filters').insertAdjacentHTML('beforeend', tags.map(tag => `<button class="filter" data-filter="tag:${esc(tag)}"><bdi>#${esc(tag)}</bdi></button>`).join(''));
+  // Rebuilt only when the tags change, so the filter just pressed keeps the focus.
+  const html = tags.map(tag => `<button class="filter" data-filter="tag:${esc(tag)}"><bdi>#${esc(tag)}</bdi></button>`).join('');
+  if (markups.get($('filters')) !== html) {
+    const key = focusKey($('filters'));
+    $('filters').querySelectorAll('[data-filter^="tag:"]').forEach(b => b.remove());
+    $('filters').insertAdjacentHTML('beforeend', html); markups.set($('filters'), html);
+    restoreFocus(key, $('filters').querySelector('[data-filter="all"]'));
+  }
   $('tag-options').innerHTML = tags.map(tag => `<option value="${esc(tag)}">`).join('');
 }
 function parseTags(text) { return text.split(/[,،;؛]/).map(t => t.trim()).filter(Boolean); }

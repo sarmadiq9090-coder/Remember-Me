@@ -13,7 +13,7 @@ function taskCard(t) {
 }
 function renderNotes() {
   const notes = state.notes.filter(n => matchesSearch(n, query)).sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
-  $('notes-list').innerHTML = notes.map(n => `<article class="note-card paper" data-paper="${esc(n.color)}" data-note-style="${esc(n.style || 'plain')}" data-id="${esc(n.id)}"><div class="note-edit-target" tabindex="0" role="button" aria-label="${tr('Edit')} ${esc(n.title)}"><h3 dir="auto">${esc(n.title)}</h3><p dir="auto">${esc(n.body)}</p></div>${n.attachments?.length ? `<div class="file-chips">${attachmentChips(n.attachments)}</div>` : ''}<footer><span>${new Date(n.updatedAt).toLocaleDateString(locale(), { day: 'numeric', month: 'long' })}</span><button class="icon-button" data-action="delete" aria-label="${tr('Delete note')}">${icon('trash')}</button></footer></article>`).join('');
+  setMarkup($('notes-list'), notes.map(n => `<article class="note-card paper" data-paper="${esc(n.color)}" data-note-style="${esc(n.style || 'plain')}" data-id="${esc(n.id)}"><div class="note-edit-target" tabindex="0" role="button" aria-label="${tr('Edit')} ${esc(n.title)}"><h3 dir="auto">${esc(n.title)}</h3><p dir="auto">${esc(n.body)}</p></div>${n.attachments?.length ? `<div class="file-chips">${attachmentChips(n.attachments)}</div>` : ''}<footer><span>${new Date(n.updatedAt).toLocaleDateString(locale(), { day: 'numeric', month: 'long' })}</span><button class="icon-button" data-action="delete" aria-label="${tr('Delete note')}">${icon('trash')}</button></footer></article>`).join(''), $('page-title'));
   $('notes-empty').hidden = !!notes.length;
   $('notes-empty').querySelector('h3').textContent = query ? tr("No matching notes") : tr("Your ideas deserve a place");
 }

@@ -96,6 +96,18 @@ async function alertPage() {
     await page.locator('#search').fill('خطة');
     assert.equal(await page.locator('.task-row').count(), 1);
     await page.locator('#search').fill('');
+    // Rebuilding the list keeps keyboard focus on the same control of the same task (QC R24).
+    const ids = await page.locator('#task-list .task-row').evaluateAll(rows => rows.map(r => r.dataset.id));
+    await page.locator(`#task-list [data-id="${ids[0]}"] [data-action="delete"]`).focus();
+    const kept = await page.evaluate(() => { const list = document.getElementById('task-list'); window.replaceMarkup(list, list.innerHTML); window.render(); const a = document.activeElement; return [a.closest('[data-id]')?.dataset.id, a.dataset.action]; });
+    assert.deepEqual(kept, [ids[0], 'delete'], 'Focus survives a rebuild');
+    // Deleting with the keyboard moves focus to the next task's Delete, and Ctrl+Z undoes it (QC R29).
+    await page.keyboard.press('Enter');
+    await page.locator('#toast .toast-action').waitFor();
+    assert.deepEqual(await page.evaluate(() => { const a = document.activeElement; return [a.closest('[data-id]')?.dataset.id, a.dataset.action]; }), [ids[1], 'delete'], 'Focus moves to the next task');
+    await page.keyboard.press('Control+z');
+    await page.waitForFunction(count => document.querySelectorAll('#task-list .task-row').length === count, ids.length);
+    assert.equal(await page.locator('#toast').isHidden(), true);
     fs.mkdirSync(path.join(root, 'screenshots'), { recursive: true });
     await page.screenshot({ path: path.join(root, 'screenshots/main.png') });
     // A real scheduled reminder, not the preview. It must trigger without the main UI open.
