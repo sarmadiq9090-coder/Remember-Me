@@ -323,6 +323,7 @@
   "Set a time for a repeating task.": "繰り返しタスクには時刻を設定してください。",
   "Settings": "設定",
   "Settings saved.": "設定を保存しました。",
+  "Settings saved. Date and time fields switch to the new language after a restart.": "設定を保存しました。日付と時刻の入力欄は再起動後に新しい言語に切り替わります。",
   "Simple notes for anything on your mind, saved on your device.": "思いついたことを書き留めるシンプルなメモ。デバイスに保存されます。",
   "Skip this time": "今回はスキップ",
   "Skipped this time. Next: {value}": "今回はスキップしました。次回: {value}",

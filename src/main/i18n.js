@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale, translate } = require('../../ui/lib/translate');
+const { validateState } = require('../core/tasks');
 
 // The main process's interface text (tray, dialogs, notifications, errors), in the saved language.
 function createI18n(savedLanguage) {
@@ -24,4 +25,13 @@ function createI18n(savedLanguage) {
   function errorText(error) { return error?.key ? tr(error.key, error.params) : tr(String(error?.message || error)); }
   return { language, localeTag, messages, tr, errorText };
 }
-module.exports = { createI18n };
+// The Chromium locale for the language saved in the data folder, read before the app is ready:
+// Chromium takes its locale only at startup, and it decides how native date, time and number
+// fields look. A missing or unreadable file means the default language, as the Store would load.
+function startupControlsLocale(folder) {
+  for (const name of ['data.json', 'data.json.bak']) {
+    try { return findLocale(validateState(JSON.parse(fs.readFileSync(path.join(folder, name), 'utf8'))).settings.language).chromium; } catch { /* try the next */ }
+  }
+  return findLocale(DEFAULT_LOCALE).chromium;
+}
+module.exports = { createI18n, startupControlsLocale };

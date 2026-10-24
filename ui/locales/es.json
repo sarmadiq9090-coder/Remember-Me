@@ -327,6 +327,7 @@
   "Set a time for a repeating task.": "Fija una hora para la tarea que se repite.",
   "Settings": "Ajustes",
   "Settings saved.": "Ajustes guardados.",
+  "Settings saved. Date and time fields switch to the new language after a restart.": "Ajustes guardados. Los campos de fecha y hora cambiarán al nuevo idioma tras reiniciar.",
   "Simple notes for anything on your mind, saved on your device.": "Notas sencillas para todo lo que tengas en mente, guardadas en tu equipo.",
   "Skip this time": "Saltar esta vez",
   "Skipped this time. Next: {value}": "Saltada esta vez. Siguiente: {value}",

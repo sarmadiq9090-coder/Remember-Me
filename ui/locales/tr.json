@@ -324,6 +324,7 @@
   "Set a time for a repeating task.": "Tekrarlanan görev için bir saat belirleyin.",
   "Settings": "Ayarlar",
   "Settings saved.": "Ayarlar kaydedildi.",
+  "Settings saved. Date and time fields switch to the new language after a restart.": "Ayarlar kaydedildi. Tarih ve saat alanları yeniden başlatmadan sonra yeni dile geçer.",
   "Simple notes for anything on your mind, saved on your device.": "Aklınızdaki her şey için basit notlar, cihazınızda saklanır.",
   "Skip this time": "Bu kez atla",
   "Skipped this time. Next: {value}": "Bu kez atlandı. Sonraki: {value}",

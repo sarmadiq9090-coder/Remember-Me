@@ -325,6 +325,7 @@
   "Set a time for a repeating task.": "दोहराए जाने वाले कार्य के लिए समय तय करें।",
   "Settings": "सेटिंग्स",
   "Settings saved.": "सेटिंग्स सहेजी गईं।",
+  "Settings saved. Date and time fields switch to the new language after a restart.": "सेटिंग्स सहेजी गईं। तारीख़ और समय के फ़ील्ड रीस्टार्ट के बाद नई भाषा में दिखेंगे।",
   "Simple notes for anything on your mind, saved on your device.": "मन की किसी भी बात के लिए सरल नोट्स, आपके डिवाइस पर सहेजे गए।",
   "Skip this time": "इस बार छोड़ें",
   "Skipped this time. Next: {value}": "इस बार छोड़ा गया। अगला: {value}",

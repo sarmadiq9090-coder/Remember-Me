@@ -81,3 +81,23 @@ test('errors thrown by the updater safety backup are collected and translated', 
   assert.ok(collectKeys().includes(key));
   for (const { code } of LOCALES) assert.ok(key in loadLocale(code), code);
 });
+
+test('native date, time and number fields start in the saved language, always with digits 0-9', () => {
+  const os = require('node:os');
+  const { startupControlsLocale } = require('../src/main/i18n');
+  // Chromium's ar shows Arabic-Indic digits in native fields (Node's ICU does not, so this cannot be
+  // checked with Intl here); the release QA suite checks the packaged app.
+  assert.ok(LOCALES.every(l => !/^(?:ar|fa|ur|bn|mr|ne)\b/.test(l.chromium)), 'No Chromium locale whose native fields use other digits');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-controls-'));
+  const save = (name, settings) => fs.writeFileSync(path.join(dir, name), JSON.stringify({ version: 1, tasks: [], notes: [], settings }));
+  assert.equal(startupControlsLocale(dir), 'en-US', 'No data yet: the default language');
+  save('data.json', { language: 'fr' });
+  assert.equal(startupControlsLocale(dir), 'fr');
+  save('data.json', { language: 'ar' });
+  assert.equal(startupControlsLocale(dir), 'en-GB', 'Arabic uses a Chromium locale with digits 0-9');
+  save('data.json', { sound: true });
+  assert.equal(startupControlsLocale(dir), 'en-GB', 'Settings from before the language option were Arabic');
+  fs.writeFileSync(path.join(dir, 'data.json'), '{ damaged');
+  save('data.json.bak', { language: 'de' });
+  assert.equal(startupControlsLocale(dir), 'de', 'The backup is read when the data file is damaged');
+});

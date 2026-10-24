@@ -101,7 +101,7 @@ registry throws if an allowed action has no handler, has two, or a handler is no
 | Backups | `export`, `restore`, `chooseDriveFolder`, `driveBackupNow`, `driveAutomatic`, `driveKeep`, `driveHelp`, `openDriveFolder` |
 | Updates | `updateConsent`, `checkUpdates`, `installUpdate`, `dismissUpdate` |
 | About | `openLink`, `copyDiagnostics`, `openLogs` |
-| App | `settings`, `preview`, `dataFolder`, `open` |
+| App | `settings`, `relaunch`, `preview`, `dataFolder`, `open` |
 
 The alert window may only use `alerts`, `language`, `locale`, `complete`, `skip`, `undoComplete`,
 `undoable`, `snooze`, `open` (optionally with the shown task's `id`), `openAttachment` and

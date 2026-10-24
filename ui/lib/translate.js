@@ -3,10 +3,13 @@
 // text, ui/locales/<code>.json holds the translations, and a missing entry falls back to English.
 (function (root) {
   // name is the language's own name (endonym), as shown in the language picker.
-  // chromium is the Chromium .pak kept in the packaged app for native strings in that language.
+  // chromium is the locale Chromium starts with (its .pak is kept in the packaged app). It sets how
+  // native date, time and number fields look. Chromium's Arabic always shows Arabic-Indic digits
+  // there (it turns ar-u-nu-latn and ar-MA back into ar), so Arabic uses en-GB: digits 0-9 and
+  // day/month order, like the rest of the app.
   const LOCALES = [
     { code: 'en', name: 'English', dir: 'ltr', intl: 'en-US', chromium: 'en-US', weekStart: 0 },
-    { code: 'ar', name: 'العربية', dir: 'rtl', intl: 'ar-IQ', chromium: 'ar', weekStart: 6 },
+    { code: 'ar', name: 'العربية', dir: 'rtl', intl: 'ar-IQ', chromium: 'en-GB', weekStart: 6 },
     { code: 'es', name: 'Español', dir: 'ltr', intl: 'es-ES', chromium: 'es', weekStart: 1 },
     { code: 'fr', name: 'Français', dir: 'ltr', intl: 'fr-FR', chromium: 'fr', weekStart: 1 },
     { code: 'de', name: 'Deutsch', dir: 'ltr', intl: 'de-DE', chromium: 'de', weekStart: 1 },

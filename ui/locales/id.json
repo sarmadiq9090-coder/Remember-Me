@@ -323,6 +323,7 @@
   "Set a time for a repeating task.": "Atur waktu untuk tugas berulang.",
   "Settings": "Pengaturan",
   "Settings saved.": "Pengaturan disimpan.",
+  "Settings saved. Date and time fields switch to the new language after a restart.": "Pengaturan disimpan. Kolom tanggal dan waktu akan memakai bahasa baru setelah aplikasi dimulai ulang.",
   "Simple notes for anything on your mind, saved on your device.": "Catatan sederhana untuk apa pun yang ada di pikiran Anda, tersimpan di perangkat Anda.",
   "Skip this time": "Lewati kali ini",
   "Skipped this time. Next: {value}": "Dilewati kali ini. Berikutnya: {value}",

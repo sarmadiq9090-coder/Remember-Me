@@ -16,7 +16,7 @@ test('every allowed IPC action has exactly one handler', () => {
 test('only actions that change nothing skip the rescan', () => {
   const readOnly = Object.entries(createHandlers(stub)).filter(([, handler]) => handler.readOnly).map(([action]) => action).sort();
   assert.deepEqual(readOnly, ['alerts', 'checkUpdates', 'copyDiagnostics', 'dataFolder', 'dismissUpdate', 'driveHelp', 'export', 'imagePreview', 'installUpdate',
-    'language', 'locale', 'open', 'openAttachment', 'openDriveFolder', 'openLink', 'openLogs', 'state', 'storage', 'undoable']);
+    'language', 'locale', 'open', 'openAttachment', 'openDriveFolder', 'openLink', 'openLogs', 'relaunch', 'state', 'storage', 'undoable']);
 });
 
 // A context with a real state and a store whose change() applies the function, as Store does.
@@ -55,4 +55,16 @@ test('restoring an item the 30-day purge removed fails clearly, and the purge re
   assert.throws(() => handlers.restoreTask.run({ id: t.id }), /no longer in the trash/);
   createScheduler(ctx).purgeExpiredTrash();
   assert.equal(ctx.notified, 1, 'Nothing to purge, nothing to refresh');
+});
+
+test('changing the language asks for a restart only when the native fields would change', () => {
+  const ctx = liveContext();
+  Object.assign(ctx, { controlsLocale: 'en-US', setLogin() {}, rebuildTrayMenu() {}, placeAlert() {}, applyTheme() {} });
+  const { settings } = createHandlers(ctx);
+  const save = language => settings.run({ ...ctx.store.state.settings, language });
+  assert.deepEqual(save('fr'), { restart: true });
+  assert.deepEqual(save('fr'), { restart: false }, 'Nothing changed');
+  assert.deepEqual(save('en'), { restart: false }, 'Back to the locale the app started with');
+  ctx.controlsLocale = 'en-GB';
+  assert.deepEqual(save('ar'), { restart: false }, 'Arabic uses en-GB, already running');
 });

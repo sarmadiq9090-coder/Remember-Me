@@ -339,6 +339,7 @@
   "Set a time for a repeating task.": "حدّد موعدًا للمهمة المتكررة.",
   "Settings": "الإعدادات",
   "Settings saved.": "حُفظت الإعدادات.",
+  "Settings saved. Date and time fields switch to the new language after a restart.": "حُفظت الإعدادات. ستظهر حقول التاريخ والوقت باللغة الجديدة بعد إعادة التشغيل.",
   "Simple notes for anything on your mind, saved on your device.": "ملاحظات بسيطة لكل ما يدور في بالك، محفوظة على جهازك.",
   "Skip this time": "تخطَّ هذه المرة",
   "Skipped this time. Next: {value}": "تخطّيت هذه المرة. الموعد التالي: {value}",

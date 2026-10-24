@@ -323,6 +323,7 @@
   "Set a time for a repeating task.": "请为重复任务设置时间。",
   "Settings": "设置",
   "Settings saved.": "设置已保存。",
+  "Settings saved. Date and time fields switch to the new language after a restart.": "设置已保存。日期和时间字段将在重启后切换为新语言。",
   "Simple notes for anything on your mind, saved on your device.": "简单记下你想到的任何事，保存在你的设备上。",
   "Skip this time": "跳过这一次",
   "Skipped this time. Next: {value}": "已跳过这一次。下一次：{value}",

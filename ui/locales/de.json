@@ -327,6 +327,7 @@
   "Set a time for a repeating task.": "Lege eine Zeit für die wiederkehrende Aufgabe fest.",
   "Settings": "Einstellungen",
   "Settings saved.": "Einstellungen gespeichert.",
+  "Settings saved. Date and time fields switch to the new language after a restart.": "Einstellungen gespeichert. Datums- und Zeitfelder wechseln nach einem Neustart zur neuen Sprache.",
   "Simple notes for anything on your mind, saved on your device.": "Einfache Notizen für alles, was dir durch den Kopf geht, gespeichert auf deinem Gerät.",
   "Skip this time": "Dieses Mal überspringen",
   "Skipped this time. Next: {value}": "Dieses Mal übersprungen. Nächster Termin: {value}",
