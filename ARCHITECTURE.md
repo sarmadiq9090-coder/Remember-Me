@@ -40,7 +40,12 @@ true (see "Keeping this document current").
 | Update checks, download and install policy | `src/platform/updates.js` |
 | About card: link allowlist and diagnostic info | `src/platform/about.js` |
 | Palette colors for window backgrounds, read from `ui/styles/theme.css` | `src/platform/themes.js` |
-| Main window and sticky alert pages, shared scripts and CSS | `ui/` |
+| The two pages (main window, sticky alert) | `ui/index.html`, `ui/alert.html` |
+| Main window scripts: plain scripts loaded in order, sharing one scope (state, render, cards, editors, trash, settings, events, boot) | `ui/main/*.js` |
+| Alert window script | `ui/alert/alert.js` |
+| Shared by both windows: languages (`translate.js`, `i18n.js`), helpers and icons (`shared.js`), search, alert formatting | `ui/lib/*.js` |
+| Stylesheets and theme tokens | `ui/styles/*.css` |
+| Translations | `ui/locales/*.json` |
 | Packaging, installer, winget manifests, icon generator | `tools/` |
 | Unit tests (`node --test`) and Playwright desktop suites (`*-desktop.cjs`, `desktop-smoke.cjs`) | `tests/` |
 | Lint rules (folder-agnostic) and editor settings | `eslint.config.cjs`, `.editorconfig` |
