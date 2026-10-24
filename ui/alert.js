@@ -1,4 +1,4 @@
-let currentId;
+let currentId, currentDue, queueSize = 0, busy = false;
 const $ = id => document.getElementById(id);
 async function refreshAlert() {
   try {
@@ -8,9 +8,9 @@ async function refreshAlert() {
     document.body.classList.toggle('all-done', !tasks.length);
     $('alert-all-done').hidden = !!tasks.length;
     if (!tasks.length) { currentId = null; return; }
-    const task = tasks[0];
+    const task = tasks[0]; queueSize = tasks.length;
     if (currentId !== task.id) { $('snooze-until').value = localDateValue(Date.now() + 3600000); $('alert-error').textContent = ''; }
-    currentId = task.id;
+    currentId = task.id; currentDue = task.dueAt ?? null;
     $('alert-title').textContent = task.title;
     $('alert-note').textContent = task.body || tr('خذ خطوتك التالية، أو اختر وقتًا يناسبك أكثر.','Take your next step, or choose a time that suits you better.');
     $('alert-time').textContent = dateLabel(task.dueAt);
@@ -19,19 +19,28 @@ async function refreshAlert() {
     document.body.classList.toggle('has-files', !!task.files?.length);
     document.body.classList.toggle('has-photos', (task.files || []).some(isImageFile));
     hydratePreviews($('alert-files'));
-    $('alert-queue').textContent = task.id === '__preview' ? tr('معاينة التنبيه • لا ينشئ تذكيرًا فعليًا','Alert preview • no real reminder is created') : tasks.length > 1 ? (uiLanguage === 'en' ? `${tasks.length} reminders waiting • shown one at a time` : `${tasks.length} تذكيرات بانتظارك • تُعرض واحدًا تلو الآخر`) : tr('مساحة صغيرة لشيء مهم','A small space for something important');
+    $('alert-queue').textContent = task.id === '__preview' ? tr('معاينة التنبيه • لا ينشئ تذكيرًا فعليًا','Alert preview • no real reminder is created') : tasks.length > 1 ? (uiLanguage === 'en' ? `1 / ${tasks.length} • ${tasks.length} reminders waiting • shown one at a time` : `1 / ${tasks.length} • ${tasks.length} تذكيرات بانتظارك • تُعرض واحدًا تلو الآخر`) : tr('مساحة صغيرة لشيء مهم','A small space for something important');
   } catch (e) { $('alert-error').textContent = e.message; }
 }
 async function act(action, until) {
-  if (!currentId) return;
+  if (!currentId || busy) return;
+  busy = true;
   const buttons = document.querySelectorAll('button'); buttons.forEach(b => b.disabled = true);
+  const shown = currentId;
   try {
-    await api(action, { id: currentId, until });
+    // The due time lets the main process ignore a second click on a reminder that was already handled.
+    await api(action, { id: shown, until, expectedDueAt: currentDue });
     if (action === 'complete') { const info = await api('undoable'); if (info) showUndo(info); }
     await refreshAlert();
+    // The next queued reminder took this place: pause briefly so a repeated click cannot act on it unseen.
+    if (currentId && currentId !== shown) {
+      $('alert-queue').textContent = `${action === 'complete' ? tr('تمّت - التذكير التالي', 'Done - next reminder') : tr('أُجّلت - التذكير التالي', 'Snoozed - next reminder')}${queueSize > 1 ? ` • 1 / ${queueSize}` : ''}`;
+      await new Promise(resolve => setTimeout(resolve, 600));
+      await refreshAlert();
+    }
   }
   catch (e) { $('alert-error').textContent = e.message; }
-  finally { buttons.forEach(b => b.disabled = false); }
+  finally { busy = false; buttons.forEach(b => b.disabled = false); }
 }
 let undoTimer;
 function showUndo(info) {
