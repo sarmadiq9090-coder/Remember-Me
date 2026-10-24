@@ -22,6 +22,7 @@ test('Drive backup contains text and images locally and in the selected sync fol
   assert.ok(fs.existsSync(path.join(result.lastLocalPath, 'data.json')));
   assert.equal(JSON.parse(fs.readFileSync(path.join(result.lastDrivePath, 'data.json'))).tasks[0].body, 'نص مع الصورة');
   assert.deepEqual(fs.readFileSync(path.join(result.lastDrivePath, 'attachments', image.id, image.name)), fs.readFileSync(path.join(__dirname, '../assets/icon.png')));
+  assert.equal(JSON.parse(fs.readFileSync(path.join(result.lastDrivePath, 'backup.json'))).kind, 'automatic', 'Checksums travel with the Drive copy');
   await backup.tick(); assert.equal(fs.readdirSync(sync).length, 1);
   const loaded = new DriveBackup(data, () => store.state, () => {}, { clock: () => now });
   assert.equal(loaded.status().folder, sync); assert.equal(loaded.status().lastCopiedAt, result.lastCopiedAt);

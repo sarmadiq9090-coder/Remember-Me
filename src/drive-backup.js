@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const fsp = fs.promises;
 const path = require('node:path');
-const { exportBackup } = require('./attachments');
+const { exportBackup, BACKUP_INFO } = require('./attachments');
 
 // Google Drive for desktop owns authentication, upload retries and offline syncing.
 // Waqt only reports handing a complete backup to the user-selected sync folder.
@@ -51,6 +51,7 @@ class DriveBackup {
     await fsp.mkdir(destination, { recursive: true });
     const files = path.join(source, 'attachments');
     if (fs.existsSync(files)) await fsp.cp(files, path.join(destination, 'attachments'), { recursive: true });
+    if (fs.existsSync(path.join(source, BACKUP_INFO))) await fsp.copyFile(path.join(source, BACKUP_INFO), path.join(destination, BACKUP_INFO));
     // A manifest is the completion marker; write it only after every attachment.
     await fsp.copyFile(path.join(source, 'data.json'), path.join(destination, 'data.json'));
     return destination;
@@ -62,7 +63,7 @@ class DriveBackup {
       if (!this.config.pending || !this.config.lastLocalPath || !fs.existsSync(path.join(this.config.lastLocalPath, 'data.json'))) {
         const parent = path.join(this.directory, 'backups');
         await fsp.mkdir(parent, { recursive: true });
-        this.config.lastLocalPath = await this.exporter(this.getState(), this.directory, parent);
+        this.config.lastLocalPath = await this.exporter(this.getState(), this.directory, parent, { kind: 'automatic' });
         this.config.pending = true;
         this.save();
       }

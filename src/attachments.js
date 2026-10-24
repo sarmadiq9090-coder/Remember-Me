@@ -2,9 +2,10 @@
 const fs = require('node:fs');
 const fsp = fs.promises;
 const path = require('node:path');
-const { randomUUID } = require('node:crypto');
+const { randomUUID, createHash } = require('node:crypto');
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_ATTACHMENTS = 20;
+const BACKUP_INFO = 'backup.json';
 const idPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 function attachmentIds(value = []) {
   if (!Array.isArray(value) || value.length > MAX_ATTACHMENTS || value.some(id => typeof id !== 'string' || !idPattern.test(id))) throw new Error('المرفقات غير صالحة. يمكنك إضافة 20 ملفًا لكل عنصر.');
@@ -66,21 +67,32 @@ function resolveAttachment(state, directory, id) {
   if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('مسار المرفق غير صالح.');
   return { file, record };
 }
-async function exportBackup(state, directory, destination) {
+async function hashFile(file) {
+  const hash = createHash('sha256');
+  for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
+  return hash.digest('hex');
+}
+// kind is 'automatic' for copies the app makes on its own; only those may ever be rotated away.
+async function exportBackup(state, directory, destination, { kind = 'manual', prefix = 'Waqt-backup-' } = {}) {
   const snapshot = structuredClone(state);
   const used = new Set([...snapshot.tasks, ...snapshot.notes].flatMap(item => item.attachments || []));
   snapshot.attachments = snapshot.attachments.filter(a => used.has(a.id));
   const sources = snapshot.attachments.map(a => resolveAttachment(snapshot, directory, a.id));
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const folder = path.join(destination, 'Waqt-backup-' + timestamp);
+  const createdAt = new Date().toISOString();
+  const folder = path.join(destination, prefix + createdAt.replace(/[:.]/g, '-'));
   await fsp.mkdir(folder, { recursive: false });
+  const files = {};
   for (const { file, record } of sources) {
     const target = attachmentPath(folder, record);
     await fsp.mkdir(path.dirname(target), { recursive: true });
     await fsp.copyFile(file, target, fs.constants.COPYFILE_EXCL);
+    files[`attachments/${record.id}/${record.name}`] = await hashFile(target);
   }
+  const text = JSON.stringify(snapshot, null, 2);
+  files['data.json'] = createHash('sha256').update(text, 'utf8').digest('hex');
+  await fsp.writeFile(path.join(folder, BACKUP_INFO), JSON.stringify({ app: 'Remember Me', kind, createdAt, algorithm: 'sha256', files }, null, 2), { encoding: 'utf8', flag: 'wx' });
   // Write the manifest last: a successful backup always has all referenced files.
-  await fsp.writeFile(path.join(folder, 'data.json'), JSON.stringify(snapshot, null, 2), { encoding: 'utf8', flag: 'wx' });
+  await fsp.writeFile(path.join(folder, 'data.json'), text, { encoding: 'utf8', flag: 'wx' });
   return folder;
 }
-module.exports = { MAX_ATTACHMENTS, attachmentIds, opensAsProgram, validateAttachment, attachmentPath, importFiles, resolveAttachment, exportBackup };
+module.exports = { MAX_ATTACHMENTS, BACKUP_INFO, attachmentIds, opensAsProgram, hashFile, validateAttachment, attachmentPath, importFiles, resolveAttachment, exportBackup };

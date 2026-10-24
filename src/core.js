@@ -153,11 +153,16 @@ class Store {
   change(fn) {
     const draft = structuredClone(this.state);
     const result = fn(draft);
+    this.commit(draft);
+    return result;
+  }
+  // Swaps in a complete state, such as one restored from a backup.
+  replace(next) { this.commit(structuredClone(next)); }
+  commit(draft) {
     validateState(draft);
     if (fs.existsSync(this.file)) copyDurable(this.file, this.file + '.bak');
     writeDurable(this.file, JSON.stringify(draft, null, 2));
     this.state = draft;
-    return result;
   }
 }
 module.exports = { initialState, saveTask, completeTask, snoozeTask, dueTasks, nextOccurrence, validateState, Store };
