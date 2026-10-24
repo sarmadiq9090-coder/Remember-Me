@@ -105,26 +105,34 @@ function language() { return store?.state?.settings?.language === 'en' ? 'en' : 
 // Dates and times always use Western digits (0-9), in Arabic too, so the layout never shifts.
 function localeTag() { return (language() === 'en' ? 'en-US' : 'ar-IQ') + '-u-nu-latn'; }
 function nativeText(ar, en) { return language() === 'en' ? en : ar; }
-function rebuildTrayMenu() {
-  if (!tray) return;
-  tray.setContextMenu(Menu.buildFromTemplate([
+// The tray menu, top to bottom. Each feature adds its item here and builds it in its own function.
+function trayMenuItems() {
+  return [
     { label: nativeText('فتح ذكرني', 'Open Remember Me'), click: showMain },
     { label: nativeText('مهمة جديدة', 'New task'), click: openTaskEditor },
-    isPaused(store?.state?.settings?.pausedUntil)
-      ? { label: nativeText('استئناف التذكيرات', 'Resume reminders'), click: () => { pause.resume(); scan(); } }
-      : { label: nativeText('إيقاف التذكيرات مؤقتًا', 'Pause reminders'), submenu: [
-        { label: nativeText('لمدة ساعة', 'For 1 hour'), click: () => pauseFor('hour') },
-        { label: nativeText('حتى الغد الساعة 8:00', 'Until tomorrow, 8:00'), click: () => pauseFor('tomorrow') },
-        { label: nativeText('حتى أستأنفها', 'Until I resume'), click: () => pauseFor('manual') },
-      ] },
+    pauseMenuItem(),
     { type: 'separator' },
-    { label: nativeText('خروج وإيقاف التذكيرات', 'Exit and stop reminders'), click: async () => {
-      const { response } = await dialog.showMessageBox(mainWindow, { type: 'question', title: nativeText('إغلاق ذكرني', 'Close Remember Me'), message: nativeText('ستتوقف التذكيرات حتى تفتح البرنامج مجددًا.', 'Reminders will stop until you open the app again.'), buttons: [nativeText('البقاء في الخلفية', 'Keep running'), nativeText('خروج', 'Exit')], defaultId: 0, cancelId: 0 });
-      if (response === 1) { quitting = true; app.quit(); }
-    } }
-  ]));
+    exitMenuItem(),
+  ];
+}
+function rebuildTrayMenu() {
+  if (tray) tray.setContextMenu(Menu.buildFromTemplate(trayMenuItems()));
+}
+function pauseMenuItem() {
+  if (isPaused(store?.state?.settings?.pausedUntil)) return { label: nativeText('استئناف التذكيرات', 'Resume reminders'), click: () => { pause.resume(); scan(); } };
+  return { label: nativeText('إيقاف التذكيرات مؤقتًا', 'Pause reminders'), submenu: [
+    { label: nativeText('لمدة ساعة', 'For 1 hour'), click: () => pauseFor('hour') },
+    { label: nativeText('حتى الغد الساعة 8:00', 'Until tomorrow, 8:00'), click: () => pauseFor('tomorrow') },
+    { label: nativeText('حتى أستأنفها', 'Until I resume'), click: () => pauseFor('manual') },
+  ] };
 }
 function pauseFor(choice) { pause.pause(choice); scan(); }
+function exitMenuItem() {
+  return { label: nativeText('خروج وإيقاف التذكيرات', 'Exit and stop reminders'), click: async () => {
+    const { response } = await dialog.showMessageBox(mainWindow, { type: 'question', title: nativeText('إغلاق ذكرني', 'Close Remember Me'), message: nativeText('ستتوقف التذكيرات حتى تفتح البرنامج مجددًا.', 'Reminders will stop until you open the app again.'), buttons: [nativeText('البقاء في الخلفية', 'Keep running'), nativeText('خروج', 'Exit')], defaultId: 0, cancelId: 0 });
+    if (response === 1) { quitting = true; app.quit(); }
+  } };
+}
 // "until 11:15", or with the weekday when the pause ends on another day.
 function pauseText(pausedUntil) {
   if (pausedUntil === UNTIL_RESUMED) return nativeText('حتى تستأنفها', 'until you resume');
