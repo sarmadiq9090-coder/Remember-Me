@@ -33,12 +33,13 @@ async function run() {
     const filters = await s.page.locator('#filters').innerText();
     return t.tags.join() === 'travel,Family' && t.checklist.map(c => c.text).join() === 'Book hotel,Pack' && /#travel/.test(text) && after.checklist[0].done && /#Family/.test(filters) ? `tags ${t.tags}, steps ${t.checklist.length}` : bad(`tags ${t.tags} steps ${JSON.stringify(t.checklist)} row ${text} filters ${filters}`);
   });
-  await check('tags & steps', 'a tag filter shows only tasks with that tag', async () => {
+  await check('tags & steps', 'a tag filter shows only tasks with that tag, in any letter case', async () => {
     await s.value('saveTask', { title: 'Untagged' });
-    await s.page.locator('#filters [data-filter="tag:Family"]').click(); await sleep(300);
+    await s.value('saveTask', { title: 'Picnic', tags: ['family'] });
+    await s.page.locator('#filters [data-filter="tag:family" i]').click(); await sleep(300);
     const rows = await s.page.locator('.task-row .task-name').allInnerTexts();
     await s.page.locator('#filters [data-filter="all"]').click();
-    return rows.join() === 'Trip' ? true : bad(rows.join());
+    return rows.sort().join() === 'Picnic,Trip' ? true : bad(rows.join());
   });
   await check('trash', 'deleting a task offers Undo, which restores it', async () => {
     const row = s.page.locator('.task-row', { hasText: 'Untagged' });
