@@ -30,6 +30,15 @@ function saveTask(state, input, now = new Date()) {
   fields.attachments = attachmentIds(input.attachments ?? task?.attachments ?? []);
   if (input.id && !task) throw new Error('المهمة لم تعد موجودة.');
   if (task) {
+    // The editor sends the updatedAt it opened with and whether its reminder fields (on/off, time,
+    // repeat) were edited. If the alert snoozed or completed the task meanwhile, only the text is
+    // applied so the editor's old time cannot undo that; older callers send neither field.
+    const outdated = typeof input.timeEdited === 'boolean' && input.updatedAt !== task.updatedAt;
+    if (outdated && (!input.timeEdited || task.completedAt)) {
+      const { title, body, priority, category, attachments } = fields;
+      Object.assign(task, { title, body, priority, category, attachments, updatedAt: now.toISOString() });
+      return task;
+    }
     if (task.completedAt) throw new Error('أعد فتح المهمة قبل تعديلها.');
     // A new time, or a repeat switched on or changed, anchors the series at the time the editor shows,
     // which for a snoozed task is the snoozed time rather than the original one.
@@ -67,7 +76,7 @@ function completeTask(state, id, now = new Date(), { expectedDueAt } = {}) {
     task.scheduleAt = task.dueAt;
     task.snoozedAt = null;
     task.updatedAt = now.toISOString();
-  } else task.completedAt = now.toISOString();
+  } else { task.completedAt = now.toISOString(); task.updatedAt = now.toISOString(); }
   return true;
 }
 // Returns false when expectedDueAt shows the reminder was already handled.

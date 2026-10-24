@@ -171,3 +171,40 @@ test('turning on or changing a repeat anchors it to the snoozed time the editor 
   completeTask(s, daily.id, new Date(2026, 9, 23, 11, 1));
   assert.deepEqual([new Date(daily.dueAt).getDate(), new Date(daily.dueAt).getHours()], [30, 11]);
 });
+test('saving an editor opened before a snooze or Done in the alert keeps the new time and applies the text', () => {
+  const s = initialState(), at = (d, h, m = 0) => new Date(2026, 9, d, h, m);
+  const t = saveTask(s, { title: 'once', dueAt: at(23, 9).toISOString() }, at(22, 8));
+  const editor = { ...t }; // what the editor opened with
+  snoozeTask(s, t.id, at(23, 9, 15).toISOString(), at(23, 9));
+  saveTask(s, { ...editor, body: 'edited in the editor', timeEdited: false }, at(23, 9, 1));
+  assert.deepEqual([t.dueAt, t.body], [at(23, 9, 15).toISOString(), 'edited in the editor']);
+  assert.ok(t.snoozedAt, 'The snooze is kept');
+  assert.equal(t.scheduleAt, at(23, 9).toISOString());
+
+  const daily = saveTask(s, { title: 'daily', dueAt: at(23, 9).toISOString(), repeat: 'daily' }, at(22, 8));
+  const opened = { ...daily };
+  completeTask(s, daily.id, at(23, 9, 5));
+  saveTask(s, { ...opened, title: 'daily, renamed', timeEdited: false }, at(23, 9, 6));
+  assert.equal(new Date(daily.dueAt).getDate(), 24, 'Stays on tomorrow’s occurrence');
+  assert.equal(daily.title, 'daily, renamed');
+  assert.equal(s.tasks.filter(x => x.sourceId === daily.id).length, 1, 'No second completion');
+
+  const done = saveTask(s, { title: 'one-time', dueAt: at(23, 10).toISOString() }, at(22, 8));
+  const before = { ...done };
+  completeTask(s, done.id, at(23, 10, 1));
+  saveTask(s, { ...before, body: 'not lost', timeEdited: true, dueAt: at(23, 12).toISOString() }, at(23, 10, 2));
+  assert.equal(done.body, 'not lost', 'Text edits land on the completed record');
+  assert.ok(done.completedAt);
+  assert.equal(done.dueAt, at(23, 10).toISOString());
+  assert.throws(() => saveTask(s, { ...done, body: 'x' }), /أعد فتح/, 'Older callers still cannot edit a completed task');
+
+  // An edit that does change the time still moves the task and its anchor, even after a snooze.
+  const moved = saveTask(s, { title: 'moved', dueAt: at(23, 9).toISOString(), repeat: 'daily' }, at(22, 8));
+  const seen = { ...moved };
+  snoozeTask(s, moved.id, at(23, 9, 30).toISOString(), at(23, 9));
+  saveTask(s, { ...seen, dueAt: at(23, 11).toISOString(), timeEdited: true }, at(23, 9, 1));
+  assert.deepEqual([moved.dueAt, moved.scheduleAt, moved.snoozedAt], [at(23, 11).toISOString(), at(23, 11).toISOString(), null]);
+  // Saved without anything happening in between, the time is applied as before.
+  saveTask(s, { ...moved, dueAt: at(23, 12).toISOString(), timeEdited: true }, at(23, 9, 2));
+  assert.equal(moved.scheduleAt, at(23, 12).toISOString());
+});

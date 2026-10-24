@@ -1,6 +1,6 @@
 let state, view = 'today', filter = 'all', query = '', pendingDelete, toastTimer;
 let taskAttachments = [], noteAttachments = [];
-let originalTaskDue = null, originalTaskDueValue = '';
+let originalTaskDue = null, originalTaskDueValue = '', originalTaskUpdatedAt, originalTaskRepeat = 'none';
 const $ = id => document.getElementById(id);
 const views = {
   today: [['يومي','Today'], ['يومك، على مهل','Your day, at your pace'], ['خطوة صغيرة كل مرة. رتّب أولوياتك واترك التذكير علينا.','One small step at a time. Set your priorities and leave the reminders to us.'], ['مهام اليوم',"Today's tasks"]],
@@ -107,7 +107,8 @@ function openTaskEditor(task) {
   $('task-reminder').checked = !!task?.dueAt;
   $('task-due').value = localDateValue(task?.dueAt || Date.now() + 3600000);
   originalTaskDue = task?.dueAt || null; originalTaskDueValue = $('task-due').value;
-  $('task-repeat').value = task?.repeat || 'none';
+  $('task-repeat').value = originalTaskRepeat = task?.repeat || 'none';
+  originalTaskUpdatedAt = task?.updatedAt;
   taskAttachments = [...(task?.attachments || [])]; renderEditorFiles('task');
   $('task-dialog-title').textContent = task?.id ? tr('تفاصيل المهمة','Task details') : tr('مساحة لمهمة جديدة','Space for a new task');
   toggleReminder();
@@ -185,9 +186,17 @@ document.querySelectorAll('.close-dialog').forEach(b => b.addEventListener('clic
 $('task-form').addEventListener('submit', async e => {
   e.preventDefault(); const submit = e.submitter; submit.disabled = true;
   try {
-    await api('saveTask', { id: $('task-id').value || undefined, title: $('task-title').value, body: $('task-body').value, attachments: taskAttachments, category: state.tasks.find(t => t.id === $('task-id').value)?.category || 'personal', priority: $('task-priority').value,
-      dueAt: $('task-reminder').checked ? (originalTaskDue && $('task-due').value === originalTaskDueValue ? originalTaskDue : new Date($('task-due').value).toISOString()) : null, repeat: $('task-reminder').checked ? $('task-repeat').value : 'none' });
-    $('task-dialog').close(); await refresh(); toast(tr('حُفظت المهمة. خطوة جديدة في مكانها.','Task saved. Your next step is in place.'));
+    const id = $('task-id').value || undefined, reminder = $('task-reminder').checked;
+    // Tells the main process whether to keep a snooze or Done made in the alert while this editor was open.
+    const timeEdited = reminder !== !!originalTaskDue || (reminder && ($('task-due').value !== originalTaskDueValue || $('task-repeat').value !== originalTaskRepeat));
+    await api('saveTask', { id, title: $('task-title').value, body: $('task-body').value, attachments: taskAttachments, category: state.tasks.find(t => t.id === $('task-id').value)?.category || 'personal', priority: $('task-priority').value,
+      dueAt: reminder ? (originalTaskDue && $('task-due').value === originalTaskDueValue ? originalTaskDue : new Date($('task-due').value).toISOString()) : null, repeat: reminder ? $('task-repeat').value : 'none',
+      ...(id ? { updatedAt: originalTaskUpdatedAt, timeEdited } : {}) });
+    $('task-dialog').close(); await refresh();
+    const saved = id && state.tasks.find(t => t.id === id);
+    toast(saved?.completedAt ? tr('حُفظ النص. كانت المهمة قد اكتملت من نافذة التنبيه.', 'Your text was saved. The task had already been completed from the alert.')
+      : saved && !timeEdited && saved.dueAt !== originalTaskDue ? tr('حُفظ النص، وبقي الموعد الذي اخترته من نافذة التنبيه.', 'Your text was saved, and the time chosen from the alert was kept.')
+      : tr('حُفظت المهمة. خطوة جديدة في مكانها.','Task saved. Your next step is in place.'));
   } catch (err) { $('task-error').textContent = err.message; } finally { submit.disabled = false; }
 });
 let quickBusy = false;
