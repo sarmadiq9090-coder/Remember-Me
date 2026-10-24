@@ -9,7 +9,7 @@ const { exportBackup, BACKUP_INFO } = require('./attachments');
 const { validKeep, expiredBackups, rotateBackups } = require('./backups');
 
 // Google Drive for desktop owns authentication, upload retries and offline syncing.
-// Waqt only reports handing a complete backup to the user-selected sync folder.
+// Remember Me only reports handing a complete backup to the user-selected sync folder.
 class DriveBackup {
   constructor(directory, getState, onChange = () => {}, options = {}) {
     this.directory = directory;
@@ -48,7 +48,7 @@ class DriveBackup {
     if (this.running) throw new Error(this.text('انتظر اكتمال النسخة الحالية.', 'Wait for the current backup to finish.'));
     if (typeof folder !== 'string' || !path.isAbsolute(folder) || !(await fsp.stat(folder)).isDirectory()) throw new Error(this.text('اختر مجلد Google Drive المتزامن.', 'Choose the synced Google Drive folder.'));
     const root = path.resolve(folder), local = path.resolve(this.directory);
-    if (root === local || root.startsWith(local + path.sep)) throw new Error(this.text('اختر وجهة خارج مجلد بيانات وقت.', 'Choose a destination outside the Remember Me data folder.'));
+    if (root === local || root.startsWith(local + path.sep)) throw new Error(this.text('اختر وجهة خارج مجلد بيانات ذكرني.', 'Choose a destination outside the Remember Me data folder.'));
     this.config.folder = root;
     this.config.error = '';
     this.config.unavailableSince = null;

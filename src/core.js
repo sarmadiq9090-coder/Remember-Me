@@ -5,7 +5,7 @@ const path = require('node:path');
 const { attachmentIds, validateAttachment } = require('./attachments');
 
 function initialState() {
-  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'ar', weekStart: 6, theme: 'system' } };
+  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'ar', weekStart: 6, theme: 'system', autoUpdate: null } };
 }
 // Minutes between repeated alert sounds; 0 is off. Data from before the setting has no value, meaning off.
 const REMIND_AGAIN = [0, 2, 5, 15];
@@ -251,6 +251,8 @@ function validateState(data) {
   data.settings.alertSide = data.settings.alertSide === 'left' ? 'left' : 'right';
   data.settings.language = data.settings.language === 'en' ? 'en' : 'ar';
   if (data.settings.remindAgain !== undefined && !REMIND_AGAIN.includes(data.settings.remindAgain)) data.settings.remindAgain = 0;
+  // null until the user answers the one-time question about automatic updates.
+  if (data.settings.autoUpdate !== true && data.settings.autoUpdate !== false) data.settings.autoUpdate = null;
   return data;
 }
 // Antivirus scanners, the search indexer and sync clients briefly lock new files on Windows.

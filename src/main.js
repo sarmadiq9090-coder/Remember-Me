@@ -8,18 +8,28 @@ const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
 const { checkRequest, fromPage } = require('./ipc');
 const { alertBounds } = require('./placement');
-const { readBackup, restoreBackup } = require('./backups');
+const { readBackup, safetyBackup, restoreBackup } = require('./backups');
 const { createRepeatBeep } = require('./repeat-beep');
 const { createLogger } = require('./logger');
+const { Updates, configure: configureUpdater } = require('./updates');
+const { migrateDataFolder } = require('./data-folder');
+const { setLoginItem, refreshLoginItem } = require('./login-item');
 const testMode = process.env.WAQT_TEST === '1';
 // Lets the desktop tests read early notifications without showing them.
 if (testMode) globalThis.waqtTest = { get early() { return earlyLog; } };
-app.setName('ذكرني');
-app.setPath('userData', testMode && process.env.WAQT_DATA_DIR ? process.env.WAQT_DATA_DIR : path.join(app.getPath('appData'), 'Waqt'));
+app.setName('Remember Me');
+// Runs before anything (including the single-instance lock) creates files in the data folder.
+const dataFolder = testMode && process.env.WAQT_DATA_DIR ? { folder: process.env.WAQT_DATA_DIR, migrated: 'none' } : migrateDataFolder(app.getPath('appData'));
+if (dataFolder.error) console.error('Could not move the data folder; using the old one:', dataFolder.error);
+app.setPath('userData', dataFolder.folder);
+// The ID predates the Remember Me name. Keep it: it names the start-with-Windows entry and taskbar
+// group of v1.4.0, and the installer's appId must stay the same for upgrades and updates.
 app.setAppUserModelId('com.waqt.reminder');
-// Local log for bug reports: ids, counts and outcomes only, never task or note content.
+// Local log for bug reports: ids, counts and outcomes only, never task or note content or paths.
 const log = createLogger(app.getPath('userData'));
-let mainWindow, alertWindow, tray, store, quitting = false, interval, preview = null, driveBackup, backupInterval;
+if (dataFolder.migrated !== 'none') log.info('data-folder-migrated', { result: dataFolder.migrated });
+if (dataFolder.error) log.warn('data-folder-migration-failed', dataFolder.error);
+let mainWindow, alertWindow, tray, store, quitting = false, interval, preview = null, driveBackup, backupInterval, updates;
 const imagePreview = createPreviewService(nativeImage);
 let previousDue = new Set();
 const repeatBeep = createRepeatBeep(() => shell.beep());
@@ -49,7 +59,7 @@ let trayWaiting = false;
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => showMain());
-  app.whenReady().then(start).catch(error => { log.error('start-failed', error); dialog.showErrorBox('تعذّر تشغيل ذكرني', error.message); app.quit(); });
+  app.whenReady().then(start).catch(error => { log.error('start-failed', error); dialog.showErrorBox(nativeText('تعذّر تشغيل ذكرني', 'Remember Me could not start'), error.message); app.quit(); });
 }
 // Window backgrounds match ui/dark.css so opening a window never flashes the other theme.
 function background(light, dark) { return nativeTheme.shouldUseDarkColors ? dark : light; }
@@ -64,7 +74,7 @@ function secure(win) {
 }
 function createMain(visible = !process.argv.includes('--background')) {
   const win = mainWindow = new BrowserWindow({ width: 1250, height: 850, minWidth: 900, minHeight: 650,
-    title: 'ذكرني • مساحة ليومك', icon, show: false, backgroundColor: background('#f7f8fa', '#181d27'), autoHideMenuBar: true, webPreferences: options() });
+    title: nativeText('ذكرني • مساحة ليومك', 'Remember Me • Your day'), icon, show: false, backgroundColor: background('#f7f8fa', '#181d27'), autoHideMenuBar: true, webPreferences: options() });
   win.setMenu(null);
   secure(win);
   win.loadFile(path.join(__dirname, '../ui/index.html'));
@@ -148,7 +158,21 @@ function purgeExpiredTrash() {
 function setLogin(enabled) {
   if (testMode) return;
   if (!app.isPackaged) { if (enabled) throw new Error('شغّل نسخة البرنامج الجاهزة لتفعيل التشغيل مع ويندوز.'); return; }
-  app.setLoginItemSettings({ openAtLogin: enabled, path: process.execPath, args: ['--background'] });
+  setLoginItem(app, enabled, process.execPath);
+}
+function createUpdates() {
+  // Test runs never contact GitHub; electron-updater itself does nothing in development builds.
+  const updater = testMode ? Object.assign(new (require('node:events'))(), { checkForUpdates: async () => null, quitAndInstall() {} })
+    : configureUpdater(require('electron-updater').autoUpdater);
+  // Logs each change of update state with versions only; electron-updater's messages can hold paths and URLs.
+  let loggedState = 'idle';
+  const onChange = () => {
+    if (updates && updates.state !== loggedState) { loggedState = updates.state; log.info('update', { state: updates.state, version: app.getVersion(), ...(updates.next ? { next: String(updates.next).slice(0, 40) } : {}) }); }
+    notifyViews();
+  };
+  return new Updates({ updater, version: app.getVersion(), consent: () => store.state.settings.autoUpdate, onChange,
+    backup: () => safetyBackup(app.getPath('userData'), store.state, 'RememberMe-before-update-'),
+    prepareQuit: () => { quitting = true; }, quit: () => app.quit() });
 }
 async function start() {
   // The UI needs no camera, microphone, notifications, location or other browser permissions.
@@ -160,6 +184,11 @@ async function start() {
   nativeTheme.themeSource = store.state.settings.theme;
   nativeTheme.on('updated', applyTheme);
   driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, notifyViews, { text: nativeText, log });
+  // After an upgrade the entry may still point at the old Waqt.exe, or at an old install folder.
+  if (store.state.settings.startAtLogin && app.isPackaged && !testMode) {
+    try { refreshLoginItem(app, process.execPath); } catch (error) { console.error('Could not update start with Windows:', error); log.warn('login-item-refresh-failed', error); }
+  }
+  updates = createUpdates();
   createMain();
   tray = new Tray(nativeImage.createFromPath(icon));
   rebuildTrayMenu();
@@ -173,7 +202,7 @@ async function start() {
       payload = checkRequest(action, payload, { fromAlert, text: nativeText });
       let value;
       switch (action) {
-        case 'state': value = { ...store.state, dataPath: app.getPath('userData'), packaged: app.isPackaged, recovered: store.recovered, driveBackup: driveBackup.status() }; break;
+        case 'state': value = { ...store.state, dataPath: app.getPath('userData'), packaged: app.isPackaged, recovered: store.recovered, driveBackup: driveBackup.status(), updates: updates.status() }; break;
         case 'alerts': value = activeAlerts().map(t => ({ ...t, files: (t.attachments || []).map(id => store.state.attachments.find(a => a.id === id)).filter(Boolean) })); break;
         case 'language': value = { language: language() }; break;
         case 'saveTask': store.change(s => saveTask(s, payload)); break;
@@ -276,7 +305,7 @@ async function start() {
             weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 6, theme: ['light', 'dark'].includes(payload.theme) ? payload.theme : 'system',
             remindAgain: REMIND_AGAIN.includes(payload.remindAgain) ? payload.remindAgain : 0 };
           if (old.startAtLogin !== settings.startAtLogin) setLogin(settings.startAtLogin);
-          try { store.change(s => { s.settings = settings; }); }
+          try { store.change(s => { s.settings = { ...s.settings, ...settings }; }); }
           catch (err) { if (old.startAtLogin !== settings.startAtLogin) setLogin(old.startAtLogin); throw err; }
           rebuildTrayMenu(); placeAlert(); applyTheme(); break;
         }
@@ -327,10 +356,17 @@ A safety copy of your current data is saved in the backups folder first.`),
           break;
         }
         case 'dataFolder': await shell.openPath(app.getPath('userData')); break;
+        case 'updateConsent': store.change(s => { s.settings.autoUpdate = payload.enabled; }); updates.consentChanged(); break;
+        case 'checkUpdates': value = await updates.check(); break;
+        case 'installUpdate':
+          try { value = await updates.restart(); }
+          catch (error) { throw new Error(nativeText(`تعذّر حفظ نسخة أمان من بياناتك، فلم يُثبَّت التحديث. ${error.message}`, `Couldn't save a safety copy of your data, so the update was not installed. ${error.message}`), { cause: error }); }
+          break;
+        case 'dismissUpdate': updates.dismiss(); break;
         case 'open': showMain(); break;
         default: throw new Error('إجراء غير معروف.');
       }
-      if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder'].includes(action)) { scan(); notifyViews(); }
+      if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder', 'checkUpdates', 'installUpdate', 'dismissUpdate'].includes(action)) { scan(); notifyViews(); }
       return { ok: true, value };
     } catch (error) { log.warn('action-failed', error, { action: typeof action === 'string' ? action.slice(0, 40) : typeof action }); return { ok: false, error: error.message }; }
   });
@@ -338,6 +374,7 @@ A safety copy of your current data is saved in the backups folder first.`),
   purgeExpiredTrash();
   backupInterval = setInterval(() => { driveBackup.tick(); try { purgeExpiredTrash(); } catch (error) { console.error('Trash purge failed:', error); log.error('trash-purge-failed', error); } }, 60000);
   if (!testMode) driveBackup.tick();
+  updates.start();
   powerMonitor.on('resume', () => { log.info('resume'); scan(); });
   powerMonitor.on('unlock-screen', scan);
   screen.on('display-metrics-changed', placeAlert);
@@ -348,4 +385,9 @@ A safety copy of your current data is saved in the backups folder first.`),
 app.on('web-contents-created', (event, contents) => contents.on('will-attach-webview', e => e.preventDefault()));
 app.on('activate', showMain);
 app.on('window-all-closed', () => {});
-app.on('before-quit', () => { log.info('quit'); quitting = true; clearInterval(interval); clearInterval(backupInterval); });
+app.on('before-quit', event => {
+  log.info('quit');
+  quitting = true; clearInterval(interval); clearInterval(backupInterval);
+  // With a downloaded update this waits for a safety backup, then installs it.
+  updates?.beforeQuit(event);
+});

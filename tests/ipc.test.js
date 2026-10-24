@@ -9,7 +9,7 @@ test('requests are limited to known actions, the alert window to its own subset'
   assert.deepEqual(checkRequest('saveTask', { title: 'x' }), { title: 'x' });
   for (const action of [undefined, 42, '__proto__', 'constructor', 'toString', 'deleteEverything']) assert.throws(() => checkRequest(action), /غير معروف/);
   for (const action of ALERT_ACTIONS) assert.doesNotThrow(() => checkRequest(action, { id: 'a' }, { fromAlert: true }));
-  for (const action of ['saveTask', 'deleteTask', 'settings', 'export', 'attachFiles', 'dataFolder']) assert.throws(() => checkRequest(action, { id: 'a' }, { fromAlert: true }), /غير مسموح/);
+  for (const action of ['saveTask', 'deleteTask', 'settings', 'export', 'attachFiles', 'dataFolder', 'updateConsent', 'checkUpdates', 'installUpdate']) assert.throws(() => checkRequest(action, { id: 'a' }, { fromAlert: true }), /غير مسموح/);
   assert.throws(() => checkRequest('saveTask', {}, { fromAlert: true, text: (ar, en) => en }), /Request not allowed/);
 });
 
@@ -19,6 +19,8 @@ test('payloads must be plain objects and item IDs short strings', () => {
   assert.doesNotThrow(() => checkRequest('complete', { id: '__preview' }));
   assert.doesNotThrow(() => checkRequest('saveNote', { title: 'new note' }), 'Creating an item needs no ID');
   assert.throws(() => checkRequest('saveNote', { id: 9, title: 'x' }), /معرّف/);
+  assert.doesNotThrow(() => checkRequest('updateConsent', { enabled: false }));
+  for (const enabled of [undefined, null, 'true', 1]) assert.throws(() => checkRequest('updateConsent', { enabled }), /بيانات الطلب/);
 });
 
 test('only the window’s own bundled page may call the main process', () => {

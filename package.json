@@ -1,5 +1,5 @@
 {
-  "name": "waqt-reminder",
+  "name": "remember-me",
   "version": "1.4.0",
   "description": "تطبيق مهام وملاحظات وتذكيرات عربي وإنجليزي لويندوز",
   "main": "src/main.js",
@@ -12,11 +12,14 @@
   "keywords": ["reminder", "todo", "notes", "windows", "electron", "arabic", "english"],
   "scripts": {
     "start": "electron .",
-    "test": "node --test tests/core.test.js tests/scheduling.test.js tests/ipc.test.js tests/placement.test.js tests/search.test.js tests/attachments.test.js tests/backups.test.js tests/drive-backup.test.js tests/dark-theme.test.js tests/formatting.test.js tests/logger.test.js",
+    "test": "node --test tests/core.test.js tests/scheduling.test.js tests/ipc.test.js tests/placement.test.js tests/search.test.js tests/attachments.test.js tests/backups.test.js tests/drive-backup.test.js tests/dark-theme.test.js tests/formatting.test.js tests/data-folder.test.js tests/login-item.test.js tests/updates.test.js tests/winget-manifest.test.js tests/logger.test.js",
     "lint": "eslint .",
     "test:desktop": "node tests/desktop-smoke.cjs",
     "package": "node tools/package.mjs",
     "installer": "node tools/installer.cjs"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.10"
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",
@@ -27,5 +30,5 @@
     "globals": "17.13.0",
     "playwright": "1.64.0"
   },
-  "productName": "ذكرني - Remember Me"
+  "productName": "Remember Me"
 }

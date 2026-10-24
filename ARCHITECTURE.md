@@ -1,6 +1,7 @@
 # Architecture
 
-Remember Me (ذكرني, internally "Waqt") is an offline-first Electron app for Windows. It is plain
+Remember Me (ذكرني) is an offline-first Electron app for Windows. Up to v1.4 it was named "Waqt"
+internally, a name that survives in the app ID and the test variables. It is plain
 JavaScript with no framework and no build step: `src/` runs in the main process, `ui/` is loaded
 as-is into sandboxed windows, and `node --test` runs the unit tests directly against the sources.
 
@@ -21,8 +22,11 @@ true (see "Keeping this document current").
 | Google Drive folder backups | `src/drive-backup.js` |
 | Image thumbnails | `src/image-preview.js` |
 | Local log | `src/logger.js` |
+| Moving the data folder from `Waqt` to `Remember Me` | `src/data-folder.js` |
+| Start with Windows entry | `src/login-item.js` |
+| Update checks, download and install policy | `src/updates.js` |
 | Main window and sticky alert pages, shared scripts and CSS | `ui/` |
-| Packaging, installer, icon and dark-theme generators | `tools/` |
+| Packaging, installer, winget manifests, icon and dark-theme generators | `tools/` |
 | Unit tests (`node --test`) and Playwright desktop suites (`*-desktop.cjs`, `desktop-smoke.cjs`) | `tests/` |
 | Lint rules (folder-agnostic) and editor settings | `eslint.config.cjs`, `.editorconfig` |
 
@@ -59,6 +63,7 @@ Every request goes through one `ipcMain.handle('waqt:action')` handler, which:
 | Notes | `saveNote` |
 | Attachments | `attachFiles`, `openAttachment`, `imagePreview`, `cleanOrphans` |
 | Backups | `export`, `restore`, `chooseDriveFolder`, `driveBackupNow`, `driveAutomatic`, `driveKeep`, `driveHelp`, `openDriveFolder` |
+| Updates | `updateConsent`, `checkUpdates`, `installUpdate`, `dismissUpdate` |
 | App | `settings`, `preview`, `dataFolder`, `open` |
 
 The alert window may only use `alerts`, `language`, `complete`, `skip`, `undoComplete`, `undoable`,
@@ -71,14 +76,15 @@ reminder it is currently showing.
 
 ## Data: data.json
 
-Everything lives in the data folder, `%APPDATA%\Waqt` (overridable only in test mode through
+Everything lives in the data folder, `%APPDATA%\Remember Me` (overridable only in test mode through
 `WAQT_TEST=1` and `WAQT_DATA_DIR`):
 
 ```
 data.json, data.json.bak        the current data and the previous good copy
 data.json.damaged-<time>        a file that failed to load, kept untouched
 attachments/<id>/<name>         one folder per attachment
-backups/Waqt-backup-<time>/     automatic and safety backups
+backups/RememberMe-backup-<time>/  automatic backups (older ones are named Waqt-backup-)
+backups/RememberMe-before-*/    safety copies made before a restore or an update
 drive-backup.json               Google Drive backup settings and status
 logs/remember-me.log[.1|.2]     the local log (see Logging)
 ```
@@ -113,6 +119,7 @@ all data. The shape (`version` is always `1`):
   settings: {
     sound: true, startAtLogin: false, alertSide: 'right'|'left', language: 'ar'|'en',
     weekStart: 6|0|1, theme: 'system'|'light'|'dark',
+    autoUpdate: null|true|false,  // consent to background update checks; null means not asked yet
     remindAgain?: 0|2|5|15    // minutes between repeated alert sounds; absent means off
   }
 }
@@ -123,6 +130,16 @@ apart from defaults for settings it did not have; the removed `settings.hijri` a
 `settings.digits` are deleted on load. Completing a repeating task keeps the task and adds a
 completed copy with `repeat: 'none'` and `sourceId`. Deleted items get `deletedAt` and stay in the
 trash for 30 days.
+
+### Moving the data folder
+
+Up to v1.4 the data folder was `%APPDATA%\Waqt`. At startup, before anything else touches the data
+folder (even the single-instance lock), the data-folder module moves it to `%APPDATA%\Remember Me`
+when the new folder has no data yet: it renames the whole folder, or, if the folder is locked, copies
+it, checks the copy, and renames the old folder to `Waqt.migrated-<time>`. An empty new folder (left
+by a development build, say) is set aside as `Remember Me.unused-<time>` first. The old data is never
+deleted. If anything fails the old folder is used as it is, and the move is retried on the next
+start. `drive-backup.json` paths that pointed into the old folder are rewritten to the new one.
 
 ## Scheduler
 
@@ -161,6 +178,28 @@ past. A second timer, every minute, runs the Drive backup tick and removes trash
   the folder has been missing for more than a day. Optional rotation keeps only the newest automatic
   copies; manual exports and safety copies are never rotated.
 
+## Start with Windows
+
+The login-item module registers the executable with `--background`, so the app starts hidden in the
+tray. After an upgrade the entry may still point at the old `Waqt.exe` or an old install folder, so
+at startup (packaged builds, setting on) the old entries are removed and the current executable is
+registered again, keeping the entry disabled if the user disabled it in Task Manager.
+
+## Updates
+
+The updates module wraps electron-updater with the app's policy:
+
+- New versions come from this repository's GitHub Releases over HTTPS. The feed is set in code and
+  in `resources/app-update.yml`. Downloads are checked against the SHA-512 in the release's
+  `latest.yml`; once releases are code-signed, the publisher name will be checked too.
+- Background checks need consent (`settings.autoUpdate === true`, asked once): about 30 seconds after
+  start, then once a day. "Check now" in Settings works either way. Prereleases and downgrades are
+  never offered.
+- A downloaded update installs only when the user chooses "Restart now", or on the next normal quit.
+  The app never restarts on its own. Either way a safety copy of the data
+  (`RememberMe-before-update-<time>`) is made first; if it fails, nothing is installed.
+- Test mode replaces the updater with a stub that never contacts GitHub.
+
 ## Logging
 
 The logger appends one JSON line per event to `logs/remember-me.log` in the data folder,
@@ -168,6 +207,10 @@ rotating at 1 MB and keeping three files (at most 3 MB), so a user can attach it
 Settings' "Open data folder" shows it. It records:
 
 - `start` (version, whether packaged, and task, note and attachment counts), `quit` and `resume`;
+- `data-folder-migrated` (renamed or copied) and `data-folder-migration-failed`, and
+  `login-item-refresh-failed`;
+- `update` on each change of update state (checking, downloading, ready, installing, latest,
+  unavailable, error), with the current and next version only, never feed URLs or paths;
 - `data-recovered-from-bak` when `data.json` could not be read and the `.bak` copy was loaded;
 - `start-failed`, `scan-failed` (once per distinct error, then at most every 10 minutes) and
   `trash-purge-failed`;
@@ -190,16 +233,20 @@ which Chromium keeps bounded. Backups never include them.
 ## Packaging and releases
 
 - `pnpm run package` (`tools/package.mjs`) runs `@electron/packager` into `release/v<version>/`,
-  bundling only `package.json`, `LICENSE`, `src/`, `ui/` and `assets/`, and keeping only the Arabic
-  and English Chromium locales.
+  producing `Remember Me.exe`. It bundles only `package.json`, `LICENSE`, `src/`, `ui/` and
+  `assets/`, plus the runtime dependencies (electron-updater and what it needs) copied in as one flat
+  `node_modules` folder, since pnpm links packages instead of nesting them. It keeps only the Arabic
+  and English Chromium locales and writes `resources/app-update.yml` for the updater.
 - `pnpm run installer` (`tools/installer.cjs`) turns that folder into a per-user NSIS installer,
-  `release/installer/Remember-Me-Setup-<version>-x64.exe`.
+  `release/installer/Remember-Me-Setup-<version>-x64.exe`, with the `latest.yml` and `.blockmap`
+  files the updater reads. The installer keeps the v1.4 app ID, so it upgrades older installs.
 - `.github/workflows/test.yml` runs the unit tests and ESLint on Windows for every pull request.
   `.github/workflows/desktop.yml` packages the app and runs `tests/desktop-smoke.cjs` against the
   packaged build with Playwright.
   `.github/workflows/release.yml` runs on a `v*` tag: it checks the tag against `package.json`,
-  runs the tests, builds the installer, writes `SHA256SUMS.txt`, attests the build provenance and
-  publishes a GitHub release.
+  runs the tests, builds the installer, writes `SHA256SUMS.txt`, attests the build provenance,
+  publishes a GitHub release with `latest.yml` and the `.blockmap`, and builds winget manifests
+  (`tools/winget-manifest.mjs`) as an artifact. `RELEASING.md` is the release checklist.
 - `tools/build-assets.cjs` regenerates the icons, including the tray's "waiting" variant, and
   `tools/dark-theme.cjs` regenerates `ui/dark.css` from the light stylesheets (a test checks it is
   up to date).
