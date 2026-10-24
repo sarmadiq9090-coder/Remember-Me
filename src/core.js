@@ -31,9 +31,11 @@ function saveTask(state, input, now = new Date()) {
   if (input.id && !task) throw new Error('المهمة لم تعد موجودة.');
   if (task) {
     if (task.completedAt) throw new Error('أعد فتح المهمة قبل تعديلها.');
-    const changed = fields.dueAt !== task.dueAt;
+    // A new time, or a repeat switched on or changed, anchors the series at the time the editor shows,
+    // which for a snoozed task is the snoozed time rather than the original one.
+    const anchor = fields.dueAt !== task.dueAt || (fields.repeat !== 'none' && fields.repeat !== task.repeat);
     Object.assign(task, fields, { updatedAt: now.toISOString() });
-    if (changed) { task.scheduleAt = fields.dueAt; task.snoozedAt = null; }
+    if (anchor) { task.scheduleAt = fields.dueAt; task.snoozedAt = null; }
   } else {
     task = { ...fields, id: randomUUID(), scheduleAt: fields.dueAt, createdAt: now.toISOString(), updatedAt: now.toISOString(), completedAt: null, snoozedAt: null };
     state.tasks.push(task);

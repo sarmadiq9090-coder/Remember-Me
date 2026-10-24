@@ -151,3 +151,23 @@ test('a repeated Done or snooze for an occurrence that already moved on changes 
   const undated = saveTask(s, { title: 'undated' });
   assert.equal(completeTask(s, undated.id, now, { expectedDueAt: null }), true);
 });
+test('turning on or changing a repeat anchors it to the snoozed time the editor shows', () => {
+  const s = initialState();
+  const once = saveTask(s, { title: 'once', dueAt: new Date(2026, 9, 23, 9).toISOString() });
+  snoozeTask(s, once.id, new Date(2026, 9, 23, 14).toISOString(), new Date(2026, 9, 23, 9));
+  saveTask(s, { ...once, repeat: 'daily' });
+  assert.equal(once.scheduleAt, new Date(2026, 9, 23, 14).toISOString());
+  assert.equal(once.snoozedAt, null);
+  completeTask(s, once.id, new Date(2026, 9, 23, 14, 1));
+  assert.deepEqual([new Date(once.dueAt).getDate(), new Date(once.dueAt).getHours()], [24, 14]);
+
+  const daily = saveTask(s, { title: 'daily', dueAt: new Date(2026, 9, 23, 9).toISOString(), repeat: 'daily' });
+  snoozeTask(s, daily.id, new Date(2026, 9, 23, 11).toISOString(), new Date(2026, 9, 23, 9));
+  saveTask(s, { ...daily, body: 'only the text' });
+  assert.equal(daily.scheduleAt, new Date(2026, 9, 23, 9).toISOString(), 'A body edit keeps the anchor');
+  assert.ok(daily.snoozedAt);
+  saveTask(s, { ...daily, repeat: 'weekly' });
+  assert.equal(daily.scheduleAt, new Date(2026, 9, 23, 11).toISOString(), 'A new repeat type re-anchors');
+  completeTask(s, daily.id, new Date(2026, 9, 23, 11, 1));
+  assert.deepEqual([new Date(daily.dueAt).getDate(), new Date(daily.dueAt).getHours()], [30, 11]);
+});
