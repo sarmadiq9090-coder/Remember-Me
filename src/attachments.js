@@ -12,6 +12,8 @@ function attachmentIds(value = []) {
   return [...new Set(value)];
 }
 function validateAttachment(record) {
+  // Windows forbids control characters in file names, so the pattern has to match them.
+  // eslint-disable-next-line no-control-regex
   if (!record || !idPattern.test(record.id) || typeof record.name !== 'string' || !record.name || record.name.length > 255 || /[<>:"/\\|?*\x00-\x1f]/.test(record.name) || record.name === '.' || record.name === '..' || /[. ]$/.test(record.name) || !Number.isSafeInteger(record.size) || record.size < 0 || record.size > MAX_FILE_SIZE) throw new Error('بيانات المرفق غير صالحة.');
   return record;
 }

@@ -19,7 +19,7 @@ async function readBackup(folder, { text = arabic } = {}) {
   catch { throw new Error(text('ملف بيانات النسخة الاحتياطية غير صالح.', 'The backup data file is invalid.')); }
   let info = null;
   try { info = JSON.parse(await fsp.readFile(path.join(folder, BACKUP_INFO), 'utf8')); }
-  catch (error) { if (error.code !== 'ENOENT') throw new Error(text('ملف بصمات النسخة الاحتياطية غير صالح.', 'The backup checksum file is invalid.')); }
+  catch (error) { if (error.code !== 'ENOENT') throw new Error(text('ملف بصمات النسخة الاحتياطية غير صالح.', 'The backup checksum file is invalid.'), { cause: error }); }
   if (info && (info.algorithm !== 'sha256' || !info.files || typeof info.files !== 'object')) throw new Error(text('ملف بصمات النسخة الاحتياطية غير صالح.', 'The backup checksum file is invalid.'));
   const damaged = name => new Error(text(`النسخة الاحتياطية تالفة: «${name}» لا يطابق بصمته المحفوظة.`, `The backup is damaged: "${name}" does not match its saved checksum.`));
   if (info && createHash('sha256').update(raw, 'utf8').digest('hex') !== info.files['data.json']) throw damaged('data.json');

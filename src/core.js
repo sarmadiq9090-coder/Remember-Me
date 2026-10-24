@@ -282,7 +282,7 @@ class Store {
     this.recovered = false;
     if (!fs.existsSync(this.file)) { this.state = initialState(); return; }
     try { this.state = validateState(JSON.parse(fs.readFileSync(this.file, 'utf8'))); }
-    catch (err) {
+    catch {
       try {
         this.state = validateState(JSON.parse(fs.readFileSync(this.file + '.bak', 'utf8')));
         fs.copyFileSync(this.file, this.file + '.damaged-' + Date.now());
