@@ -93,9 +93,10 @@ function nextOccurrence(value, repeat, now, rule = {}) {
   while (next <= now) next.setDate(next.getDate() + step);
   return next.toISOString();
 }
+// Returns what undoComplete needs: the history copy for repeats, or the task itself.
 function completeTask(state, id, now = new Date()) {
-  const task = state.tasks.find(t => t.id === id);
-  if (!task || task.completedAt) return;
+  const task = state.tasks.find(t => t.id === id && !t.deletedAt);
+  if (!task || task.completedAt) return null;
   if (task.repeat !== 'none' && task.scheduleAt) {
     const done = { ...task, id: randomUUID(), repeat: 'none', sourceId: task.id, completedAt: now.toISOString() };
     applyRule(done, {});
@@ -104,10 +105,37 @@ function completeTask(state, id, now = new Date()) {
     task.scheduleAt = task.dueAt;
     task.snoozedAt = null;
     task.updatedAt = now.toISOString();
-  } else task.completedAt = now.toISOString();
+    return { id, copyId: done.id };
+  }
+  task.completedAt = now.toISOString();
+  return { id, copyId: id };
+}
+// Puts a just-completed task back exactly as it was: a repeat returns to the occurrence that was
+// completed and loses the history copy that completing it created.
+function undoComplete(state, id, copyId, now = new Date()) {
+  const task = state.tasks.find(t => t.id === id);
+  if (!task) throw new Error('المهمة لم تعد موجودة.');
+  if (copyId === id) { if (task.completedAt) Object.assign(task, { completedAt: null, updatedAt: now.toISOString() }); return; }
+  const copy = state.tasks.find(t => t.id === copyId && t.sourceId === id && t.completedAt);
+  if (!copy) return;
+  Object.assign(task, { dueAt: copy.dueAt, scheduleAt: copy.scheduleAt, snoozedAt: copy.snoozedAt, updatedAt: now.toISOString() });
+  state.tasks = state.tasks.filter(t => t !== copy);
+}
+// Deleted tasks and notes stay in a trash for TRASH_DAYS before they are removed for good.
+const TRASH_DAYS = 30;
+function list(state, kind) { if (kind !== 'tasks' && kind !== 'notes') throw new Error('invalid kind'); return state[kind]; }
+function trashItem(state, kind, id, now = new Date()) { const item = list(state, kind).find(i => i.id === id); if (item && !item.deletedAt) item.deletedAt = now.toISOString(); }
+function restoreItem(state, kind, id) { const item = list(state, kind).find(i => i.id === id); if (item) item.deletedAt = null; }
+function purgeItem(state, kind, id) { state[kind] = list(state, kind).filter(i => !(i.id === id && i.deletedAt)); }
+function purgeTrash(state, now = new Date(), all = false) {
+  const limit = now.getTime() - TRASH_DAYS * 86400000;
+  const keep = i => !i.deletedAt || (!all && Date.parse(i.deletedAt) > limit);
+  const before = state.tasks.length + state.notes.length;
+  state.tasks = state.tasks.filter(keep); state.notes = state.notes.filter(keep);
+  return before - state.tasks.length - state.notes.length;
 }
 function snoozeTask(state, id, until, now = new Date()) {
-  const task = state.tasks.find(t => t.id === id && !t.completedAt);
+  const task = state.tasks.find(t => t.id === id && !t.completedAt && !t.deletedAt);
   if (!task) throw new Error('هذا التذكير لم يعد نشطًا.');
   const next = date(until);
   if (!next || Date.parse(next) <= now.getTime()) throw new Error('اختر وقتًا لاحقًا للتذكير.');
@@ -116,7 +144,7 @@ function snoozeTask(state, id, until, now = new Date()) {
   task.updatedAt = now.toISOString();
 }
 function dueTasks(state, now = new Date()) {
-  return state.tasks.filter(t => !t.completedAt && t.dueAt && Date.parse(t.dueAt) <= now.getTime())
+  return state.tasks.filter(t => !t.completedAt && !t.deletedAt && t.dueAt && Date.parse(t.dueAt) <= now.getTime())
     .sort((a, b) => Date.parse(a.dueAt) - Date.parse(b.dueAt));
 }
 function validateState(data) {
@@ -146,6 +174,7 @@ function validateState(data) {
     if (task.repeat !== 'none' && !task.scheduleAt) task.scheduleAt = task.dueAt;
     try { task.snoozedAt = date(task.snoozedAt); } catch { task.snoozedAt = null; }
   }
+  for (const item of [...data.tasks, ...data.notes]) if ('deletedAt' in item) { try { item.deletedAt = date(item.deletedAt); } catch { item.deletedAt = null; } }
   for (const note of data.notes) {
     title(note.title);
     if (typeof note.id !== 'string' || typeof note.body !== 'string') throw new Error('بيانات الملاحظات غير صالحة.');
@@ -212,4 +241,4 @@ class Store {
     this.state = draft;
   }
 }
-module.exports = { initialState, saveTask, completeTask, snoozeTask, dueTasks, nextOccurrence, validateState, Store };
+module.exports = { TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, nextOccurrence, validateState, Store };

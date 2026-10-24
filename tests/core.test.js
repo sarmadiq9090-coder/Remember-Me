@@ -128,3 +128,44 @@ test('loading normalizes out-of-range fields instead of rejecting the file, and 
   assert.throws(() => validateState({ ...before, tasks: [null] }), /المهام/);
   assert.throws(() => validateState({ ...before, version: 2 }), /غير صالح/);
 });
+test('undoing Done restores a one-time task, and a repeat to the occurrence that was completed', () => {
+  const { undoComplete } = require('../src/core');
+  const s = initialState();
+  const once = saveTask(s, { title: 'مرة', dueAt: '2026-10-24T09:00:00.000Z' });
+  const r1 = completeTask(s, once.id, new Date('2026-10-24T09:01:00Z'));
+  undoComplete(s, r1.id, r1.copyId);
+  assert.equal(once.completedAt, null);
+  assert.equal(dueTasks(s, new Date('2026-10-24T09:02:00Z')).length, 1, 'It is due again');
+  completeTask(s, once.id);
+  const daily = saveTask(s, { title: 'يومي', dueAt: '2026-10-24T09:00:00.000Z', repeat: 'daily' });
+  snoozeTask(s, daily.id, '2026-10-24T10:00:00.000Z', new Date('2026-10-24T09:00:00Z'));
+  const before = structuredClone(daily);
+  const r2 = completeTask(s, daily.id, new Date('2026-10-24T10:01:00Z'));
+  assert.notEqual(daily.dueAt, before.dueAt);
+  undoComplete(s, r2.id, r2.copyId);
+  assert.deepEqual([daily.dueAt, daily.scheduleAt, daily.snoozedAt], [before.dueAt, before.scheduleAt, before.snoozedAt]);
+  assert.equal(s.tasks.filter(t => t.sourceId === daily.id).length, 0, 'The history copy is removed');
+  assert.equal(completeTask(s, 'missing'), null);
+});
+
+test('deleted items wait 30 days in the trash, out of every list and alert, and can be restored', () => {
+  const { trashItem, restoreItem, purgeItem, purgeTrash, validateState } = require('../src/core');
+  const s = initialState();
+  const t = saveTask(s, { title: 'محذوفة', dueAt: '2026-10-01T09:00:00.000Z' });
+  s.notes.push({ id: 'n1', title: 'ملاحظة', body: '', attachments: [], color: 'cream' });
+  trashItem(s, 'tasks', t.id, new Date('2026-10-01T10:00:00Z')); trashItem(s, 'notes', 'n1', new Date('2026-10-20T10:00:00Z'));
+  assert.equal(dueTasks(s, new Date('2026-10-02T00:00:00Z')).length, 0, 'A deleted reminder never alerts');
+  assert.throws(() => snoozeTask(s, t.id, '2026-10-03T00:00:00Z', new Date('2026-10-02T00:00:00Z')));
+  assert.equal(completeTask(s, t.id), null);
+  restoreItem(s, 'tasks', t.id);
+  assert.equal(dueTasks(s, new Date('2026-10-02T00:00:00Z')).length, 1);
+  trashItem(s, 'tasks', t.id, new Date('2026-10-01T10:00:00Z'));
+  assert.equal(purgeTrash(s, new Date('2026-10-30T09:00:00Z')), 0, 'Still inside 30 days');
+  assert.equal(purgeTrash(s, new Date('2026-11-01T09:00:00Z')), 1, 'Only the task deleted over 30 days ago goes');
+  assert.deepEqual(s.notes.map(n => n.id), ['n1']);
+  purgeItem(s, 'notes', 'n1');
+  assert.equal(s.notes.length, 0);
+  const loaded = validateState({ ...initialState(), tasks: [{ ...t, deletedAt: 'garbage' }] });
+  assert.equal(loaded.tasks[0].deletedAt, null, 'A malformed deletion date restores the task rather than hiding it');
+  assert.throws(() => trashItem(s, 'settings', 'x'));
+});
