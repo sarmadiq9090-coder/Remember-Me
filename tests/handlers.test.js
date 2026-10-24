@@ -16,5 +16,5 @@ test('every allowed IPC action has exactly one handler', () => {
 test('only actions that change nothing skip the rescan', () => {
   const readOnly = Object.entries(createHandlers(stub)).filter(([, handler]) => handler.readOnly).map(([action]) => action).sort();
   assert.deepEqual(readOnly, ['alerts', 'checkUpdates', 'copyDiagnostics', 'dataFolder', 'dismissUpdate', 'driveHelp', 'export', 'imagePreview', 'installUpdate',
-    'language', 'open', 'openAttachment', 'openDriveFolder', 'openLink', 'openLogs', 'state', 'storage', 'undoable']);
+    'language', 'locale', 'open', 'openAttachment', 'openDriveFolder', 'openLink', 'openLogs', 'state', 'storage', 'undoable']);
 });

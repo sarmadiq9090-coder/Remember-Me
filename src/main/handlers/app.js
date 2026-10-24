@@ -12,7 +12,8 @@ module.exports = ctx => ({
       next: t.repeat && t.repeat !== 'none' && t.scheduleAt ? nextOccurrence(t.scheduleAt, t.repeat, now, t) : null }));
   } },
   language: { readOnly: true, run: () => ({ language: ctx.language(), palette: ctx.store.state.settings.palette }) },
-  locale: { run: payload => {
+  // Reads translations only; each window asks once per language inside its own refresh, before rendering.
+  locale: { readOnly: true, run: payload => {
     const code = LOCALES.some(l => l.code === payload.code) ? payload.code : ctx.language();
     return { ...findLocale(code), messages: ctx.messages(code), fallback: ctx.messages(DEFAULT_LOCALE) };
   } },
