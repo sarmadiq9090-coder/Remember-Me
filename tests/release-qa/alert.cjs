@@ -73,11 +73,12 @@ async function run() {
     const pickerOpen = await alert.locator('#snooze-form').isVisible();
     await alert.keyboard.press('Escape'); await sleep(200);
     const closed = !(await alert.locator('#snooze-form').isVisible());
+    const focus = await alert.evaluate(() => document.activeElement?.dataset.preset);
     const shown = await alert.locator('#alert-title').innerText();
     await alert.keyboard.press('Digit1'); await sleep(1200);
     const t = (await tasks()).find(x => x.title === shown);
     const minutes = Math.round((Date.parse(t.dueAt) - Date.now()) / 60e3);
-    return pickerOpen && closed && minutes >= 8 && minutes <= 10 ? `${labels.join(' ')}; "${shown}" snoozed ${minutes} min` : bad(`${labels} picker ${pickerOpen}/${closed}, ${shown} in ${minutes} min`);
+    return pickerOpen && closed && focus === 'pick' && minutes >= 8 && minutes <= 10 ? `${labels.join(' ')}; "${shown}" snoozed ${minutes} min` : bad(`${labels} picker ${pickerOpen}/${closed}, focus ${focus}, ${shown} in ${minutes} min`);
   });
   await check('alert', 'Pick a time snoozes to the chosen time', async () => {
     alert = await s.alertPage();
@@ -101,6 +102,14 @@ async function run() {
     const queued = (await tasks()).filter(t => !t.completedAt && t.dueAt && Date.parse(t.dueAt) <= Date.now());
     const later = (await tasks()).filter(t => t.title.startsWith('Queue') && Date.parse(t.dueAt) > Date.now() + 50 * 60e3).length;
     return queued.length === 0 && later === 3 && !s.alertOpen() ? `${count} → all snoozed` : bad(`still due ${queued.map(t => t.title)}, later ${later}, alert open ${s.alertOpen()}`);
+  });
+  await check('alert', 'after the last Done, Undo has the focus and the screen reader hears that all is done', async () => {
+    await s.value('saveTask', { title: 'Last one', dueAt: iso(Date.now() - 1000) }); await sleep(1500);
+    alert = await s.alertPage();
+    await alert.locator('#alert-complete').click(); await sleep(800);
+    const v = await alert.evaluate(() => [document.activeElement?.id, document.getElementById('alert-live').textContent]);
+    for (let i = 0; i < 80 && s.alertOpen(); i++) await sleep(100);
+    return v[0] === 'alert-undo-button' && /Last one/.test(v[1]) && /Well done/.test(v[1]) ? v[1] : bad(JSON.stringify(v));
   });
   await check('alert', 'Open task opens that task in the main window editor', async () => {
     await s.value('saveTask', { title: 'Open me', dueAt: iso(Date.now() - 1000) });

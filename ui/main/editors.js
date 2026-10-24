@@ -37,12 +37,12 @@ let repeatDays = [];
 let steps = [];
 // Steps keep their ids while editing so ticks survive renaming or reordering.
 function renderSteps() {
-  $('task-steps').innerHTML = steps.map((step, i) => `<li><input type="checkbox" data-step-done="${i}" ${step.done ? 'checked' : ''} aria-label="${tr("Done")}"><input type="text" dir="auto" maxlength="200" data-step-text="${i}" value="${esc(step.text)}" placeholder="${tr("Step")} ${i + 1}"><button type="button" class="icon-button" data-step-remove="${i}" aria-label="${tr("Remove step")}">${icon('x')}</button></li>`).join('');
+  $('task-steps').innerHTML = steps.map((step, i) => `<li><input type="checkbox" data-step-done="${i}" ${step.done ? 'checked' : ''} aria-label="${tr("Done")}"><input type="text" dir="auto" maxlength="200" data-step-text="${i}" value="${esc(step.text)}" placeholder="${tr("Step {number}", { number: i + 1 })}"><button type="button" class="icon-button" data-step-remove="${i}" aria-label="${tr("Remove step")}">${icon('x')}</button></li>`).join('');
 }
 function stepsMarkup(t) {
   if (!t.checklist?.length) return '';
   const done = t.checklist.filter(s => s.done).length;
-  return `<ul class="step-list" aria-label="${tr("Steps")} ${num(done)}/${num(t.checklist.length)}">${t.checklist.map(s => `<li><label><input type="checkbox" data-toggle-step="${esc(s.id)}" ${s.done ? 'checked' : ''} ${t.completedAt ? 'disabled' : ''}><span dir="auto" class="${s.done ? 'step-done' : ''}">${esc(s.text)}</span></label></li>`).join('')}</ul>`;
+  return `<ul class="step-list" aria-label="${tr("Steps: {done} of {count} done", { done, count: t.checklist.length })}">${t.checklist.map(s => `<li><label><input type="checkbox" data-toggle-step="${esc(s.id)}" ${s.done ? 'checked' : ''} ${t.completedAt ? 'disabled' : ''}><span dir="auto" class="${s.done ? 'step-done' : ''}">${esc(s.text)}</span></label></li>`).join('')}</ul>`;
 }
 function renderRepeatDays() {
   $('repeat-days').innerHTML = weekOrder(state.settings.weekStart).map(d => `<button type="button" data-day="${d}" aria-pressed="${repeatDays.includes(d)}" title="${esc(weekdayName(d, 'long'))}">${esc(weekdayName(d))}</button>`).join('');

@@ -105,15 +105,17 @@ test('windows get the palette through the preload and keep plain page URLs', () 
   const loads = [...main.matchAll(/loadFile\(([^;]*)\);/g)].map(m => m[1]);
   assert.ok(loads.length >= 2);
   for (const args of loads) assert.match(args, /^path\.join\(__dirname, '\.\.\/\.\.\/ui\/\w+\.html'\)$/, `loadFile(${args}) adds nothing to the URL`);
-  assert.match(main, /additionalArguments: \[`--waqt-palette=\$\{store\.state\.settings\.palette\}`\]/);
+  assert.match(main, /additionalArguments: \[`--waqt-palette=\$\{store\.state\.settings\.palette\}`, `--waqt-language=\$\{locale\.code\}`, `--waqt-dir=\$\{locale\.dir\}`\]/);
   const run = argv => {
     let exposed;
     const electron = { contextBridge: { exposeInMainWorld: (name, api) => { exposed = api; } }, ipcRenderer: {} };
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/main/preload.js'), 'utf8'), { require: () => electron, process: { argv } });
-    return exposed.palette;
+    return [exposed.palette, exposed.language, exposed.dir];
   };
-  assert.equal(run(['electron.exe', '--type=renderer', '--waqt-palette=forest']), 'forest');
-  assert.equal(run(['electron.exe', '--type=renderer']), '', 'No flag: the page falls back to Lavender');
+  assert.deepEqual(run(['electron.exe', '--type=renderer', '--waqt-palette=forest', '--waqt-language=ar', '--waqt-dir=rtl']), ['forest', 'ar', 'rtl']);
+  assert.deepEqual(run(['electron.exe', '--type=renderer', '--waqt-language=zh-CN']), ['', 'zh-CN', 'ltr']);
+  assert.deepEqual(run(['electron.exe', '--type=renderer']), ['', '', 'ltr'], 'No flag: the page falls back to Lavender and its own HTML');
+  assert.deepEqual(run(['electron.exe', '--waqt-language=<x>', '--waqt-dir=down']), ['', '', 'ltr'], 'Odd values are dropped');
 });
 
 test('settings keep the theme mode and fall back to Lavender for unknown palettes', () => {

@@ -41,15 +41,17 @@
   function isShortcut(e) { return e.key === 'Enter' || e.key === ' ' || /^(Digit|Numpad)[1-6]$/.test(e.code || '') || e.code === 'KeyS'; }
   // The alert appears without taking focus, but focus can still land on it while the user types
   // elsewhere. Shortcuts act only after the user has interacted with the window: a pointer press,
-  // or pressing or releasing a key that is not a shortcut (Tab, the arrows, or Alt after Alt+Tab).
-  // Held keys never act. reset() when the window loses focus.
+  // or a navigation key (Tab, the arrows, Home/End/Page Up/Page Down, or Alt after Alt+Tab).
+  // Letters, Shift and Backspace are typing, not interaction. Held keys never act.
+  // reset() when the window loses focus or another reminder moves in.
+  const NAVIGATION_KEYS = new Set(['Tab', 'Alt', 'AltGraph', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown']);
   function createInteractionGuard() {
     let engaged = false;
     return {
       get engaged() { return engaged; },
       reset() { engaged = false; },
       pointer() { engaged = true; },
-      key(e) { if (!e.repeat && !isShortcut(e)) engaged = true; },
+      key(e) { if (!e.repeat && NAVIGATION_KEYS.has(e.key)) engaged = true; },
       allows(e) { return engaged && !e.repeat; },
     };
   }

@@ -49,7 +49,7 @@ function renderNoteLook() {
   noteLookLanguage = uiLanguage;
   $('note-look').innerHTML = `<div><span class="look-label" id="note-color-label">${tr('Note color')}</span><div class="swatches" role="radiogroup" aria-labelledby="note-color-label">${NOTE_COLORS.map(([id, name]) => `<label class="swatch" title="${tr(name)}"><input type="radio" name="note-color" value="${id}" aria-label="${tr(name)}"><span class="swatch-paper" data-paper="${id}">${icon('check')}</span></label>`).join('')}</div>`
     + `<span class="look-label" id="note-style-label">${tr('Style')}</span><div class="style-tiles" role="radiogroup" aria-labelledby="note-style-label">${NOTE_STYLES.map(([id, name]) => `<label class="style-tile"><input type="radio" name="note-style" value="${id}"><span class="style-sample paper" data-paper="cream" data-note-style="${id}" aria-hidden="true"><i></i><i></i><i></i></span>${tr(name)}</label>`).join('')}</div></div>`
-    + '<div class="note-preview paper" data-paper="cream" data-note-style="plain" aria-hidden="true"><strong dir="auto"></strong><p dir="auto"></p></div>';
+    + '<div class="note-preview paper" data-paper="cream" data-note-style="plain" aria-hidden="true" translate="no"><strong dir="auto"></strong><p dir="auto"></p></div>';
 }
 function setNoteLook(color, style) {
   for (const [name, value] of [['note-color', color], ['note-style', style]]) $('note-look').querySelector(`input[name="${name}"][value="${value}"]`).checked = true;
@@ -74,7 +74,7 @@ $('appearance-card').addEventListener('change', async e => {
 // Names the attachments a backup had to leave out because their files are missing, with the task or note each belongs to.
 function skippedText(skipped = []) {
   if (!skipped.length) return '';
-  const list = skipped.map(s => s.itemTitle ? `${s.name} (${s.itemTitle})` : s.name).join(tr(", "));
+  const list = skipped.map(s => s.itemTitle ? `${isolate(s.name)} (${isolate(s.itemTitle)})` : isolate(s.name)).join(tr(", "));
   return tr("{count} attachments were left out because their files are missing: {list}", { count: skipped.length, list });
 }
 $('export-data').addEventListener('click', async () => {

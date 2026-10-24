@@ -39,6 +39,16 @@ async function run() {
     // Web addresses stay as they are.
     const left = [...found].filter(([text]) => !/github\.com/.test(text));
     await check('translations', `${language}: no English left in the views, editors, confirm dialog and alert`, async () => left.length ? bad(left.map(([text, where]) => `[${where}] ${text.slice(0, 80)}`).join(' | ')) : true);
+    await check('translations', `${language}: Ctrl+N and Ctrl+K work while the ${language} keyboard layout is active`, async () => {
+      // With a non-Latin layout, Chromium reports the layout's letter as e.key; only e.code is N or K.
+      const press = (key, code) => s.page.evaluate(([key, code]) => document.dispatchEvent(new KeyboardEvent('keydown', { key, code, ctrlKey: true, bubbles: true, cancelable: true })), [key, code]);
+      await press(language === 'ru' ? 'т' : 'ى', 'KeyN'); await sleep(300);
+      const opened = await s.page.evaluate(() => document.getElementById('task-dialog').open);
+      await s.page.evaluate(() => document.getElementById('task-dialog').close());
+      await press(language === 'ru' ? 'л' : 'ن', 'KeyK'); await sleep(200);
+      const focused = await s.page.evaluate(() => document.activeElement?.id);
+      return opened && focused === 'search' ? true : bad(`editor ${opened}, focus ${focused}`);
+    });
     await check('translations', `${language}: no page errors`, async () => s.errors.length ? bad(s.errors.join(' | ')) : true);
     await s.close();
   }

@@ -11,7 +11,8 @@ module.exports = ctx => ({
     return ctx.activeAlerts().map(t => ({ ...t, files: (t.attachments || []).map(id => store.state.attachments.find(a => a.id === id)).filter(Boolean),
       next: t.repeat && t.repeat !== 'none' && t.scheduleAt ? nextOccurrence(t.scheduleAt, t.repeat, now, t) : null }));
   } },
-  language: { readOnly: true, run: () => ({ language: ctx.language(), palette: ctx.store.state.settings.palette }) },
+  // What the alert window needs to look and read like the main window.
+  language: { readOnly: true, run: () => ({ language: ctx.language(), palette: ctx.store.state.settings.palette, weekStart: ctx.store.state.settings.weekStart }) },
   // Reads translations only; each window asks once per language inside its own refresh, before rendering.
   locale: { readOnly: true, run: payload => {
     const code = LOCALES.some(l => l.code === payload.code) ? payload.code : ctx.language();

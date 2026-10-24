@@ -38,13 +38,15 @@ async function refresh() {
     await setLanguage(state.settings.language);
     // While a palette choice is being saved, an older refresh must not switch the page back.
     if (!appearanceSaving) applyPalette(state.settings.palette);
+    // Shown before rendering: nothing in a hidden page can take the focus.
+    showPage();
     render();
     // The tray's New task, or Open task in the alert, asked for an editor.
     if (state.openTask && !document.querySelector('dialog[open]')) {
       const task = state.openTask === 'new' ? null : state.tasks.find(t => t.id === state.openTask);
       if (state.openTask === 'new' || (task && !task.completedAt)) openTaskEditor(task || undefined);
     }
-  } catch (e) { toast(e.message); }
+  } catch (e) { toast(e.message); } finally { showPage(); }
 }
 function todayEnd() { const d = new Date(); d.setHours(23, 59, 59, 999); return d.getTime(); }
 function todayTasks() { return state.tasks.filter(t => !t.completedAt && (!t.dueAt || Date.parse(t.dueAt) <= todayEnd())); }
@@ -55,7 +57,7 @@ function setView(next) {
 let storage = null;
 async function loadStorage() { try { storage = await api('storage'); } catch { storage = null; } renderStorage(); }
 function renderStorage() {
-  $('storage-usage').textContent = storage ? `${tr("Attachments")}: ${fileSize(storage.attachments)} • ${tr("Local backups")}: ${fileSize(storage.backups)}` : '';
+  $('storage-usage').textContent = storage ? tr("Attachments: {attachments} • Local backups: {backups}", { attachments: fileSize(storage.attachments), backups: fileSize(storage.backups) }) : '';
   $('clean-orphans').hidden = !storage?.orphans;
   if (storage?.orphans) $('clean-orphans').textContent = tr("Clean up {count} unused attachments ({value})", { count: storage.orphans, value: fileSize(storage.orphanBytes) });
 }

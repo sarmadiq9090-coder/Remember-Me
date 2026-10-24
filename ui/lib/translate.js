@@ -39,7 +39,16 @@
     for (const [name, value] of Object.entries(params)) shown[name] = typeof value === 'number' ? display(value) : value;
     return format(entry, shown);
   }
-  const api = { LOCALES, DEFAULT, findLocale, format, translate };
+  // Wraps user text (a title, a file name) placed in a sentence in first-strong isolate marks, so its
+  // own direction never reorders the punctuation around it, e.g. "Call Bob!" in an Arabic sentence.
+  const FSI = String.fromCharCode(0x2068), PDI = String.fromCharCode(0x2069);
+  function isolate(text) { return FSI + String(text ?? '') + PDI; }
+  // A file size in the locale's own unit names and decimal mark, e.g. "1,5 MB" in German.
+  function formatSize(bytes, intl) {
+    const [value, unit] = bytes < 1024 ? [bytes, 'byte'] : bytes < 1048576 ? [bytes / 1024, 'kilobyte'] : [bytes / 1048576, 'megabyte'];
+    return new Intl.NumberFormat(intl, { style: 'unit', unit, unitDisplay: 'short', maximumFractionDigits: 1 }).format(value);
+  }
+  const api = { LOCALES, DEFAULT, findLocale, format, translate, isolate, formatSize };
   if (typeof module === 'object' && module.exports) module.exports = api;
-  else Object.assign(root, { LOCALES, findLocale, translate });
+  else Object.assign(root, { LOCALES, findLocale, translate, isolate, formatSize });
 })(this);

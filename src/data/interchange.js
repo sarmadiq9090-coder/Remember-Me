@@ -41,7 +41,7 @@ function fromCSV(text) {
   return rows.slice(0, MAX_ITEMS).map(row => {
     const get = key => unguard(row[index[key]]).trim();
     const due = get('due'), parsed = due ? Date.parse(due) : NaN;
-    return { title: get('title'), body: get('notes'), dueAt: Number.isFinite(parsed) ? new Date(parsed).toISOString() : null, repeat: get('repeat') || 'none', priority: get('priority') || 'normal', tags: get('tags').split(/[;,،]/).map(t => t.trim()).filter(Boolean) };
+    return { title: get('title'), body: get('notes'), dueAt: Number.isFinite(parsed) ? new Date(parsed).toISOString() : null, repeat: get('repeat') || 'none', priority: get('priority') || 'normal', tags: get('tags').split(/[,;،؛、，､；]/).map(t => t.trim()).filter(Boolean) };
   });
 }
 
