@@ -1,5 +1,6 @@
 'use strict';
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, Notification, nativeTheme, clipboard } = require('electron');
+const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const { randomUUID } = require('node:crypto');
@@ -421,10 +422,17 @@ A safety copy of your current data is saved in the backups folder first.`),
             language: language(), theme: store.state.settings.theme });
           clipboard.writeText(value);
           break;
+        case 'openLogs': {
+          // The folder appears with the first log line; create it so the button always opens something.
+          fs.mkdirSync(log.folder, { recursive: true });
+          const error = await shell.openPath(log.folder);
+          if (error) throw new Error(nativeText('تعذّر فتح مجلد السجل.', "Couldn't open the log folder."));
+          break;
+        }
         case 'open': showMain(); break;
         default: throw new Error('إجراء غير معروف.');
       }
-      if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder', 'checkUpdates', 'installUpdate', 'dismissUpdate', 'openLink', 'copyDiagnostics'].includes(action)) { scan(); notifyViews(); }
+      if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder', 'checkUpdates', 'installUpdate', 'dismissUpdate', 'openLink', 'copyDiagnostics', 'openLogs'].includes(action)) { scan(); notifyViews(); }
       return { ok: true, value };
     } catch (error) { log.warn('action-failed', error, { action: typeof action === 'string' ? action.slice(0, 40) : typeof action }); return { ok: false, error: error.message }; }
   });

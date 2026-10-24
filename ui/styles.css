@@ -127,3 +127,4 @@
 [dir=rtl] .about-link-open svg{transform:scaleX(-1)}
 .about-update-status{font-size:12px;line-height:2;color:#8b799c;margin:0}
 .about-footnote{font-size:11px;color:#a094ad;margin-top:14px}
+.about-card .soft-button{white-space:nowrap;flex-shrink:0}

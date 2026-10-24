@@ -60,6 +60,7 @@ test('openLink takes a link ID from the fixed list, never a URL, and not from th
   assert.throws(() => checkRequest('openLink', { link: 'mailto:x' }, { text: (ar, en) => en }), /Unknown link/);
   assert.throws(() => checkRequest('openLink', { link: 'github' }, { fromAlert: true }), /غير مسموح/);
   assert.throws(() => checkRequest('copyDiagnostics', {}, { fromAlert: true }), /غير مسموح/);
+  assert.throws(() => checkRequest('openLogs', {}, { fromAlert: true }), /غير مسموح/);
 });
 
 test('ARCHITECTURE.md lists every IPC action', () => {
