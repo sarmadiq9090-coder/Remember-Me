@@ -119,7 +119,7 @@ function startupNotice(dismissible) {
     try { await api('settings', { ...state.settings, startAtLogin: true }); await refresh(); toast(tr('سيعمل ذكرني مع ويندوز من الآن.', 'Remember Me will now start with Windows.')); }
     catch (err) { toast(err.message); } finally { e.target.disabled = false; }
   });
-  card.querySelector('[data-dismiss]')?.addEventListener('click', () => { try { localStorage.setItem('startupBannerDismissed', '1'); } catch {} card.hidden = true; });
+  card.querySelector('[data-dismiss]')?.addEventListener('click', () => { try { localStorage.setItem('startupBannerDismissed', '1'); } catch { /* storage unavailable: it shows again next time */ } card.hidden = true; });
   return card;
 }
 const startupCard = startupNotice(false), startupBanner = startupNotice(true);

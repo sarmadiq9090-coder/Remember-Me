@@ -51,3 +51,10 @@ test('skip is allowed from the alert, needs an ID and validates the expected tim
   assert.throws(() => checkRequest('skip', {}, { fromAlert: true }), /معرّف/);
   assert.throws(() => checkRequest('skip', { id: 'a', expectedDueAt: 'later' }), /موعد/);
 });
+
+test('ARCHITECTURE.md lists every IPC action', () => {
+  const doc = require('node:fs').readFileSync(path.join(__dirname, '..', 'ARCHITECTURE.md'), 'utf8');
+  const { ACTIONS } = require('../src/ipc');
+  const missing = [...ACTIONS, ...ALERT_ACTIONS].filter(action => !doc.includes('`' + action + '`'));
+  assert.deepEqual(missing, [], 'Add these actions to the IPC table in ARCHITECTURE.md');
+});
