@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const fsp = fs.promises;
 const path = require('node:path');
 const { exportBackup, BACKUP_INFO } = require('./attachments');
+const { validKeep, expiredBackups, rotateBackups } = require('./backups');
 
 // Google Drive for desktop owns authentication, upload retries and offline syncing.
 // Waqt only reports handing a complete backup to the user-selected sync folder.
@@ -15,12 +16,13 @@ class DriveBackup {
     this.clock = options.clock || (() => Date.now());
     this.exporter = options.exporter || exportBackup;
     this.running = null;
-    this.config = { folder: '', automatic: true, lastCopiedAt: null, lastLocalPath: '', lastDrivePath: '', pending: false, error: '', lastAttempt: 0 };
+    this.config = { folder: '', automatic: true, lastCopiedAt: null, lastLocalPath: '', lastDrivePath: '', pending: false, error: '', lastAttempt: 0, keep: 0 };
     if (fs.existsSync(this.file)) {
       try {
         const data = JSON.parse(fs.readFileSync(this.file, 'utf8'));
         if (typeof data.folder !== 'string' || (data.folder && !path.isAbsolute(data.folder))) throw new Error('invalid');
         Object.assign(this.config, data);
+        if (!validKeep(this.config.keep)) this.config.keep = 0;
       } catch { this.config.error = 'تعذّرت قراءة إعدادات النسخ إلى Drive. اختر مجلد المزامنة مجددًا.'; }
     }
   }
@@ -43,6 +45,26 @@ class DriveBackup {
     this.save();
   }
   setAutomatic(value) { this.config.automatic = !!value; this.save(); }
+  // Where automatic copies live: the local backups folder and, when mounted, the Drive folder.
+  rotationTargets() {
+    const targets = [[path.join(this.directory, 'backups'), [this.config.lastLocalPath]]];
+    if (this.config.folder && fs.existsSync(this.config.folder)) targets.push([this.config.folder, [this.config.lastDrivePath]]);
+    return targets;
+  }
+  async expired(keep = this.config.keep) {
+    const lists = await Promise.all(this.rotationTargets().map(([parent, protect]) => expiredBackups(parent, keep, protect)));
+    return lists.flat();
+  }
+  async setKeep(keep) {
+    if (!validKeep(keep)) throw new Error('invalid keep');
+    this.config.keep = keep; this.save();
+    return this.rotate();
+  }
+  async rotate() {
+    const lists = [];
+    for (const [parent, protect] of this.rotationTargets()) lists.push(await rotateBackups(parent, this.config.keep, protect));
+    return lists.flat();
+  }
   async copySnapshot(source) {
     const folder = this.config.folder;
     // Never create a missing Drive mount as a normal local folder.
@@ -72,6 +94,8 @@ class DriveBackup {
       this.config.pending = false;
       this.config.error = '';
       this.save();
+      // Old copies are only removed after a new one is complete; a failure here never fails the backup.
+      await this.rotate().catch(() => {});
       return this.status();
     } catch (error) {
       this.config.error = error.message || 'تعذّر نسخ الملفات إلى مجلد Google Drive.';

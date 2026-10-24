@@ -70,3 +70,32 @@ test('restoring replaces the data and files, after saving a safety copy of the c
   assert.deepEqual(undo.state.tasks.map(t => t.title), ['الحالية'], 'The previous data can be restored again');
   assert.ok(path.basename(safety).startsWith('Waqt-before-restore-'));
 });
+
+test('rotation keeps the newest automatic copies locally and in Drive, and never touches manual or older backups', async () => {
+  const { DriveBackup } = require('../src/drive-backup');
+  const { root, data, store } = await setup('مهمة', Buffer.from('x'));
+  const sync = path.join(root, 'Drive'); fs.mkdirSync(sync);
+  const drive = new DriveBackup(data, () => store.state);
+  await drive.configure(sync);
+  const pause = () => new Promise(r => setTimeout(r, 5));
+  for (let i = 0; i < 5; i++) { await drive.run(); await pause(); }
+  const local = path.join(data, 'backups');
+  const manual = await exportBackup(store.state, data, local); await pause();
+  const legacy = await exportBackup(store.state, data, sync); fs.unlinkSync(path.join(legacy, BACKUP_INFO));
+  assert.equal(fs.readdirSync(local).length, 6); assert.equal(fs.readdirSync(sync).length, 6);
+  assert.deepEqual(await drive.expired(0), [], 'Keeping everything is the default');
+  assert.equal(drive.status().keep, 0);
+  assert.equal((await drive.expired(2)).length, 6, 'Three old automatic copies in each place');
+  const removed = await drive.setKeep(2);
+  assert.equal(removed.length, 6);
+  for (const folder of [local, sync]) {
+    const left = fs.readdirSync(folder).map(name => path.join(folder, name));
+    assert.equal(left.length, 3);
+    assert.ok(left.includes(folder === local ? drive.status().lastLocalPath : drive.status().lastDrivePath), 'The newest copy stays');
+  }
+  assert.ok(fs.existsSync(manual) && fs.existsSync(legacy));
+  assert.equal(new DriveBackup(data, () => store.state).status().keep, 2, 'The choice is saved');
+  await drive.run();
+  assert.equal(fs.readdirSync(local).length, 3, 'Each new copy retires the oldest automatic one');
+  for (const keep of [-1, 1.5, '5', 101]) await assert.rejects(drive.setKeep(keep));
+});

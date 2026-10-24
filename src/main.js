@@ -173,6 +173,19 @@ async function start() {
         }
         case 'driveBackupNow': value = await driveBackup.run(); break;
         case 'driveAutomatic': driveBackup.setAutomatic(payload.enabled); break;
+        case 'driveKeep': {
+          const keep = payload.keep;
+          const expired = await driveBackup.expired(keep);
+          if (expired.length) {
+            const { response } = await dialog.showMessageBox(mainWindow, { type: 'warning', title: nativeText('حذف النسخ القديمة', 'Delete old backups'),
+              message: nativeText(`ستُحذف ${expired.length} من النسخ التلقائية الأقدم.`, `${expired.length} older automatic backups will be deleted.`),
+              detail: nativeText('تبقى أحدث النسخ والنسخ التي صدّرتها بنفسك. ما يُحذف من مجلد Drive ينتقل إلى سلة محذوفات Google Drive.', 'The newest copies and backups you exported yourself are kept. Copies removed from the Drive folder go to the Google Drive trash.'),
+              buttons: [nativeText('إلغاء', 'Cancel'), nativeText('حذف', 'Delete')], defaultId: 0, cancelId: 0 });
+            if (response !== 1) break;
+          }
+          await driveBackup.setKeep(keep);
+          break;
+        }
         case 'driveHelp': await shell.openExternal('https://www.google.com/drive/download/'); break;
         case 'openDriveFolder': {
           const folder = driveBackup.status().folder;

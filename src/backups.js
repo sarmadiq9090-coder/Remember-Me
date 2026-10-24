@@ -50,4 +50,28 @@ async function restoreBackup(directory, store, backup) {
   store.replace(backup.state);
   return { safety };
 }
-module.exports = { readBackup, restoreBackup };
+const validKeep = keep => Number.isInteger(keep) && keep >= 0 && keep <= 100;
+// Automatic backups beyond the newest `keep` in `parent`, oldest last. Only folders whose
+// backup.json says the app made them on its own are candidates, so manual exports, safety
+// copies and backups from before checksums are never removed. 0 keeps everything.
+async function expiredBackups(parent, keep, protect = []) {
+  if (!keep) return [];
+  const kept = new Set(protect.filter(Boolean).map(p => path.resolve(p).toLowerCase()));
+  const automatic = [];
+  for (const entry of await fsp.readdir(parent, { withFileTypes: true }).catch(() => [])) {
+    if (!entry.isDirectory() || !entry.name.startsWith('Waqt-backup-')) continue;
+    const folder = path.join(parent, entry.name);
+    try {
+      const info = JSON.parse(await fsp.readFile(path.join(folder, BACKUP_INFO), 'utf8'));
+      if (info.kind === 'automatic' && fs.existsSync(path.join(folder, 'data.json'))) automatic.push({ folder, createdAt: Date.parse(info.createdAt) || 0 });
+    } catch { /* Not ours or incomplete: leave it alone. */ }
+  }
+  automatic.sort((a, b) => b.createdAt - a.createdAt);
+  return automatic.slice(keep).map(b => b.folder).filter(folder => !kept.has(path.resolve(folder).toLowerCase()));
+}
+async function rotateBackups(parent, keep, protect) {
+  const expired = await expiredBackups(parent, keep, protect);
+  for (const folder of expired) await fsp.rm(folder, { recursive: true, force: true });
+  return expired;
+}
+module.exports = { validKeep, readBackup, restoreBackup, expiredBackups, rotateBackups };

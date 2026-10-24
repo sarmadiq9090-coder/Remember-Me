@@ -125,6 +125,8 @@ function renderDriveBackup() {
   $('drive-folder').textContent = backup.folder || tr('لم يُحدَّد مجلد المزامنة بعد','No sync folder selected yet');
   $('drive-automatic').checked = backup.automatic;
   $('drive-automatic').disabled = !backup.folder || backup.busy;
+  $('drive-keep').value = String(backup.keep || 0);
+  $('drive-keep').disabled = !backup.folder || backup.busy;
   $('choose-drive-folder').disabled = backup.busy;
   $('drive-now').disabled = !backup.folder || backup.busy;
   $('drive-now-label').textContent = backup.busy ? tr('جارٍ تجهيز ونسخ الملفات…','Preparing and copying files…') : backup.pending ? tr('إعادة محاولة النسخ','Retry backup') : tr('نسخ احتياطي الآن','Back up now');
@@ -214,6 +216,7 @@ async function driveAction(action, payload) { try { const value = await api(acti
 $('choose-drive-folder').addEventListener('click', () => driveAction('chooseDriveFolder'));
 $('drive-now').addEventListener('click', async () => { $('drive-now').disabled = true; if (await driveAction('driveBackupNow')) toast('حُفظت النسخة محليًا وفي مجلد Drive. يتولى Google Drive إكمال الرفع.'); });
 $('drive-automatic').addEventListener('change', () => driveAction('driveAutomatic', { enabled: $('drive-automatic').checked }));
+$('drive-keep').addEventListener('change', () => driveAction('driveKeep', { keep: Number($('drive-keep').value) }));
 $('drive-install').addEventListener('click', () => driveAction('driveHelp'));
 $('drive-open').addEventListener('click', () => driveAction('openDriveFolder'));
 document.addEventListener('keydown', e => {
