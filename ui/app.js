@@ -51,6 +51,7 @@ function render() {
   for (const [key, value] of Object.entries({ today: today.length, all: active.length, upcoming: upcoming.length, notes: state.notes.length, completed: complete.length, trash: trash.length })) $('count-' + key).textContent = num(value);
   document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   document.querySelector('.nav-item[data-view="settings"]').classList.toggle('needs-attention', !!state.driveBackup?.stale);
+  renderTagFilters();
   document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
   const names = views[view].map(([ar, en]) => tr(ar, en));
   $('breadcrumb').textContent = names[0];
@@ -90,9 +91,10 @@ function render() {
   } else {
     let tasks = view === 'today' ? today : view === 'upcoming' ? upcoming : view === 'completed' ? complete : active;
     if (filter === 'high') tasks = tasks.filter(t => t.priority === 'high');
+    else if (filter.startsWith('tag:')) tasks = tasks.filter(t => (t.tags || []).includes(filter.slice(4)));
     if (query) tasks = tasks.filter(t => matchesSearch(t, query));
     const rank = { high: 0, medium: 1, normal: 2 };
-    tasks = [...tasks].sort((a, b) => $('sort').value === 'priority' ? rank[a.priority] - rank[b.priority] : $('sort').value === 'newest' ? Date.parse(b.createdAt) - Date.parse(a.createdAt) : (Date.parse(a.dueAt) || Infinity) - (Date.parse(b.dueAt) || Infinity));
+    tasks = [...tasks].sort((a, b) => $('sort').value === 'priority' ? rank[a.priority] - rank[b.priority] : $('sort').value === 'newest' ? Date.parse(b.createdAt) - Date.parse(a.createdAt) : $('sort').value === 'title' ? a.title.localeCompare(b.title, locale()) : (Date.parse(a.dueAt) || Infinity) - (Date.parse(b.dueAt) || Infinity));
     $('list-title').innerHTML = `${names[3]} <span id="list-count">${num(tasks.length)}</span>`;
     $('quick-form').hidden = view === 'completed';
     $('task-list').innerHTML = tasks.map(task => taskCard(task)).join('');
@@ -104,6 +106,16 @@ function render() {
   }
   hydratePreviews();
 }
+function allTags() { const tags = new Map(); for (const t of state.tasks) for (const tag of t.tags || []) tags.set(tag.toLowerCase(), tag); return [...tags.values()].sort((a, b) => a.localeCompare(b, locale())); }
+// One filter button per tag in use, after All and High priority.
+function renderTagFilters() {
+  const tags = allTags();
+  if (filter.startsWith('tag:') && !tags.includes(filter.slice(4))) filter = 'all';
+  $('filters').querySelectorAll('[data-filter^="tag:"]').forEach(b => b.remove());
+  $('filters').insertAdjacentHTML('beforeend', tags.map(tag => `<button class="filter" data-filter="tag:${esc(tag)}"><bdi>#${esc(tag)}</bdi></button>`).join(''));
+  $('tag-options').innerHTML = tags.map(tag => `<option value="${esc(tag)}">`).join('');
+}
+function parseTags(text) { return text.split(/[,،;؛]/).map(t => t.trim()).filter(Boolean); }
 function attachmentChips(ids = []) {
   const records = ids.map(id => state.attachments.find(a => a.id === id)).filter(Boolean);
   return records.filter(isImageFile).map(photoMarkup).join('') + records.filter(a => !isImageFile(a)).map(a => `<button type="button" class="file-chip" data-file-id="${esc(a.id)}" title="فتح ${esc(a.name)}">${icon('paperclip')}<bdi>${esc(a.name)}</bdi></button>`).join('');
@@ -113,7 +125,7 @@ function taskCard(t) {
   const due = t.dueAt ? `<span class="${overdue ? 'overdue' : ''}">${icon('clock')}${esc(dateLabel(t.dueAt))}${overdue ? ` • ${tr('حان الموعد','Due now')}` : ''}</span>` : `<span>${tr('دون موعد','No due date')}</span>`;
   return `<article class="task-row ${t.completedAt ? 'completed' : ''}" data-id="${esc(t.id)}">
     <button class="task-check" data-action="${t.completedAt ? 'reopen' : 'complete'}" aria-label="${t.completedAt ? tr('إعادة فتح','Reopen') : tr('إكمال','Complete')} ${esc(t.title)}" title="${t.completedAt ? tr('إعادة فتح دون موعد','Reopen without due date') : tr('تم الإنجاز','Mark complete')}">${t.completedAt ? icon('check') : ''}</button>
-    <div class="task-info"><div ${!t.completedAt ? 'data-action="edit" tabindex="0" role="button" class="task-edit-target"' : ''}><div class="task-name" dir="auto">${esc(t.title)}</div>${t.body ? `<p class="task-body" dir="auto">${esc(t.body)}</p>` : ''}<div class="task-meta">${due}${t.repeat !== 'none' ? `<span>${icon('repeat')}${esc(repeatLabel(t))}</span>` : ''}${t.remindBefore && !t.completedAt ? `<span title="${tr('تنبيه مسبق', 'Early notice')}">${icon('bell')}${esc($('task-before').querySelector(`option[value="${t.remindBefore}"]`)?.textContent || '')}</span>` : ''}${t.snoozedAt && !t.completedAt ? `<span>${tr('مؤجّلة','Snoozed')}</span>` : ''}</div></div>${t.attachments?.length ? `<div class="file-chips">${attachmentChips(t.attachments)}</div>` : ''}</div>
+    <div class="task-info"><div ${!t.completedAt ? 'data-action="edit" tabindex="0" role="button" class="task-edit-target"' : ''}><div class="task-name" dir="auto">${esc(t.title)}</div>${t.body ? `<p class="task-body" dir="auto">${esc(t.body)}</p>` : ''}<div class="task-meta">${due}${t.repeat !== 'none' ? `<span>${icon('repeat')}${esc(repeatLabel(t))}</span>` : ''}${(t.tags || []).map(tag => `<span class="tag-chip"><bdi>#${esc(tag)}</bdi></span>`).join('')}${t.remindBefore && !t.completedAt ? `<span title="${tr('تنبيه مسبق', 'Early notice')}">${icon('bell')}${esc($('task-before').querySelector(`option[value="${t.remindBefore}"]`)?.textContent || '')}</span>` : ''}${t.snoozedAt && !t.completedAt ? `<span>${tr('مؤجّلة','Snoozed')}</span>` : ''}</div></div>${t.attachments?.length ? `<div class="file-chips">${attachmentChips(t.attachments)}</div>` : ''}</div>
     ${t.priority !== 'normal' ? `<span class="priority ${t.priority}">${t.priority === 'high' ? tr('أولوية عالية','High priority') : tr('متوسطة','Medium')}</span>` : ''}<div class="task-actions">${!t.completedAt ? `<button class="icon-button" data-action="edit" title="${tr('تعديل المهمة','Edit task')}" aria-label="${tr('تعديل المهمة','Edit task')}">${icon('edit')}</button>` : ''}<button class="icon-button" data-action="delete" title="${tr('حذف المهمة','Delete task')}" aria-label="${tr('حذف المهمة','Delete task')}">${icon('trash')}</button></div></article>`;
 }
 function renderNotes() {
@@ -135,6 +147,7 @@ function openTaskEditor(task) {
   repeatDays = [...(task?.repeatDays || [new Date(task?.dueAt || Date.now() + 3600000).getDay()])];
   $('task-every').value = task?.repeatEvery || 2;
   $('task-before').value = String(task?.remindBefore || 0);
+  $('task-tags').value = (task?.tags || []).join(tr('، ', ', '));
   toggleRepeat();
   taskAttachments = [...(task?.attachments || [])]; renderEditorFiles('task');
   $('task-dialog-title').textContent = task?.id ? tr('تفاصيل المهمة','Task details') : tr('مساحة لمهمة جديدة','Space for a new task');
@@ -243,7 +256,7 @@ for (const type of ['task', 'note']) {
   });
 }
 document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
-document.querySelectorAll('[data-filter]').forEach(b => b.addEventListener('click', () => { filter = b.dataset.filter; render(); }));
+$('filters').addEventListener('click', e => { const b = e.target.closest('[data-filter]'); if (b) { filter = b.dataset.filter; render(); } });
 ['new-task', 'hero-add', 'empty-add'].forEach(id => $(id).addEventListener('click', () => openTaskEditor()));
 $('page-add').addEventListener('click', () => view === 'notes' ? openNoteEditor() : openTaskEditor());
 $('empty-note').addEventListener('click', () => openNoteEditor());
@@ -259,7 +272,7 @@ $('task-form').addEventListener('submit', async e => {
   e.preventDefault(); const submit = e.submitter; submit.disabled = true;
   try {
     await api('saveTask', { id: $('task-id').value || undefined, title: $('task-title').value, body: $('task-body').value, attachments: taskAttachments, category: state.tasks.find(t => t.id === $('task-id').value)?.category || 'personal', priority: $('task-priority').value,
-      dueAt: $('task-reminder').checked ? (originalTaskDue && $('task-due').value === originalTaskDueValue ? originalTaskDue : new Date($('task-due').value).toISOString()) : null, repeat: $('task-reminder').checked ? $('task-repeat').value : 'none', repeatDays, repeatEvery: Number($('task-every').value), remindBefore: $('task-reminder').checked ? Number($('task-before').value) : 0 });
+      dueAt: $('task-reminder').checked ? (originalTaskDue && $('task-due').value === originalTaskDueValue ? originalTaskDue : new Date($('task-due').value).toISOString()) : null, repeat: $('task-reminder').checked ? $('task-repeat').value : 'none', repeatDays, repeatEvery: Number($('task-every').value), remindBefore: $('task-reminder').checked ? Number($('task-before').value) : 0, tags: parseTags($('task-tags').value) });
     $('task-dialog').close(); await refresh(); toast(tr('حُفظت المهمة. خطوة جديدة في مكانها.','Task saved. Your next step is in place.'));
   } catch (err) { $('task-error').textContent = err.message; } finally { submit.disabled = false; }
 });

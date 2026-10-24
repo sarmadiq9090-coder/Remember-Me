@@ -180,3 +180,19 @@ test('digit style, first weekday and Hijri settings default to the previous beha
   const bad = validateState({ ...base, settings: { ...base.settings, digits: 'roman', weekStart: 3, hijri: 'yes' } }).settings;
   assert.deepEqual([bad.digits, bad.weekStart, bad.hijri], ['auto', 'auto', false]);
 });
+test('tags are trimmed, de-duplicated, limited and kept through edits, repeats and loading', () => {
+  const { normalizeTags, validateState } = require('../src/core');
+  assert.deepEqual(normalizeTags(['#عمل', ' عمل ', 'Home', 'home', '  ', 7, 'x'.repeat(40)]), ['عمل', 'Home', 'x'.repeat(30)]);
+  assert.equal(normalizeTags(Array.from({ length: 15 }, (_, i) => 't' + i)).length, 10);
+  const s = initialState();
+  const t = saveTask(s, { title: 'موسوم', tags: ['عمل'], dueAt: '2026-10-24T09:00:00.000Z', repeat: 'daily' });
+  assert.deepEqual(t.tags, ['عمل']);
+  saveTask(s, { id: t.id, title: 'موسوم', dueAt: t.dueAt, repeat: 'daily' });
+  assert.deepEqual(t.tags, ['عمل'], 'Saving without tags keeps them');
+  completeTask(s, t.id, new Date('2026-10-24T10:00:00Z'));
+  assert.deepEqual(s.tasks.find(x => x.completedAt).tags, ['عمل'], 'History keeps the tags');
+  saveTask(s, { ...t, tags: [] });
+  assert.ok(!('tags' in t));
+  assert.ok(!('tags' in saveTask(s, { title: 'بلا وسوم' })));
+  assert.deepEqual(validateState({ ...initialState(), tasks: [{ ...t, tags: ['a', 'A', 3] }] }).tasks[0].tags, ['a']);
+});

@@ -42,6 +42,18 @@ function taskInput(input) {
     priority: ['normal', 'medium', 'high'].includes(input.priority) ? input.priority : 'normal',
     category: ['personal', 'work', 'study'].includes(input.category) ? input.category : 'personal', dueAt, repeat, rule: repeat === 'none' ? {} : repeatRule(input, repeat, dueAt) };
 }
+// Up to 10 tags of up to 30 characters; "#" prefixes, extra spaces and case duplicates are dropped.
+function normalizeTags(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set(), out = [];
+  for (const raw of value) {
+    if (typeof raw !== 'string') continue;
+    const tag = raw.replace(/^#+/, '').replace(/\s+/g, ' ').trim().slice(0, 30);
+    if (tag && !seen.has(tag.toLowerCase()) && out.length < 10) { seen.add(tag.toLowerCase()); out.push(tag); }
+  }
+  return out;
+}
+function setTags(task, value) { const tags = normalizeTags(value); if (tags.length) task.tags = tags; else delete task.tags; }
 function setEarly(task, minutes) { const value = early(minutes, task.dueAt); if (value) task.remindBefore = value; else delete task.remindBefore; }
 function saveTask(state, input, now = new Date()) {
   const { rule, ...fields } = taskInput(input);
@@ -56,11 +68,13 @@ function saveTask(state, input, now = new Date()) {
     Object.assign(task, fields, { updatedAt: now.toISOString() });
     applyRule(task, rule);
     setEarly(task, input.remindBefore);
+    setTags(task, input.tags ?? task.tags);
     if (changed) { task.scheduleAt = fields.dueAt; task.snoozedAt = null; }
   } else {
     if ('repeatFrom' in rule) rule.repeatFrom = fields.dueAt;
     task = { ...fields, ...rule, id: randomUUID(), scheduleAt: fields.dueAt, createdAt: now.toISOString(), updatedAt: now.toISOString(), completedAt: null, snoozedAt: null };
     setEarly(task, input.remindBefore);
+    setTags(task, input.tags);
     state.tasks.push(task);
   }
   return task;
@@ -184,6 +198,7 @@ function validateState(data) {
     if (task.repeat !== 'none' && !task.scheduleAt) task.scheduleAt = task.dueAt;
     try { task.snoozedAt = date(task.snoozedAt); } catch { task.snoozedAt = null; }
     if ('remindBefore' in task) setEarly(task, task.remindBefore);
+    if ('tags' in task) setTags(task, task.tags);
   }
   for (const item of [...data.tasks, ...data.notes]) if ('deletedAt' in item) { try { item.deletedAt = date(item.deletedAt); } catch { item.deletedAt = null; } }
   for (const note of data.notes) {
@@ -255,4 +270,4 @@ class Store {
     this.state = draft;
   }
 }
-module.exports = { EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, nextOccurrence, validateState, Store };
+module.exports = { normalizeTags, EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, nextOccurrence, validateState, Store };
