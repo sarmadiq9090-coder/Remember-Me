@@ -73,7 +73,7 @@ module.exports = [
   },
   {
     // Playwright runs these callbacks inside the app's pages.
-    files: ['**/*-desktop.cjs', '**/desktop-*.cjs'],
+    files: ['**/*-desktop.cjs', '**/desktop-*.cjs', 'tests/release-qa/**/*.cjs'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {
