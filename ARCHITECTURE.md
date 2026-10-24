@@ -25,6 +25,7 @@ true (see "Keeping this document current").
 | Moving the data folder from `Waqt` to `Remember Me` | `src/data-folder.js` |
 | Start with Windows entry | `src/login-item.js` |
 | Pausing reminders from the tray | `src/pause.js` |
+| "Coming up" notifications, each once and kept clickable | `src/early-notices.js` |
 | Update checks, download and install policy | `src/updates.js` |
 | About card: link allowlist and diagnostic info | `src/about.js` |
 | Main window and sticky alert pages, shared scripts and CSS | `ui/` |
@@ -184,7 +185,8 @@ Chromium locale) and formats messages, including plural forms through `Intl.Plur
 next tick tries again). Each scan:
 
 1. shows early notifications from `upcomingTasks()` (`remindBefore` minutes before `dueAt`), once per
-   task and due time;
+   task and due time. A notice moment at or before the task's `updatedAt` is skipped, so a snooze,
+   a late Done or an edit that moves the time into the lead window doesn't announce it at once;
 2. builds the alert queue with `alertQueue(state, preview)`: every active, untrashed task whose
    `dueAt` has passed, oldest first. The preview alert shows only when nothing real is due, and a real
    reminder drops it for good;
@@ -195,7 +197,8 @@ next tick tries again). Each scan:
    in the alert), and swaps the tray icon to its dotted variant only when the waiting state changes.
 
 While reminders are paused from the tray (`settings.pausedUntil`, handled by the pause module), the
-scan opens no alert window, plays no sound and sends no early notices. Due reminders stay queued and
+scan opens no alert window, plays no sound and sends no early notices (they are recorded, so none
+arrive in a burst afterwards). Due reminders stay queued and
 appear, with one sound, when the pause ends. An ended pause clears itself on the next scan.
 
 Overdue reminders survive restarts because they are simply tasks whose `dueAt` is in the past.
@@ -296,17 +299,23 @@ which Chromium keeps bounded. Backups never include them.
   producing `Remember Me.exe`. It bundles only `package.json`, `LICENSE`, `src/`, `ui/` and
   `assets/`, plus the runtime dependencies (electron-updater and what it needs) copied in as one flat
   `node_modules` folder, since pnpm links packages instead of nesting them. It keeps only the Chromium
-  locales of the interface languages and writes `resources/app-update.yml` for the updater.
+  locales of the interface languages and writes `resources/app-update.yml` for the updater. Finally it
+  sets Electron fuses on the exe and reads them back: no running as Node.js, no `NODE_OPTIONS`, no
+  `--inspect`, app code only from the checked `app.asar`. `WAQT_DESKTOP_TEST_BUILD=1` keeps
+  `--inspect` allowed, because Playwright attaches through it.
 - `pnpm run installer` (`tools/installer.cjs`) turns that folder into a per-user NSIS installer,
   `release/installer/Remember-Me-Setup-<version>-x64.exe`, with the `latest.yml` and `.blockmap`
   files the updater reads. The installer keeps the v1.4 app ID, so it upgrades older installs.
 - `.github/workflows/test.yml` runs the unit tests and ESLint on Windows for every pull request.
-  `.github/workflows/desktop.yml` packages the app and runs `tests/desktop-smoke.cjs` against the
-  packaged build with Playwright.
-  `.github/workflows/release.yml` runs on a `v*` tag: it checks the tag against `package.json`,
-  runs the tests, builds the installer, writes `SHA256SUMS.txt`, attests the build provenance,
-  publishes a GitHub release with `latest.yml` and the `.blockmap`, and builds winget manifests
-  (`tools/winget-manifest.mjs`) as an artifact. `RELEASING.md` is the release checklist.
+  `.github/workflows/desktop.yml` packages a desktop test build and runs `tests/desktop-smoke.cjs`
+  against it with Playwright.
+  `.github/workflows/release.yml` has two jobs. `build`, with a read-only token that isn't kept in
+  the checkout, checks a `v*` tag against `package.json`, runs the tests, builds the installer,
+  writes `SHA256SUMS.txt` and winget manifests (`tools/winget-manifest.mjs`) and uploads them as
+  artifacts. `publish` runs only for tag pushes, in the `release` environment, and runs no
+  repository code: it checks the checksums, attests the installer and publishes the GitHub release
+  with `latest.yml` and the `.blockmap`. Actions are pinned to commit SHAs, kept current by
+  Dependabot. `RELEASING.md` is the release checklist.
 - `tools/build-assets.cjs` (`pnpm run assets`, run by Electron) regenerates the icons. A hidden
   sandboxed window's preload (`tools/build-assets-preload.cjs`) draws each SVG at its exact pixel
   size on a canvas and sends the PNGs back over IPC. It writes `assets/icon.ico` (PNG entries at

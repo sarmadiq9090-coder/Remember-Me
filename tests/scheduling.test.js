@@ -176,7 +176,7 @@ test('early notifications start at the chosen lead time and stop at the due time
   const { upcomingTasks, validateState } = require('../src/core');
   process.env.TZ = 'Asia/Baghdad';
   const s = initialState();
-  const t = saveTask(s, { title: 'اجتماع', dueAt: '2026-10-24T10:00:00.000Z', remindBefore: 10 });
+  const t = saveTask(s, { title: 'اجتماع', dueAt: '2026-10-24T10:00:00.000Z', remindBefore: 10 }, new Date('2026-10-24T08:00:00Z'));
   assert.equal(t.remindBefore, 10);
   assert.equal(upcomingTasks(s, new Date('2026-10-24T09:49:59Z')).length, 0);
   assert.equal(upcomingTasks(s, new Date('2026-10-24T09:50:00Z')).length, 1);
@@ -189,6 +189,32 @@ test('early notifications start at the chosen lead time and stop at the due time
   completeTask(s, daily.id, new Date('2026-10-24T10:05:00Z'));
   assert.equal(upcomingTasks(s, new Date('2026-10-25T09:00:00Z')).map(x => x.title).join(), 'يومي', 'The next occurrence keeps its lead time');
   assert.ok(!('remindBefore' in validateState({ ...initialState(), tasks: [{ ...t, remindBefore: 'soon' }] }).tasks[0]));
+});
+
+test('no early notice for a time just moved into the lead window by a snooze, a late Done or an edit', () => {
+  const { upcomingTasks, snoozeTask, skipOccurrence } = require('../src/core');
+  const s = initialState();
+  const at = iso => new Date(iso);
+  const t = saveTask(s, { title: 'Call', dueAt: '2026-10-24T10:00:00.000Z', remindBefore: 15 }, at('2026-10-24T08:00:00Z'));
+  assert.equal(upcomingTasks(s, at('2026-10-24T09:45:00Z')).length, 1, 'The notice still comes at its time');
+  assert.equal(upcomingTasks(s, at('2026-10-24T09:58:00Z')).length, 1, 'and on a start inside the lead window');
+  // At 10:00 the alert appears; snoozing 5 minutes moves it to 10:05, inside the 15-minute window.
+  snoozeTask(s, t.id, '2026-10-24T10:05:00.000Z', at('2026-10-24T10:00:01Z'));
+  assert.equal(upcomingTasks(s, at('2026-10-24T10:00:02Z')).length, 0, 'No "Coming up" right after the snooze');
+  // A snooze longer than the lead time gets its notice again.
+  snoozeTask(s, t.id, '2026-10-24T11:00:00.000Z', at('2026-10-24T10:05:01Z'));
+  assert.equal(upcomingTasks(s, at('2026-10-24T10:44:59Z')).length, 0);
+  assert.equal(upcomingTasks(s, at('2026-10-24T10:45:00Z')).length, 1);
+  // A daily task with a 1-day notice, completed late: tomorrow's notice moment has already passed.
+  const daily = saveTask(s, { title: 'Daily', dueAt: '2026-10-24T10:00:00.000Z', repeat: 'daily', remindBefore: 1440 }, at('2026-10-23T08:00:00Z'));
+  completeTask(s, daily.id, at('2026-10-24T11:00:00Z'));
+  assert.ok(!upcomingTasks(s, at('2026-10-24T11:00:01Z')).some(x => x.id === daily.id));
+  skipOccurrence(s, daily.id, daily.dueAt, at('2026-10-24T12:00:00Z'));
+  assert.ok(!upcomingTasks(s, at('2026-10-24T12:00:01Z')).some(x => x.id === daily.id), 'Skipping one occurrence neither');
+  // An edit that moves the time into the window.
+  const edited = saveTask(s, { title: 'Moved', dueAt: '2026-10-24T15:00:00.000Z', remindBefore: 30 }, at('2026-10-24T08:00:00Z'));
+  saveTask(s, { ...edited, dueAt: '2026-10-24T14:10:00.000Z' }, at('2026-10-24T14:00:00Z'));
+  assert.ok(!upcomingTasks(s, at('2026-10-24T14:00:01Z')).some(x => x.id === edited.id));
 });
 
 test('skip and only-this-time follow every repeat mode, and skip ignores trashed tasks', () => {

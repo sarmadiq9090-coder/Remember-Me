@@ -1,8 +1,13 @@
 name: Release
 
-# Pushing a tag such as v1.4.1 builds the Windows installer, attests where it was built,
-# and publishes it with SHA-256 checksums and the latest.yml and .blockmap files the app's
-# updater reads. Running it by hand only builds and uploads the files.
+# Pushing a tag such as v1.4.1 builds the Windows installer, attests where it was built, and
+# publishes it with SHA-256 checksums and the latest.yml and .blockmap files the app's updater
+# reads. Running it by hand only builds the files and uploads them as workflow artifacts: it
+# creates no release and no attestation.
+#
+# The build job runs the dependencies and build tools with a read-only token that isn't kept in
+# the checkout. Only the publish job, which runs no repository code, can write releases and
+# attestations.
 on:
   push:
     tags: ['v*']
@@ -12,18 +17,18 @@ permissions:
   contents: read
 
 jobs:
-  installer:
+  build:
     runs-on: windows-latest
     permissions:
-      contents: write
-      id-token: write
-      attestations: write
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:
           version: 10
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: pnpm
@@ -56,10 +61,7 @@ jobs:
           Get-Content SHA256SUMS.txt
       # For a winget-pkgs submission after the release; not uploaded to the release itself.
       - run: node tools/winget-manifest.mjs --sums release/installer/SHA256SUMS.txt --out release/winget
-      - uses: actions/attest-build-provenance@v2
-        with:
-          subject-path: release/installer/Remember-Me-Setup-*.exe
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: installer
           path: |
@@ -68,18 +70,39 @@ jobs:
             release/installer/latest.yml
             release/installer/SHA256SUMS.txt
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: winget-manifests
           path: release/winget/*.yaml
           if-no-files-found: error
+
+  publish:
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      # No checkout: this job only handles the files the build job produced.
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: installer
+          path: installer
+      - name: Check the checksums
+        working-directory: installer
+        run: sha256sum -c SHA256SUMS.txt
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-path: installer/Remember-Me-Setup-*.exe
       - name: Publish the release
-        if: github.event_name == 'push'
-        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: |
-          $installer = Get-ChildItem release/installer -Filter 'Remember-Me-Setup-*.exe' | Select-Object -First 1
+          installer=$(ls installer/Remember-Me-Setup-*.exe)
           # latest.yml and the .blockmap must stay next to the installer: the app's updater reads them.
-          gh release create $env:TAG $installer.FullName "$($installer.FullName).blockmap" release/installer/latest.yml release/installer/SHA256SUMS.txt --title "ذكرني | Remember Me $env:TAG" --generate-notes --verify-tag
+          gh release create "$TAG" "$installer" "$installer.blockmap" installer/latest.yml installer/SHA256SUMS.txt --title "ذكرني | Remember Me $TAG" --generate-notes --verify-tag

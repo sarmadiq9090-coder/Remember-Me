@@ -2,13 +2,14 @@
 
 A checklist for publishing v1.5.0. Later releases follow the same steps with their own version number.
 
-Releases are built only by `.github/workflows/release.yml` on GitHub Actions, never on a personal PC. Pushing a `v*` tag builds, attests and publishes the release; running the workflow by hand only builds the files.
+Releases are built only by `.github/workflows/release.yml` on GitHub Actions, never on a personal PC. Pushing a `v*` tag builds, attests and publishes the release; running the workflow by hand only builds the files, with no release and no attestation. The build job runs with a read-only token. Only the publish job, which runs no repository code, can create the release; it uses the `release` environment, where **Settings → Environments → release → Required reviewers** can add a manual approval before anything is published.
 
 ## 1. Prepare
 
 - [ ] Everything planned for the release is merged into `main`, and the **Tests** workflow is green.
 - [ ] In `package.json`, set `"version": "1.5.0"`. The lockfile doesn't change.
 - [ ] In `CHANGELOG.md`, replace `## v1.5.0 (unreleased)` with `## v1.5.0 (YYYY-MM-DD)` and check the entries match what's merged.
+- [ ] Check the entry against `git log v1.4.0..main --oneline` and the merged pull requests: every user-visible change since the last release needs a line with its PR. Replace or delete every **TODO** line and the 'Before release' note.
 - [ ] In the README's "Verify the download" section, change the example file name to `Remember-Me-Setup-1.5.0-x64.exe`.
 - [ ] Merge these changes through a pull request, and wait for **Tests** to pass on `main`.
 
@@ -27,7 +28,7 @@ git tag -a v1.5.0 -m "Remember Me 1.5.0"
 git push origin v1.5.0
 ```
 
-- [ ] Watch **Actions → Release**. It stops if the tag doesn't match `package.json`, if any test fails, or if `latest.yml` or the `.blockmap` is missing.
+- [ ] Watch **Actions → Release**. The `build` job stops if the tag doesn't match `package.json`, if any test fails, or if `latest.yml` or the `.blockmap` is missing. The `publish` job then checks the checksums, attests the installer and creates the release.
 - [ ] When it finishes, open the new release and edit its notes if needed:
   - Paste the CHANGELOG entry, and mention that v1.4.0 users install this version by hand once.
   - Link the [code signing policy](README.md#code-signing-policy): `See the [code signing policy](https://github.com/sarmadiq9090-coder/Remember-Me#code-signing-policy).` SignPath requires it on every release page.
@@ -42,7 +43,7 @@ git push origin v1.5.0
 ```powershell
 Get-FileHash .\Remember-Me-Setup-1.5.0-x64.exe -Algorithm SHA256
 Get-Content .\SHA256SUMS.txt
-gh attestation verify .\Remember-Me-Setup-1.5.0-x64.exe --repo sarmadiq9090-coder/Remember-Me
+gh attestation verify .\Remember-Me-Setup-1.5.0-x64.exe --repo sarmadiq9090-coder/Remember-Me --source-ref refs/tags/v1.5.0 --signer-workflow sarmadiq9090-coder/Remember-Me/.github/workflows/release.yml
 ```
 
 - [ ] The SHA-512 in `latest.yml` matches the installer. The updater refuses the download otherwise:
