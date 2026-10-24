@@ -5,6 +5,7 @@
 ### Added
 
 - Automatic updates from GitHub Releases, only after you allow them. Remember Me asks once, then checks about 30 seconds after starting and once a day, downloads in the background and installs when you choose **Restart now** or the next time you quit. It saves a safety copy of your data first and never restarts on its own. **Settings → Updates** has the switch and **Check now**.
+- **Pause reminders** from the notification-area menu: for 1 hour, until tomorrow at 8:00, or until you resume. Reminders that come due meanwhile appear when the pause ends.
 
 ### Changed
 
