@@ -16,11 +16,13 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:
           version: 10
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: pnpm
@@ -28,12 +30,14 @@ jobs:
       - run: pnpm run package
         env:
           WAQT_BUILD_FOLDER: ci
+          # Playwright attaches through --inspect, which release builds turn off with a fuse.
+          WAQT_DESKTOP_TEST_BUILD: '1'
       - name: Run the smoke test against the packaged app
         shell: pwsh
         run: |
           $env:WAQT_EXECUTABLE = (Get-ChildItem release/ci/*/*.exe | Select-Object -First 1).FullName
           node tests/desktop-smoke.cjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: desktop-screenshots

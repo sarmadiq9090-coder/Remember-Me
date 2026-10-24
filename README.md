@@ -25,8 +25,11 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 - **Sticky reminders:** a persistent alert above the taskbar, shown on top of other windows until you choose **Done** or snooze it.
 - **Flexible snooze:** 5 minutes, 15 minutes, 1 hour, 24 hours, or any date and time you pick. Snoozes survive restarts.
 - **Recurring tasks:** daily, weekly, monthly, yearly, on chosen weekdays (for example workdays), or every few days. Completing one logs it under *Completed* and schedules the next occurrence at the same wall-clock time, including across daylight-saving changes. Monthly repeats on the 31st and yearly repeats on February 29 fall back to the last day of the month without drifting.
+- **Skip this time and Only this time:** skip one occurrence of a repeating task without marking it done, or move just one occurrence and keep the rest of the series.
 - **Early notice:** an optional Windows notification from 5 minutes to 1 day before a reminder is due.
-- **Undo and Trash:** undo Done from the main window or the alert; deleted tasks and notes wait 30 days in the Trash and can be restored.
+- **Remind me again:** while an alert is unanswered, its sound can repeat every 2, 5 or 15 minutes, up to 6 times.
+- **Pause reminders:** from the notification-area menu, for 1 hour, until tomorrow at 8:00, or until you resume. Nothing pops up or sounds meanwhile, and reminders that came due appear when the pause ends.
+- **Undo and Trash:** undo Done from the main window or the alert, and undo a delete from its message. Deleted tasks and notes wait 30 days in the Trash and can be restored.
 - **No dropped alerts:** several due reminders are queued and shown one at a time, with a count of how many are waiting.
 - **Notes:** notes you can edit, search and delete, on ten paper colors as a plain card, a sticky note or lined paper.
 - **Attachments:** add PDFs, Excel sheets, documents, images or any other file to tasks and notes, up to 20 files per item and 50 MB per file. Images preview inline, including in the alert.
@@ -35,10 +38,11 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 - **Arabic and English interfaces:** a full right-to-left Arabic UI and a left-to-right English UI, switchable in Settings. Mixed-language text keeps its reading order.
 - **Local-first data:** atomic saves, an automatic `.bak` copy and automatic recovery if the data file is damaged.
 - **Backups:** export a full backup with all attachments and checksums, restore one from Settings after it's verified, or copy daily backups into a synced Google Drive folder.
-- **Themes and display options:** light, dark or follow Windows, six color palettes (Lavender, Ocean, Forest, Sunset, Graphite and High contrast), and the first day of the week.
+- **Themes and display options:** light, dark or follow Windows, six color palettes (Lavender, Ocean, Forest, Sunset, Graphite and High contrast), and the first day of the week (Saturday by default). Dates and times always use Western digits (0-9), in Arabic too.
 - **Multi-monitor aware:** the alert sits above the taskbar wherever it is (bottom, top, left or right) and adapts to scaled and secondary displays.
-- **Runs in the background:** closing the window keeps Remember Me in the notification area, and it can start with Windows.
+- **Runs in the background:** closing the window keeps Remember Me in the notification area, and it can start with Windows. The icon shows a dot while reminders are waiting, and Remember Me warns you if Start with Windows is off while reminders are still to come.
 - **Optional automatic updates:** with your permission, new versions are downloaded from GitHub Releases and installed when you restart.
+- **About and support:** the version, links to the source code, release notes and problem reports, a local log, and diagnostic info to copy into a report.
 
 ## Install
 
@@ -54,10 +58,10 @@ Compare the file's fingerprint with `SHA256SUMS.txt` from the same release:
 Get-FileHash .\Remember-Me-Setup-1.4.0-x64.exe -Algorithm SHA256
 ```
 
-With the GitHub CLI you can also confirm the file was built from this repository:
+With the GitHub CLI you can also confirm the file was built by this repository's release workflow from the release tag:
 
 ```powershell
-gh attestation verify .\Remember-Me-Setup-1.4.0-x64.exe --repo sarmadiq9090-coder/Remember-Me
+gh attestation verify .\Remember-Me-Setup-1.4.0-x64.exe --repo sarmadiq9090-coder/Remember-Me --source-ref refs/tags/v1.4.0 --signer-workflow sarmadiq9090-coder/Remember-Me/.github/workflows/release.yml
 ```
 
 ### Upgrading from v1.4.0 or earlier
@@ -80,10 +84,16 @@ v1.4.0 can't update itself: install the next version from Releases once by hand,
 - **New task:** a title, notes, a priority and an optional reminder time.
 - **Today:** tasks without a date, today's tasks and anything overdue. **Upcoming:** tasks due after today.
 - **Multiple reminders:** shown one after another, with no task skipped.
-- **Recurring tasks:** missed occurrences roll forward to the next future one when you complete the task. Snoozing never changes the original repeat time.
+- **Recurring tasks:** missed occurrences roll forward to the next future one when you complete the task. Snoozing never changes the original repeat time. The skip button on a repeating task moves it to the next occurrence without logging it as done. When you change a repeating task's time, tick **Only this time** to move just this occurrence.
+- **Done and delete:** both show an **Undo** button for a few seconds. Deleted items go to **Trash**, where you can restore them or delete them for good; they're removed automatically after 30 days.
 - **Attachments:** while editing a task or note, choose **Add files**. Files are copied into Remember Me's data folder, so moving or deleting the original doesn't break the attachment. Removing an attachment from one item doesn't affect other items.
 - **Opening files:** click an attachment to open it with the default Windows app. Excel files need a compatible app such as Excel.
-- **Settings:** alert sound, start with Windows, alert position (left or right) and interface language.
+- **Settings:**
+  - *Reminders and background:* alert sound, **Remind me again**, start with Windows, alert position (left or right), interface language, and a preview alert.
+  - *Appearance:* light, dark or same as Windows, and one of six palettes, picked from preview cards. The change shows at once in the main window and the alert.
+  - *Calendar:* the first day of the week.
+  - *Your data:* export, restore, storage use and cleanup, the data folder, and Google Drive backups with how many automatic copies to keep.
+  - *Updates:* automatic checks and **Check now**.
 - **About:** at the end of Settings, or **About Remember Me** in the tray menu. It shows the version, links to the source code, release notes, problem reports, the privacy notice and the MIT license, and has **Check for updates** and **Open log folder**. **Copy diagnostic info** copies the app, Electron, Chromium and Windows versions plus the interface language and theme, to paste into a problem report. It never includes your tasks, notes, files or folder paths.
 - **Shortcuts:** Ctrl+N creates a task or note, Ctrl+K focuses search.
 
@@ -109,9 +119,12 @@ Everything is stored locally in `%APPDATA%\Remember Me\data.json`, with the prev
 
 - Remember Me checks every file against its checksum first and shows the number of tasks, notes and attachments for you to confirm.
 - Before replacing anything, it saves a safety copy of your current data in the `backups` folder.
+- Settings that belong to this PC (start with Windows, automatic updates and a pause) stay as they are.
 - Backups made before checksums existed can still be restored. Remember Me only checks that their files are present and the right size, and labels them "unverified".
 
 Settings also shows how much space attachments and backups use, and can clean up attachment files that no task or note uses any more.
+
+The data folder also holds a small log, `logs\remember-me.log` (at most three 1 MB files), that you can attach to a problem report: **Settings → About → Open log folder**. It records app events and errors, never the titles or text of your tasks and notes, or file names.
 
 To restore a backup manually instead:
 
@@ -159,18 +172,20 @@ Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable
 - `tests/about.test.js`: the About links are exact GitHub addresses, and diagnostic info holds only versions, language and theme.
 - `tests/icons.test.js`: every size in `icon.ico` and the tray images' dimensions.
 - `tests/search.test.js`: Arabic-aware search matching.
+- `tests/placement.test.js`: placing the alert next to a taskbar on any edge, on scaled and secondary displays.
+- `tests/theme.test.js`: every palette in light and dark meets WCAG contrast for text, buttons, focus rings and the logo; the stylesheets use only theme tokens; palette, note color and note style settings fall back safely.
 - `tests/pause.test.js`: pausing reminders from the tray, with a fake clock.
 - `tests/winget-manifest.test.js`: the winget manifests written from a release's `SHA256SUMS.txt`.
 - `tests/updates.test.js`: the update consent, background schedule, Check now, the ready banner, and installing after a safety backup.
 - `tests/data-folder.test.js` and `tests/login-item.test.js`: moving the old `Waqt` data folder, including locked and interrupted moves, and pointing start with Windows at the renamed executable.
 - `tests/attachments.test.js`, `tests/backups.test.js` and `tests/drive-backup.test.js`: copying, export, checksums, restore, rotation, migration, validation and Drive-folder recovery.
 - `tests/formatting.test.js` and `tests/logger.test.js`: Western digits in dates and times, and a log that rotates and never records task or note content.
-- **Desktop tests (Playwright):** `tests/desktop-smoke.cjs`, `tests/attachments-desktop.cjs` and `tests/photos-drive-desktop.cjs` drive the real Windows app with temporary data. Run the smoke test with `pnpm test:desktop`; set `WAQT_EXECUTABLE` to a packaged `Waqt.exe` to test a build instead of the sources. Playwright is a devDependency; the attachments suite also needs JSZip (or the `WAQT_PLAYWRIGHT` and `WAQT_JSZIP` paths). `.github/workflows/desktop.yml` packages the app and runs the smoke test on every pull request.
+- **Desktop tests (Playwright):** `tests/desktop-smoke.cjs`, `tests/attachments-desktop.cjs` and `tests/photos-drive-desktop.cjs` drive the real Windows app with temporary data. Run the smoke test with `pnpm test:desktop`; set `WAQT_EXECUTABLE` to a packaged `Remember Me.exe` to test a build instead of the sources. Playwright is a devDependency; the attachments suite also needs JSZip (or the `WAQT_PLAYWRIGHT` and `WAQT_JSZIP` paths). `.github/workflows/desktop.yml` packages the app and runs the smoke test on every pull request.
 - `pnpm lint` runs ESLint (`eslint.config.cjs`); CI runs it after the unit tests.
 
 ### Releasing
 
-Bump `version` in `package.json` and push a matching tag, such as `v1.4.1`. `.github/workflows/release.yml` runs the tests, builds the installer and publishes it to Releases with `SHA256SUMS.txt`, build provenance, and the `latest.yml` and `.blockmap` files the app's updater reads. Running the workflow by hand only builds the files and publishes nothing. [RELEASING.md](RELEASING.md) has the full checklist, and [docs/distribution/winget](docs/distribution/winget/README.md) the winget manifests.
+Bump `version` in `package.json` and push a matching tag, such as `v1.4.1`. `.github/workflows/release.yml` runs the tests, builds the installer and publishes it to Releases with `SHA256SUMS.txt`, build provenance, and the `latest.yml` and `.blockmap` files the app's updater reads. Running the workflow by hand only builds the files: it creates no release and no attestation. [RELEASING.md](RELEASING.md) has the full checklist, and [docs/distribution/winget](docs/distribution/winget/README.md) the winget manifests.
 
 ## Code signing policy
 
