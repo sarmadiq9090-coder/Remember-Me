@@ -3,7 +3,7 @@ const { UserError } = require('./errors');
 const { randomUUID } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
-const { attachmentIds, validateAttachment } = require('../attachments');
+const { attachmentIds, validateAttachment } = require('../data/attachments');
 const { LOCALES, DEFAULT: DEFAULT_LOCALE } = require('../../ui/translate');
 const { validPause } = require('./pause');
 

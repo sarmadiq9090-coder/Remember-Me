@@ -3,10 +3,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { DriveBackup } = require('../src/drive-backup');
+const { DriveBackup } = require('../src/data/drive-backup');
 const { Store, saveTask } = require('../src/core/tasks');
-const { importFiles } = require('../src/attachments');
-const { isImage } = require('../src/image-preview');
+const { importFiles } = require('../src/data/attachments');
+const { isImage } = require('../src/data/image-preview');
 test('Drive backup contains text and images locally and in the selected sync folder; daily copies are bounded', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-drive-'));
   const data = path.join(root, 'data'), sync = path.join(root, 'Google Drive');

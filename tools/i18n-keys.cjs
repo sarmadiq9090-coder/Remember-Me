@@ -10,7 +10,7 @@ const unescape = text => text.replace(/\\(['"\\])/g, '$1').replace(/\\n/g, '\n')
 const SCRIPTS = ['ui/app.js', 'ui/alert.js', 'ui/shared.js', 'ui/i18n.js', 'src/main.js'];
 // The data modules throw English messages that the main process translates. Messages for users
 // start with a capital letter; lowercase ones ('invalid kind') are for developers only.
-const MODULES = ['src/core/tasks.js', 'src/attachments.js', 'src/backups.js', 'src/drive-backup.js', 'src/ipc.js'];
+const MODULES = ['src/core/tasks.js', 'src/data/attachments.js', 'src/data/backups.js', 'src/data/drive-backup.js', 'src/ipc.js'];
 const PAGES = ['ui/index.html', 'ui/alert.html'];
 function collectKeys() {
   const keys = new Set();

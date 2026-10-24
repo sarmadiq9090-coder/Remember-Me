@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { Store, saveTask, completeTask, validateState, initialState } = require('../src/core/tasks');
-const { importFiles, attachmentPath, attachmentIds, resolveAttachment, validateAttachment, exportBackup } = require('../src/attachments');
+const { importFiles, attachmentPath, attachmentIds, resolveAttachment, validateAttachment, exportBackup } = require('../src/data/attachments');
 test('attachments survive moving the original, restarting, recurrence and full backup export', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-attachments-'));
   const store = new Store(path.join(root, 'data'));
@@ -62,14 +62,14 @@ test('multi-selection validates all files before copying and missing files are r
   assert.throws(() => resolveAttachment(state, root, record.id), /missing/);
 });
 test('programs, scripts, installers and disk images are revealed instead of opened, whatever their case or double extension', () => {
-  const { opensAsProgram } = require('../src/attachments');
+  const { opensAsProgram } = require('../src/data/attachments');
   for (const name of ['setup.exe', 'SETUP.EXE', 'تقرير.pdf.exe', 'run.Bat', 'a.cmd', 'a.ps1', 'a.psm1', 'a.vbs', 'a.js', 'a.jse', 'a.wsf', 'a.hta', 'a.msi', 'a.msp',
     'a.scr', 'a.lnk', 'a.url', 'a.reg', 'a.cpl', 'a.pif', 'a.jar', 'a.chm', 'a.appx', 'a.msix', 'a.appref-ms', 'a.settingcontent-ms', 'a.library-ms', 'a.scf',
     'a.iso', 'a.img', 'a.vhdx', 'a.xll', 'a.py', 'a.wsb', 'a.rdp', 'schedule.theme', 'a.THEMEPACK', 'a.deskthemepack', 'a.desktopthemepackfile', 'a.msstyles', 'update.msu', 'a.pyzw', 'a.vsix', 'a.vsto', 'invoice' + String.fromCharCode(0x202e) + 'fdp.exe', 'photo' + String.fromCharCode(0x202e) + 'gpj.txt']) assert.equal(opensAsProgram(name), true, name);
   for (const name of ['خطة.pdf', 'جدول.xlsx', 'a.XLSM', 'a.docx', 'a.txt', 'a.csv', 'a.png', 'exe.pdf', 'archive.zip', 'README', 'a.exe.pdf']) assert.equal(opensAsProgram(name), false, name);
 });
 test('storage usage counts orphaned attachments, and cleanup removes only files no task or note uses', async () => {
-  const { storageUsage, removeOrphans } = require('../src/attachments');
+  const { storageUsage, removeOrphans } = require('../src/data/attachments');
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-orphans-'));
   const data = path.join(root, 'data'); const store = new Store(data);
   const files = ['used.pdf', 'detached.pdf', 'draft.pdf', 'history.pdf'].map(name => { const f = path.join(root, name); fs.writeFileSync(f, name.repeat(100)); return f; });
@@ -95,7 +95,7 @@ test('storage usage counts orphaned attachments, and cleanup removes only files 
   assert.equal((await storageUsage(new Store(data).state, data)).orphans, 0);
 });
 test('a missing attachment file is skipped and reported, while invalid paths still stop the backup', async () => {
-  const { readBackup } = require('../src/backups');
+  const { readBackup } = require('../src/data/backups');
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-missing-'));
   const data = path.join(root, 'data'); const store = new Store(data);
   const files = ['kept.pdf', 'gone.pdf'].map(name => { const f = path.join(root, name); fs.writeFileSync(f, name); return f; });

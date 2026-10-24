@@ -3,8 +3,8 @@ const fs = require('node:fs');
 const fsp = fs.promises;
 const path = require('node:path');
 const { createHash } = require('node:crypto');
-const { writeDurable } = require('./core/tasks');
-const { silent } = require('./logger');
+const { writeDurable } = require('../core/tasks');
+const { silent } = require('../logger');
 const { exportBackup, BACKUP_INFO } = require('./attachments');
 const { validKeep, expiredBackups, rotateBackups } = require('./backups');
 

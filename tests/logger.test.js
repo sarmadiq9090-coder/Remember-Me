@@ -5,8 +5,8 @@ const os = require('node:os');
 const path = require('node:path');
 const { createLogger, redact } = require('../src/logger');
 const { Store, saveTask } = require('../src/core/tasks');
-const { DriveBackup } = require('../src/drive-backup');
-const { importFiles, attachmentPath } = require('../src/attachments');
+const { DriveBackup } = require('../src/data/drive-backup');
+const { importFiles, attachmentPath } = require('../src/data/attachments');
 
 test('the log rotates at its size limit and keeps three files', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-log-'));

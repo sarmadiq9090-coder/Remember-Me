@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { initialState, saveTask, importTasks, dueTasks } = require('../src/core/tasks');
-const { toCSV, fromCSV, toICS, fromICS } = require('../src/interchange');
+const { toCSV, fromCSV, toICS, fromICS } = require('../src/data/interchange');
 
 test('CSV export round-trips Arabic, quotes, commas and line breaks, and defuses spreadsheet formulas', () => {
   const s = initialState();
