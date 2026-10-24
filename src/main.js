@@ -2,7 +2,7 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, Notification, nativeTheme } = require('electron');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
-const { Store, saveTask, completeTask, undoComplete, toggleStep, snoozeTask, dueTasks, alertQueue, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
+const { REMIND_AGAIN, Store, saveTask, completeTask, skipOccurrence, undoComplete, toggleStep, snoozeTask, dueTasks, alertQueue, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
 const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
@@ -10,16 +10,26 @@ const { checkRequest, fromPage } = require('./ipc');
 const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale, translate } = require('../ui/translate');
 const fs = require('node:fs');
 const { alertBounds } = require('./placement');
-const { readBackup, restoreBackup } = require('./backups');
+const { readBackup, safetyBackup, restoreBackup } = require('./backups');
+const { createRepeatBeep } = require('./repeat-beep');
+const { Updates, configure: configureUpdater } = require('./updates');
+const { migrateDataFolder } = require('./data-folder');
+const { setLoginItem, refreshLoginItem } = require('./login-item');
 const testMode = process.env.WAQT_TEST === '1';
 // Lets the desktop tests read early notifications without showing them.
 if (testMode) globalThis.waqtTest = { get early() { return earlyLog; } };
-app.setName('ذكرني');
-app.setPath('userData', testMode && process.env.WAQT_DATA_DIR ? process.env.WAQT_DATA_DIR : path.join(app.getPath('appData'), 'Waqt'));
+app.setName('Remember Me');
+// Runs before anything (including the single-instance lock) creates files in the data folder.
+const dataFolder = testMode && process.env.WAQT_DATA_DIR ? { folder: process.env.WAQT_DATA_DIR, migrated: 'none' } : migrateDataFolder(app.getPath('appData'));
+if (dataFolder.error) console.error('Could not move the data folder; using the old one:', dataFolder.error);
+app.setPath('userData', dataFolder.folder);
+// The ID predates the Remember Me name. Keep it: it names the start-with-Windows entry and taskbar
+// group of v1.4.0, and the installer's appId must stay the same for upgrades and updates.
 app.setAppUserModelId('com.waqt.reminder');
-let mainWindow, alertWindow, tray, store, quitting = false, interval, preview = null, driveBackup, backupInterval;
+let mainWindow, alertWindow, tray, store, quitting = false, interval, preview = null, driveBackup, backupInterval, updates;
 const imagePreview = createPreviewService(nativeImage);
 let previousDue = new Set();
+const repeatBeep = createRepeatBeep(() => shell.beep());
 // The task just completed from the alert, which can be undone for a few seconds.
 let undoable = null;
 const UNDO_MS = 6000;
@@ -41,6 +51,8 @@ function announceUpcoming() {
   }
 }
 const icon = path.join(__dirname, '../assets/icon.png');
+// The tray shows a dotted variant while real reminders are waiting; trayWaiting avoids calling setImage every second.
+let trayWaiting = false;
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => showMain());
@@ -83,7 +95,8 @@ function notifyViews() {
 }
 function language() { const code = store?.state?.settings?.language; return LOCALES.some(l => l.code === code) ? code : DEFAULT_LOCALE; }
 // The same locale the windows use, including a chosen digit style.
-function localeTag() { const digits = store?.state?.settings?.digits; return findLocale(language()).intl + (digits === 'arab' || digits === 'latn' ? '-u-nu-' + digits : ''); }
+// Dates and times always use Western digits (0-9), in Arabic too, so the layout never shifts.
+function localeTag() { return findLocale(language()).intl + '-u-nu-latn'; }
 // Interface text comes from ui/locales/<code>.json, read once per language; English is the fallback.
 const messageCache = new Map();
 function messages(code) {
@@ -132,8 +145,11 @@ function scanNow() {
       alertWindow.on('closed', () => { alertWindow = null; });
     } else if (!alertWindow.isVisible()) alertWindow.showInactive();
     if (newlyDue && store.state.settings.sound && !testMode) shell.beep();
-  } else if (alertWindow && !(undoable && undoable.until > Date.now())) { alertWindow.destroy(); alertWindow = null; }
+    repeatBeep(store.state.settings.sound && !testMode && tasks[0].id !== '__preview' ? tasks[0].id : null, store.state.settings.remindAgain || 0);
+  } else { repeatBeep(null, 0); if (alertWindow && !(undoable && undoable.until > Date.now())) { alertWindow.destroy(); alertWindow = null; } }
   if (newlyDue) notifyViews();
+  const waiting = tasks.length > 0 && tasks[0].id !== '__preview';
+  if (tray && waiting !== trayWaiting) { trayWaiting = waiting; tray.setImage(nativeImage.createFromPath(waiting ? path.join(__dirname, '../assets/tray-waiting.png') : icon)); }
   if (tray) tray.setToolTip(tasks.length ? (tr("Remember Me • {count} reminders waiting", { count: tasks.length })) : tr("Remember Me • Your tasks on time"));
 }
 function purgeExpiredTrash() {
@@ -143,7 +159,15 @@ function purgeExpiredTrash() {
 function setLogin(enabled) {
   if (testMode) return;
   if (!app.isPackaged) { if (enabled) throw new Error(tr('Use the installed version of the app to start it with Windows.')); return; }
-  app.setLoginItemSettings({ openAtLogin: enabled, path: process.execPath, args: ['--background'] });
+  setLoginItem(app, enabled, process.execPath);
+}
+function createUpdates() {
+  // Test runs never contact GitHub; electron-updater itself does nothing in development builds.
+  const updater = testMode ? Object.assign(new (require('node:events'))(), { checkForUpdates: async () => null, quitAndInstall() {} })
+    : configureUpdater(require('electron-updater').autoUpdater);
+  return new Updates({ updater, version: app.getVersion(), consent: () => store.state.settings.autoUpdate, onChange: notifyViews,
+    backup: () => safetyBackup(app.getPath('userData'), store.state, 'RememberMe-before-update-'),
+    prepareQuit: () => { quitting = true; }, quit: () => app.quit() });
 }
 async function start() {
   // The UI needs no camera, microphone, notifications, location or other browser permissions.
@@ -153,6 +177,11 @@ async function start() {
   nativeTheme.themeSource = store.state.settings.theme;
   nativeTheme.on('updated', applyTheme);
   driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, notifyViews);
+  // After an upgrade the entry may still point at the old Waqt.exe, or at an old install folder.
+  if (store.state.settings.startAtLogin && app.isPackaged && !testMode) {
+    try { refreshLoginItem(app, process.execPath); } catch (error) { console.error('Could not update start with Windows:', error); }
+  }
+  updates = createUpdates();
   createMain();
   tray = new Tray(nativeImage.createFromPath(icon));
   rebuildTrayMenu();
@@ -166,9 +195,9 @@ async function start() {
       payload = checkRequest(action, payload, { fromAlert });
       let value;
       switch (action) {
-        case 'state': value = { ...store.state, dataPath: app.getPath('userData'), packaged: app.isPackaged, recovered: store.recovered, driveBackup: driveBackup.status() }; break;
+        case 'state': value = { ...store.state, dataPath: app.getPath('userData'), packaged: app.isPackaged, recovered: store.recovered, driveBackup: driveBackup.status(), updates: updates.status() }; break;
         case 'alerts': value = activeAlerts().map(t => ({ ...t, files: (t.attachments || []).map(id => store.state.attachments.find(a => a.id === id)).filter(Boolean) })); break;
-        case 'language': value = { language: language(), digits: store.state.settings.digits }; break;
+        case 'language': value = { language: language() }; break;
         case 'locale': {
           const code = LOCALES.some(l => l.code === payload.code) ? payload.code : language();
           value = { ...findLocale(code), messages: messages(code), fallback: messages(DEFAULT_LOCALE) };
@@ -183,6 +212,10 @@ async function start() {
             value = done;
             if (done && fromAlert) undoable = { ...done, title: store.state.tasks.find(t => t.id === done.id)?.title || '', until: Date.now() + UNDO_MS };
           }
+          break;
+        case 'skip':
+          if (payload.id === '__preview') throw new Error(tr('The preview does not repeat.'));
+          value = store.change(s => skipOccurrence(s, payload.id, payload.expectedDueAt, new Date()));
           break;
         case 'undoComplete':
           if (fromAlert && (!undoable || undoable.id !== payload.id || undoable.copyId !== payload.copyId)) throw new Error(tr("It is too late to undo."));
@@ -268,9 +301,10 @@ async function start() {
         case 'settings': {
           const old = store.state.settings;
           const settings = { sound: !!payload.sound, startAtLogin: !!payload.startAtLogin, alertSide: payload.alertSide === 'left' ? 'left' : 'right', language: LOCALES.some(l => l.code === payload.language) ? payload.language : DEFAULT_LOCALE,
-            digits: ['arab', 'latn'].includes(payload.digits) ? payload.digits : 'auto', weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 'auto', hijri: !!payload.hijri, theme: ['light', 'dark'].includes(payload.theme) ? payload.theme : 'system' };
+            weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 6, theme: ['light', 'dark'].includes(payload.theme) ? payload.theme : 'system',
+            remindAgain: REMIND_AGAIN.includes(payload.remindAgain) ? payload.remindAgain : 0 };
           if (old.startAtLogin !== settings.startAtLogin) setLogin(settings.startAtLogin);
-          try { store.change(s => { s.settings = settings; }); }
+          try { store.change(s => { s.settings = { ...s.settings, ...settings }; }); }
           catch (err) { if (old.startAtLogin !== settings.startAtLogin) setLogin(old.startAtLogin); throw err; }
           rebuildTrayMenu(); placeAlert(); applyTheme(); break;
         }
@@ -316,10 +350,17 @@ async function start() {
           break;
         }
         case 'dataFolder': await shell.openPath(app.getPath('userData')); break;
+        case 'updateConsent': store.change(s => { s.settings.autoUpdate = payload.enabled; }); updates.consentChanged(); break;
+        case 'checkUpdates': value = await updates.check(); break;
+        case 'installUpdate':
+          try { value = await updates.restart(); }
+          catch (error) { throw new Error(tr("Couldn't save a safety copy of your data, so the update was not installed. {reason}", { reason: errorText(error) })); }
+          break;
+        case 'dismissUpdate': updates.dismiss(); break;
         case 'open': showMain(); break;
         default: throw new Error(tr('Unknown action.'));
       }
-      if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder'].includes(action)) { scan(); notifyViews(); }
+      if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder', 'checkUpdates', 'installUpdate', 'dismissUpdate'].includes(action)) { scan(); notifyViews(); }
       return { ok: true, value };
     } catch (error) { return { ok: false, error: errorText(error) }; }
   });
@@ -327,6 +368,7 @@ async function start() {
   purgeExpiredTrash();
   backupInterval = setInterval(() => { driveBackup.tick(); try { purgeExpiredTrash(); } catch (error) { console.error('Trash purge failed:', error); } }, 60000);
   if (!testMode) driveBackup.tick();
+  updates.start();
   powerMonitor.on('resume', scan);
   powerMonitor.on('unlock-screen', scan);
   screen.on('display-metrics-changed', placeAlert);
@@ -337,4 +379,8 @@ async function start() {
 app.on('web-contents-created', (event, contents) => contents.on('will-attach-webview', e => e.preventDefault()));
 app.on('activate', showMain);
 app.on('window-all-closed', () => {});
-app.on('before-quit', () => { quitting = true; clearInterval(interval); clearInterval(backupInterval); });
+app.on('before-quit', event => {
+  quitting = true; clearInterval(interval); clearInterval(backupInterval);
+  // With a downloaded update this waits for a safety backup, then installs it.
+  updates?.beforeQuit(event);
+});

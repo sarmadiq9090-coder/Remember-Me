@@ -6,6 +6,8 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { validateState } = require('./core');
 const { BACKUP_INFO, attachmentPath, exportBackup, hashFile } = require('./attachments');
+// Folder names of the app's own backups. Versions up to 1.4 used the old internal name, Waqt.
+const BACKUP_PREFIXES = ['RememberMe-backup-', 'Waqt-backup-'];
 
 // Reads a backup folder and checks it completely before anything is restored from it.
 // Backups made before v1.5 have no backup.json: they are accepted when every file is present
@@ -33,12 +35,17 @@ async function readBackup(folder) {
   return { folder, state, verified: !!info, kind: info?.kind || 'unknown', createdAt: info?.createdAt || null };
 }
 
+// A complete copy of the current data in the backups folder, taken before a restore or an
+// update. Safety copies are never rotated away.
+async function safetyBackup(directory, state, prefix) {
+  const parent = path.join(directory, 'backups');
+  await fsp.mkdir(parent, { recursive: true });
+  return exportBackup(state, directory, parent, { kind: 'safety', prefix });
+}
 // Replaces the current data with a backup read by readBackup. The current data is exported
 // first, so a restore can always be undone from the backups folder.
 async function restoreBackup(directory, store, backup) {
-  const parent = path.join(directory, 'backups');
-  await fsp.mkdir(parent, { recursive: true });
-  const safety = await exportBackup(store.state, directory, parent, { kind: 'safety', prefix: 'Waqt-before-restore-' });
+  const safety = await safetyBackup(directory, store.state, 'RememberMe-before-restore-');
   for (const record of backup.state.attachments) {
     const source = attachmentPath(backup.folder, record), target = attachmentPath(directory, record);
     const existing = await fsp.lstat(target).catch(() => null);
@@ -59,7 +66,7 @@ async function expiredBackups(parent, keep, protect = []) {
   const kept = new Set(protect.filter(Boolean).map(p => path.resolve(p).toLowerCase()));
   const automatic = [];
   for (const entry of await fsp.readdir(parent, { withFileTypes: true }).catch(() => [])) {
-    if (!entry.isDirectory() || !entry.name.startsWith('Waqt-backup-')) continue;
+    if (!entry.isDirectory() || !BACKUP_PREFIXES.some(prefix => entry.name.startsWith(prefix))) continue;
     const folder = path.join(parent, entry.name);
     try {
       const info = JSON.parse(await fsp.readFile(path.join(folder, BACKUP_INFO), 'utf8'));
@@ -74,4 +81,4 @@ async function rotateBackups(parent, keep, protect) {
   for (const folder of expired) await fsp.rm(folder, { recursive: true, force: true });
   return expired;
 }
-module.exports = { validKeep, readBackup, restoreBackup, expiredBackups, rotateBackups };
+module.exports = { BACKUP_PREFIXES, validKeep, readBackup, safetyBackup, restoreBackup, expiredBackups, rotateBackups };

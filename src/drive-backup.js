@@ -8,7 +8,7 @@ const { exportBackup, BACKUP_INFO } = require('./attachments');
 const { validKeep, expiredBackups, rotateBackups } = require('./backups');
 
 // Google Drive for desktop owns authentication, upload retries and offline syncing.
-// Waqt only reports handing a complete backup to the user-selected sync folder.
+// Remember Me only reports handing a complete backup to the user-selected sync folder.
 class DriveBackup {
   constructor(directory, getState, onChange = () => {}, options = {}) {
     this.directory = directory;

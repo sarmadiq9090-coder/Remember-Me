@@ -9,8 +9,8 @@ test('requests are limited to known actions, the alert window to its own subset'
   assert.deepEqual(checkRequest('saveTask', { title: 'x' }), { title: 'x' });
   for (const action of [undefined, 42, '__proto__', 'constructor', 'toString', 'deleteEverything']) assert.throws(() => checkRequest(action), /Unknown action/);
   for (const action of ALERT_ACTIONS) assert.doesNotThrow(() => checkRequest(action, { id: 'a' }, { fromAlert: true }));
-  for (const action of ['saveTask', 'deleteTask', 'settings', 'export', 'attachFiles', 'dataFolder']) assert.throws(() => checkRequest(action, { id: 'a' }, { fromAlert: true }), /not allowed/);
-  assert.throws(() => checkRequest('saveTask', {}, { fromAlert: true}), /Request not allowed/);
+  for (const action of ['saveTask', 'deleteTask', 'settings', 'export', 'attachFiles', 'dataFolder', 'updateConsent', 'checkUpdates', 'installUpdate']) assert.throws(() => checkRequest(action, { id: 'a' }, { fromAlert: true }), /not allowed/);
+  assert.throws(() => checkRequest('saveTask', {}, { fromAlert: true }), /Request not allowed/);
 });
 
 test('payloads must be plain objects and item IDs short strings', () => {
@@ -19,6 +19,8 @@ test('payloads must be plain objects and item IDs short strings', () => {
   assert.doesNotThrow(() => checkRequest('complete', { id: '__preview' }));
   assert.doesNotThrow(() => checkRequest('saveNote', { title: 'new note' }), 'Creating an item needs no ID');
   assert.throws(() => checkRequest('saveNote', { id: 9, title: 'x' }), /Invalid item ID/);
+  assert.doesNotThrow(() => checkRequest('updateConsent', { enabled: false }));
+  for (const enabled of [undefined, null, 'true', 1]) assert.throws(() => checkRequest('updateConsent', { enabled }), /Invalid request data/);
 });
 
 test('only the window’s own bundled page may call the main process', () => {
@@ -41,4 +43,11 @@ test('Done and snooze may carry the due time the user saw, and nothing else in i
     assert.throws(() => checkRequest('complete', { id: 'a', expectedDueAt }), /Invalid time/, String(expectedDueAt));
     assert.throws(() => checkRequest('snooze', { id: 'a', expectedDueAt }, {}), /Invalid time/);
   }
+});
+
+test('skip is allowed from the alert, needs an ID and validates the expected time', () => {
+  assert.ok(ALERT_ACTIONS.has('skip'));
+  assert.doesNotThrow(() => checkRequest('skip', { id: 'a', expectedDueAt: '2026-10-23T09:00:00.000Z' }, { fromAlert: true }));
+  assert.throws(() => checkRequest('skip', {}, { fromAlert: true }), /Invalid item ID/);
+  assert.throws(() => checkRequest('skip', { id: 'a', expectedDueAt: 'later' }), /Invalid time/);
 });

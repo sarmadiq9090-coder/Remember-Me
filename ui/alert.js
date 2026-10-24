@@ -22,6 +22,7 @@ async function refreshAlert() {
     $('alert-queue').textContent = task.id === '__preview' ? tr("Alert preview • no real reminder is created") : tasks.length > 1 ? (tr("1 / {count} • {count} reminders waiting • shown one at a time", { count: tasks.length })) : tr("A small space for something important");
   } catch (e) { $('alert-error').textContent = e.message; }
 }
+// act('skip') skips a repeating reminder's current occurrence; the alert layout work places its button.
 async function act(action, until) {
   if (!currentId || busy) return;
   busy = true;
@@ -34,7 +35,7 @@ async function act(action, until) {
     await refreshAlert();
     // The next queued reminder took this place: pause briefly so a repeated click cannot act on it unseen.
     if (currentId && currentId !== shown) {
-      $('alert-queue').textContent = `${action === 'complete' ? tr("Done - next reminder") : tr("Snoozed - next reminder")}${queueSize > 1 ? ` • 1 / ${queueSize}` : ''}`;
+      $('alert-queue').textContent = `${action === 'complete' ? tr("Done - next reminder") : action === 'skip' ? tr("Skipped - next reminder") : tr("Snoozed - next reminder")}${queueSize > 1 ? ` • 1 / ${queueSize}` : ''}`;
       await new Promise(resolve => setTimeout(resolve, 600));
       await refreshAlert();
     }

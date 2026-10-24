@@ -80,7 +80,7 @@ function fileMissing(directory, record) {
 // kind is 'automatic' for copies the app makes on its own; only those may ever be rotated away.
 // An attachment whose file is gone is left out instead of blocking every backup: it is dropped from
 // the copied data.json so the backup stays restorable, and reported in `skipped` (if given) and backup.json.
-async function exportBackup(state, directory, destination, { kind = 'manual', prefix = 'Waqt-backup-', skipped = [] } = {}) {
+async function exportBackup(state, directory, destination, { kind = 'manual', prefix = 'RememberMe-backup-', skipped = [] } = {}) {
   const snapshot = structuredClone(state);
   const items = [...snapshot.tasks, ...snapshot.notes];
   const used = new Set(items.flatMap(item => item.attachments || []));

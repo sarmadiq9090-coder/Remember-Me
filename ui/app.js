@@ -28,11 +28,11 @@ function toast(message, undo) {
 }
 async function refresh() {
   try {
-    state = await api('state'); uiDigits = state.settings.digits;
+    state = await api('state');
     // Deleted items only appear in the trash view; every other view works on the rest.
     trash = [...state.tasks.filter(t => t.deletedAt).map(item => ({ kind: 'Task', item })), ...state.notes.filter(n => n.deletedAt).map(item => ({ kind: 'Note', item }))].sort((a, b) => Date.parse(b.item.deletedAt) - Date.parse(a.item.deletedAt));
     state.tasks = state.tasks.filter(t => !t.deletedAt); state.notes = state.notes.filter(n => !n.deletedAt);
-    await setLanguage(state.settings.language, state.settings.digits); render();
+    await setLanguage(state.settings.language); render();
   } catch (e) { toast(e.message); }
 }
 function todayEnd() { const d = new Date(); d.setHours(23, 59, 59, 999); return d.getTime(); }
@@ -57,12 +57,13 @@ function render() {
   document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   document.querySelector('.nav-item[data-view="settings"]').classList.toggle('needs-attention', !!state.driveBackup?.stale);
   renderTagFilters();
+  renderUpdateNotice();
   document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
   const names = views[view].map(key => (key ? tr(key) : ''));
   $('breadcrumb').textContent = names[0];
   $('page-title').innerHTML = `${names[1]}<span class="title-dot">.</span>`;
   $('page-description').textContent = names[2];
-  $('date-label').textContent = new Date().toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + (state.settings.hijri ? ' • ' + new Date().toLocaleDateString(locale(true), { day: 'numeric', month: 'long', year: 'numeric' }) : '');
+  $('date-label').textContent = new Date().toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   $('dashboard').hidden = view !== 'today';
   $('tasks-section').hidden = ['notes', 'settings', 'trash'].includes(view);
   $('trash-section').hidden = view !== 'trash';
@@ -88,13 +89,13 @@ function render() {
     // Each language is listed in its own script, whatever the interface language.
     if (!$('setting-language').options.length) $('setting-language').innerHTML = LOCALES.map(l => `<option value="${l.code}" lang="${l.code}" dir="${l.dir}">${esc(l.name)}</option>`).join('');
     $('setting-language').value = state.settings.language;
-    $('setting-digits').value = state.settings.digits;
+    renderRemindAgain();
     $('setting-theme').value = state.settings.theme;
     $('setting-week').value = String(state.settings.weekStart);
-    $('setting-hijri').checked = state.settings.hijri;
     $('data-path').textContent = state.dataPath;
     renderStorage();
     renderDriveBackup();
+    renderUpdatesCard();
   } else {
     let tasks = view === 'today' ? today : view === 'upcoming' ? upcoming : view === 'completed' ? complete : active;
     if (filter === 'high') tasks = tasks.filter(t => t.priority === 'high');
@@ -111,6 +112,7 @@ function render() {
     emptyText.textContent = query || filter !== 'all' ? tr("Try another word or choose a different list.") : view === 'completed' ? tr("Complete any task to see it in this list.") : tr("Write a small task, an idea, or anything you don't want to forget.");
     $('empty-add').hidden = view === 'completed' || !!query || filter !== 'all';
   }
+  renderStartupWarning();
   hydratePreviews();
 }
 function allTags() { const tags = new Map(); for (const t of state.tasks) for (const tag of t.tags || []) tags.set(tag.toLowerCase(), tag); return [...tags.values()].sort((a, b) => a.localeCompare(b, locale())); }
@@ -123,6 +125,36 @@ function renderTagFilters() {
   $('tag-options').innerHTML = tags.map(tag => `<option value="${esc(tag)}">`).join('');
 }
 function parseTags(text) { return text.split(/[,،;؛]/).map(t => t.trim()).filter(Boolean); }
+// Reminders only fire while the app runs, so warn when it will not start with Windows but reminders are
+// still to come: a card in Settings, and a banner elsewhere until it is dismissed for good.
+function startupNotice(dismissible) {
+  const card = document.createElement('div');
+  card.className = 'settings-card startup-warning'; card.hidden = true;
+  card.innerHTML = `<h2></h2><p></p><div class="dialog-footer"><button type="button" class="primary" data-enable></button>${dismissible ? '<button type="button" class="text-button" data-dismiss></button>' : ''}</div>`;
+  card.querySelector('[data-enable]').addEventListener('click', async e => {
+    e.target.disabled = true;
+    try { await api('settings', { ...state.settings, startAtLogin: true }); await refresh(); toast(tr("Remember Me will now start with Windows.")); }
+    catch (err) { toast(err.message); } finally { e.target.disabled = false; }
+  });
+  card.querySelector('[data-dismiss]')?.addEventListener('click', () => { try { localStorage.setItem('startupBannerDismissed', '1'); } catch {} card.hidden = true; });
+  return card;
+}
+const startupCard = startupNotice(false), startupBanner = startupNotice(true);
+$('settings-section').prepend(startupCard);
+document.querySelector('.page-heading').after(startupBanner);
+function bannerDismissed() { try { return localStorage.getItem('startupBannerDismissed') === '1'; } catch { return false; } }
+function renderStartupWarning() {
+  const needed = !state.settings.startAtLogin && state.tasks.some(t => !t.completedAt && t.dueAt && Date.parse(t.dueAt) > Date.now());
+  startupCard.hidden = !needed || view !== 'settings';
+  startupBanner.hidden = !needed || view === 'settings' || bannerDismissed();
+  for (const card of [startupCard, startupBanner]) {
+    card.querySelector('h2').textContent = tr("Reminders only work while Remember Me is running");
+    card.querySelector('p').textContent = tr("You have upcoming reminders, but Start with Windows is off. Turn it on so a restart does not make you miss one.");
+    card.querySelector('[data-enable]').textContent = tr("Turn on Start with Windows");
+    const dismiss = card.querySelector('[data-dismiss]');
+    if (dismiss) dismiss.textContent = tr("Dismiss");
+  }
+}
 function attachmentChips(ids = []) {
   const records = ids.map(id => state.attachments.find(a => a.id === id)).filter(Boolean);
   return records.filter(isImageFile).map(photoMarkup).join('') + records.filter(a => !isImageFile(a)).map(a => `<button type="button" class="file-chip" data-file-id="${esc(a.id)}" title="${tr('Open')} ${esc(a.name)}">${icon('paperclip')}<bdi>${esc(a.name)}</bdi></button>`).join('');
@@ -133,7 +165,7 @@ function taskCard(t) {
   return `<article class="task-row ${t.completedAt ? 'completed' : ''}" data-id="${esc(t.id)}">
     <button class="task-check" data-action="${t.completedAt ? 'reopen' : 'complete'}" aria-label="${t.completedAt ? tr("Reopen") : tr("Complete")} ${esc(t.title)}" title="${t.completedAt ? tr("Reopen without due date") : tr("Mark complete")}">${t.completedAt ? icon('check') : ''}</button>
     <div class="task-info"><div ${!t.completedAt ? 'data-action="edit" tabindex="0" role="button" class="task-edit-target"' : ''}><div class="task-name" dir="auto">${esc(t.title)}</div>${t.body ? `<p class="task-body" dir="auto">${esc(t.body)}</p>` : ''}<div class="task-meta">${due}${t.repeat !== 'none' ? `<span>${icon('repeat')}${esc(repeatLabel(t))}</span>` : ''}${(t.tags || []).map(tag => `<span class="tag-chip"><bdi>#${esc(tag)}</bdi></span>`).join('')}${t.remindBefore && !t.completedAt ? `<span title="${tr("Early notice")}">${icon('bell')}${esc($('task-before').querySelector(`option[value="${t.remindBefore}"]`)?.textContent || '')}</span>` : ''}${t.snoozedAt && !t.completedAt ? `<span>${tr("Snoozed")}</span>` : ''}</div></div>${stepsMarkup(t)}${t.attachments?.length ? `<div class="file-chips">${attachmentChips(t.attachments)}</div>` : ''}</div>
-    ${t.priority !== 'normal' ? `<span class="priority ${t.priority}">${t.priority === 'high' ? tr("High priority") : tr("Medium")}</span>` : ''}<div class="task-actions">${!t.completedAt ? `<button class="icon-button" data-action="edit" title="${tr("Edit task")}" aria-label="${tr("Edit task")}">${icon('edit')}</button>` : ''}<button class="icon-button" data-action="delete" title="${tr("Delete task")}" aria-label="${tr("Delete task")}">${icon('trash')}</button></div></article>`;
+    ${t.priority !== 'normal' ? `<span class="priority ${t.priority}">${t.priority === 'high' ? tr("High priority") : tr("Medium")}</span>` : ''}<div class="task-actions">${!t.completedAt && t.repeat !== 'none' ? `<button class="icon-button" data-action="skip" title="${tr("Skip this time")}" aria-label="${tr("Skip this time")}: ${esc(t.title)}">${icon('skip')}</button>` : ''}${!t.completedAt ? `<button class="icon-button" data-action="edit" title="${tr("Edit task")}" aria-label="${tr("Edit task")}">${icon('edit')}</button>` : ''}<button class="icon-button" data-action="delete" title="${tr("Delete task")}" aria-label="${tr("Delete task")}">${icon('trash')}</button></div></article>`;
 }
 function renderNotes() {
   const notes = state.notes.filter(n => matchesSearch(n, query)).sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
@@ -160,11 +192,21 @@ function openTaskEditor(task) {
   originalTaskRule = repeatRuleKey();
   toggleRepeat();
   taskAttachments = [...(task?.attachments || [])]; renderEditorFiles('task');
+  editingSeries = task?.repeat && task.repeat !== 'none' && task.scheduleAt ? task.scheduleAt : null;
+  if (editingSeries) $('task-only-once-label').textContent = tr("Only this time (keep the series at {value})", { value: timeLabel(editingSeries) });
   $('task-dialog-title').textContent = task?.id ? tr("Task details") : tr("Space for a new task");
   toggleReminder();
   $('task-dialog').showModal(); $('task-title').focus();
 }
 window.openTaskEditor = openTaskEditor;
+// 'Only this time' moves one occurrence of a repeating task and keeps the series at its usual time.
+let editingSeries = null;
+const onlyOnce = document.createElement('label');
+onlyOnce.className = 'hint only-once'; onlyOnce.hidden = true;
+onlyOnce.innerHTML = '<input type="checkbox" id="task-only-once"> <span id="task-only-once-label"></span>';
+$('task-due').closest('label').after(onlyOnce);
+function toggleOnlyOnce() { onlyOnce.hidden = !(editingSeries && $('task-reminder').checked && $('task-repeat').value === originalTaskRepeat); }
+$('task-repeat').addEventListener('change', toggleOnlyOnce);
 // Week order follows the interface: Saturday first in Arabic, Sunday first in English.
 function weekOrder() { const chosen = state?.settings?.weekStart; const start = [0, 1, 6].includes(chosen) ? chosen : uiLocale.weekStart; return Array.from({ length: 7 }, (_, i) => (start + i) % 7); }
 function weekdayName(day, style = 'short') { return new Date(2026, 9, 25 + day).toLocaleDateString(locale(), { weekday: style }); }
@@ -197,7 +239,7 @@ function repeatLabel(t) {
   if (t.repeat === 'interval') { const n = t.repeatEvery; return tr('Every {count} days', { count: n }); }
   return { daily: tr("Daily"), weekly: tr("Weekly"), monthly: tr("Monthly"), yearly: tr("Yearly") }[t.repeat] || '';
 }
-function toggleReminder() { $('reminder-fields').hidden = !$('task-reminder').checked; $('task-due').required = $('task-reminder').checked; }
+function toggleReminder() { $('reminder-fields').hidden = !$('task-reminder').checked; $('task-due').required = $('task-reminder').checked; toggleOnlyOnce(); }
 function openNoteEditor(note) {
   $('note-form').reset(); $('note-error').textContent = '';
   $('note-id').value = note?.id || ''; $('note-title').value = note?.title || ''; $('note-body').value = note?.body || '';
@@ -254,6 +296,32 @@ function renderDriveBackup() {
   $('drive-status').classList.toggle('backup-error', !!(stale || backup.error || backup.skipped?.length));
   $('drive-local').textContent = backup.lastLocalPath ? tr("A local copy is also kept on your PC.") : '';
 }
+// Rebuilds a block only when its content changes, so focus and clicks are not lost on refresh.
+function setMarkup(el, html) { if (el.dataset.markup !== html) { el.dataset.markup = html; el.innerHTML = html; hydrateIcons(el); } }
+function renderUpdateNotice() {
+  const updates = state.updates, notice = $('update-notice');
+  if (updates?.banner) setMarkup(notice, `<span data-icon="download"></span><p>${esc(tr("Version {next} is ready. Restart to update", { next: updates.next }))}</p><button class="primary" data-update="installUpdate">${tr("Restart now")}</button><button class="text-button" data-update="dismissUpdate">${tr("Later")}</button>`);
+  else if (state.settings.autoUpdate === null) setMarkup(notice, `<span data-icon="info"></span><p>${tr("Remember Me can check GitHub for new versions and install them when you restart. Nothing else is sent.")}</p><button class="primary" data-update="allow">${tr("Allow")}</button><button class="text-button" data-update="decline">${tr("Not now")}</button>`);
+  notice.hidden = !updates?.banner && state.settings.autoUpdate !== null;
+}
+function updateStatus(updates) {
+  const next = updates.next, checked = updates.checkedAt ? dateLabel(updates.checkedAt) : '';
+  switch (updates.state) {
+    case 'checking': return tr("Checking for a new version…");
+    case 'downloading': return tr("Downloading version {next}… {percent}%", { next, percent: updates.percent });
+    case 'ready': return tr("Version {next} is ready and installs when you restart.", { next });
+    case 'installing': return tr("Saving a safety copy of your data, then installing the update…");
+    case 'latest': return tr("You have the latest version ({version}). Last checked: {checked}", { version: updates.version, checked });
+    case 'error': return tr("Couldn't check for updates. Check your internet connection.");
+    case 'unavailable': return tr("Updates work in the installed app only.");
+    default: return tr("Current version {version}.", { version: updates.version });
+  }
+}
+function renderUpdatesCard() {
+  const updates = state.updates, busy = ['checking', 'downloading', 'installing'].includes(updates.state);
+  setMarkup($('updates-card'), `<h2>${tr("Updates")}</h2><label class="setting-row"><div><strong>${tr("Check for updates automatically")}</strong><p>${tr("Checks GitHub once a day and downloads new versions in the background. Nothing else is sent.")}</p></div><input class="switch" id="setting-updates" type="checkbox"></label><div class="setting-row"><p id="update-status">${esc(updateStatus(updates))}</p><button class="soft-button" data-update="checkUpdates"${busy ? ' disabled' : ''}>${tr("Check now")}</button></div>`);
+  $('setting-updates').checked = state.settings.autoUpdate === true;
+}
 async function openFile(id) { try { await api('openAttachment', { id }); } catch (error) { toast(error.message); } }
 for (const type of ['task', 'note']) {
   $(type + '-attach').addEventListener('click', async () => {
@@ -301,7 +369,7 @@ $('task-form').addEventListener('submit', async e => {
     await api('saveTask', { id, title: $('task-title').value, body: $('task-body').value, attachments: taskAttachments, category: state.tasks.find(t => t.id === $('task-id').value)?.category || 'personal', priority: $('task-priority').value,
       dueAt: reminder ? (originalTaskDue && $('task-due').value === originalTaskDueValue ? originalTaskDue : new Date($('task-due').value).toISOString()) : null, repeat: reminder ? $('task-repeat').value : 'none',
       repeatDays, repeatEvery: Number($('task-every').value), remindBefore: reminder ? Number($('task-before').value) : 0, tags: parseTags($('task-tags').value), checklist: steps.filter(s => s.text.trim()),
-      ...(id ? { updatedAt: originalTaskUpdatedAt, timeEdited } : {}) });
+      ...(id ? { updatedAt: originalTaskUpdatedAt, timeEdited, onlyThisTime: !onlyOnce.hidden && $('task-only-once').checked } : {}) });
     $('task-dialog').close(); await refresh();
     const saved = id && state.tasks.find(t => t.id === id);
     toast(saved?.completedAt ? tr("Your text was saved. The task had already been completed from the alert.")
@@ -337,9 +405,10 @@ $('task-list').addEventListener('click', async e => {
   // One request per row at a time; the due time lets the main process ignore a repeat for the same occurrence.
   if (busyRows.has(id)) return; busyRows.add(id); button.disabled = true;
   try {
-    // For 'complete', done is null when the occurrence was already handled, so no toast is shown.
-    const done = await api(action, action === 'complete' ? { id, expectedDueAt: state.tasks.find(t => t.id === id)?.dueAt ?? null } : { id }); await refresh();
-    if (action !== 'complete' || done) toast(action === 'complete' ? tr("Task completed. Well done—every step counts!") : tr("Task reopened without a due date. Open it to set a reminder."), action === 'complete' && done ? () => api('undoComplete', done) : undefined);
+    // For 'complete', done is null when the occurrence was already handled; skip returns false then. No toast either way.
+    const done = await api(action, action === 'reopen' ? { id } : { id, expectedDueAt: state.tasks.find(t => t.id === id)?.dueAt ?? null }); await refresh();
+    const next = state.tasks.find(t => t.id === id)?.dueAt;
+    if (action === 'reopen' || done) toast(action === 'complete' ? tr("Task completed. Well done—every step counts!") : action === 'skip' ? tr("Skipped this time. Next: {value}", { value: dateLabel(next) }) : tr("Task reopened without a due date. Open it to set a reminder."), action === 'complete' && done ? () => api('undoComplete', done) : undefined);
   } catch (err) { toast(err.message); } finally { busyRows.delete(id); button.disabled = false; }
 });
 $('task-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('task-edit-target')) { e.preventDefault(); e.target.click(); } });
@@ -360,8 +429,22 @@ $('trash-list').addEventListener('click', async e => {
 });
 $('empty-trash').addEventListener('click', () => askPurge('emptyTrash'));
 for (const id of ['preview-alert', 'settings-preview']) $(id).addEventListener('click', async () => { try { await api('preview'); toast(tr("The alert appeared above the taskbar.")); } catch (err) { toast(err.message); } });
-for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-digits', 'setting-week', 'setting-hijri', 'setting-theme']) $(id).addEventListener('change', async () => {
-  try { await api('settings', { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, digits: $('setting-digits').value, weekStart: $('setting-week').value === 'auto' ? 'auto' : Number($('setting-week').value), hijri: $('setting-hijri').checked, theme: $('setting-theme').value }); await refresh(); toast(tr("Settings saved.")); }
+// 'Remind me again every' row, built here (with tr()) so index.html and the i18n dictionary stay untouched.
+const remindAgainRow = document.createElement('label');
+remindAgainRow.className = 'setting-row';
+remindAgainRow.innerHTML = '<div><strong></strong><p></p></div><select id="setting-remind-again"><option value="0"></option><option value="2"></option><option value="5"></option><option value="15"></option></select>';
+$('setting-sound').closest('.setting-row').after(remindAgainRow);
+function renderRemindAgain() {
+  remindAgainRow.querySelector('strong').textContent = tr("Remind me again every");
+  remindAgainRow.querySelector('p').textContent = tr("While an alert is unanswered, up to 6 times.");
+  for (const option of $('setting-remind-again').options) option.textContent = { 0: tr("Off"), 2: tr("2 minutes"), 5: tr("5 minutes"), 15: tr("15 minutes") }[option.value];
+  $('setting-remind-again').value = String(state.settings.remindAgain || 0);
+}
+function settingsPayload() {
+  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: Number($('setting-week').value), theme: $('setting-theme').value, remindAgain: Number($('setting-remind-again').value) };
+}
+for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-week', 'setting-theme', 'setting-remind-again']) $(id).addEventListener('change', async () => {
+  try { await api('settings', settingsPayload()); await refresh(); toast(tr("Settings saved.")); }
   catch (err) { toast(err.message); } await refresh();
 });
 // Names the attachments a backup had to leave out because their files are missing, with the task or note each belongs to.
@@ -388,6 +471,22 @@ $('clean-orphans').addEventListener('click', async () => {
 $('open-data').addEventListener('click', async () => { try { await api('dataFolder'); } catch (err) { toast(err.message); } });
 async function driveAction(action, payload) { try { const value = await api(action, payload); await refresh(); return value; } catch (error) { toast(error.message); await refresh(); } }
 $('choose-drive-folder').addEventListener('click', () => driveAction('chooseDriveFolder'));
+document.addEventListener('click', async e => {
+  const button = e.target.closest('[data-update]');
+  if (!button) return;
+  const action = button.dataset.update;
+  button.disabled = true;
+  try {
+    if (action === 'allow' || action === 'decline') await api('updateConsent', { enabled: action === 'allow' });
+    else await api(action);
+  } catch (error) { toast(error.message); }
+  finally { button.disabled = false; await refresh(); }
+});
+document.addEventListener('change', async e => {
+  if (e.target.id !== 'setting-updates') return;
+  try { await api('updateConsent', { enabled: e.target.checked }); toast(tr("Settings saved.")); } catch (error) { toast(error.message); }
+  await refresh();
+});
 $('drive-now').addEventListener('click', async () => { $('drive-now').disabled = true; const status = await driveAction('driveBackupNow'); if (status) toast(`${tr("Saved locally and to the Drive folder. Google Drive finishes the upload.")} ${skippedText(status.skipped)}`.trim()); });
 $('drive-automatic').addEventListener('change', () => driveAction('driveAutomatic', { enabled: $('drive-automatic').checked }));
 $('drive-keep').addEventListener('change', () => driveAction('driveKeep', { keep: Number($('drive-keep').value) }));

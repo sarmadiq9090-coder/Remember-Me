@@ -36,9 +36,10 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 - **Tags and checklists:** tag tasks and filter or sort by tag or title, and break a task into steps you tick off from the list; a repeating task starts each occurrence with its steps unticked.
 - **Local-first data:** atomic saves, an automatic `.bak` copy and automatic recovery if the data file is damaged.
 - **Backups:** export a full backup with all attachments and checksums, restore one from Settings after it's verified, or copy daily backups into a synced Google Drive folder.
-- **Dark mode and display options:** light, dark or follow Windows; Arabic-Indic or Western digits; choose the first day of the week; and an optional Hijri (Umm al-Qura) date.
+- **Dark mode and display options:** light, dark or follow Windows, and choose the first day of the week.
 - **Multi-monitor aware:** the alert sits above the taskbar wherever it is (bottom, top, left or right) and adapts to scaled and secondary displays.
 - **Runs in the background:** closing the window keeps Remember Me in the notification area, and it can start with Windows.
+- **Optional automatic updates:** with your permission, new versions are downloaded from GitHub Releases and installed when you restart.
 
 ## Install
 
@@ -60,9 +61,20 @@ With the GitHub CLI you can also confirm the file was built from this repository
 gh attestation verify .\Remember-Me-Setup-1.4.0-x64.exe --repo sarmadiq9090-coder/Remember-Me
 ```
 
-### Why "Waqt"?
+### Upgrading from v1.4.0 or earlier
 
-"Waqt" (Arabic for *time*) was the project's original internal name. It remains in `Waqt.exe`, the `%APPDATA%\Waqt` data folder and the `com.waqt.reminder` app ID on purpose: renaming them would detach existing data, start-with-Windows entries and shortcuts from earlier versions. Any future rename will migrate data automatically.
+Older versions stored their data in `%APPDATA%\Waqt`. The first time a newer version starts, it moves that folder to `%APPDATA%\Remember Me` automatically. If the folder can't be moved, Remember Me copies it, checks the copy and keeps the original as `%APPDATA%\Waqt.migrated-<date>`. It never deletes the old folder.
+
+### Updating
+
+From v1.5.0, Remember Me can update itself from this repository's [Releases](https://github.com/sarmadiq9090-coder/Remember-Me/releases). The first time it starts, it asks whether it may check GitHub for new versions. Nothing else is sent.
+
+- If you allow it, it checks about 30 seconds after starting and then once a day, and downloads new versions in the background.
+- When a version is ready, a banner offers **Restart now** or **Later**. Otherwise it installs the next time you quit the app. Remember Me never restarts on its own.
+- Before installing, it saves a safety copy of your data in the `backups` folder.
+- **Settings → Updates** turns automatic checks on or off, and **Check now** works either way.
+
+v1.4.0 can't update itself: install the next version from Releases once by hand, and later versions arrive automatically.
 
 ## Usage
 
@@ -72,7 +84,7 @@ gh attestation verify .\Remember-Me-Setup-1.4.0-x64.exe --repo sarmadiq9090-code
 - **Recurring tasks:** missed occurrences roll forward to the next future one when you complete the task. Snoozing never changes the original repeat time.
 - **Attachments:** while editing a task or note, choose **Add files**. Files are copied into Remember Me's data folder, so moving or deleting the original doesn't break the attachment. Removing an attachment from one item doesn't affect other items.
 - **Opening files:** click an attachment to open it with the default Windows app. Excel files need a compatible app such as Excel.
-- **Settings:** alert sound, start with Windows, alert position (left or right), interface language, appearance, digits, first day of the week and the Hijri date.
+- **Settings:** alert sound and how often it repeats, start with Windows, alert position (left or right), interface language, appearance, first day of the week and automatic updates.
 - **Shortcuts:** Ctrl+N creates a task or note, Ctrl+K focuses search.
 
 The bell button at the top shows a **preview alert**. Snoozing a preview only closes it, while reminders you set on tasks are real.
@@ -87,7 +99,7 @@ Alerts can't appear while the PC is off or asleep, or while the app isn't runnin
 
 ## Data and backups
 
-Everything is stored locally in `%APPDATA%\Waqt\data.json`, with the previous version kept in `data.json.bak`. Settings shows the exact path and a button to open it. Saves are atomic. If the main file is ever damaged, Remember Me restores the backup automatically and keeps the damaged file for inspection.
+Everything is stored locally in `%APPDATA%\Remember Me\data.json`, with the previous version kept in `data.json.bak`. Settings shows the exact path and a button to open it. Saves are atomic. If the main file is ever damaged, Remember Me restores the backup automatically and keeps the damaged file for inspection.
 
 **Export backup** creates a new folder with `data.json`, an `attachments` folder containing every file linked to your tasks and notes (including completed tasks), and `backup.json` with a SHA-256 checksum for each file.
 
@@ -114,7 +126,7 @@ Updating from an earlier version keeps your tasks, notes and settings automatica
 
 1. In Settings, choose **Install Google Drive and sign in** to get [Google Drive for desktop](https://www.google.com/drive/download/), then sign in.
 2. Create a folder inside Google Drive, for example **Remember Me Backups**. In Remember Me, choose **Choose Google Drive folder** and select that synced folder.
-3. Choose **Back up now**. A full local copy is saved in `%APPDATA%\Waqt\backups`, then copied with all images and attachments into the Drive folder.
+3. Choose **Back up now**. A full local copy is saved in `%APPDATA%\Remember Me\backups`, then copied with all images and attachments into the Drive folder.
 4. Google Drive uploads it to your account. Check the Drive icon or the Drive website to confirm the upload finished.
 
 **Automatic daily backup** creates a copy every 24 hours while the app is running. If the Drive folder is unavailable, the local copy is kept and the copy to Drive is retried every 15 minutes. If the folder stays unavailable for more than a day, for example because Drive is signed out, Settings shows a warning.
@@ -123,7 +135,7 @@ To save space, you can choose to keep only the latest 5, 10 or 30 automatic back
 
 ## Development
 
-Built with Electron, JavaScript, HTML and CSS. The interface is isolated from Node.js (`contextIsolation`, `sandbox`, a strict Content Security Policy and validated IPC); storage and scheduling run in the main process, and the UI loads nothing from the internet.
+Built with Electron, JavaScript, HTML and CSS. The interface is isolated from Node.js (`contextIsolation`, `sandbox`, a strict Content Security Policy and validated IPC); storage and scheduling run in the main process, and the UI loads nothing from the internet. The only network access is the optional update check, made by the main process.
 
 ```sh
 pnpm install
@@ -143,6 +155,9 @@ Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable
 - `tests/search.test.js`: Arabic-aware search matching.
 - `tests/i18n.test.js`: every message has English text, Arabic is complete, translations keep placeholders and plural forms, fallbacks to English, and saved languages are kept.
 - `tests/placement.test.js`, `tests/interchange.test.js` and `tests/dark-theme.test.js`: alert placement beside the taskbar, CSV and iCalendar import/export, and that `ui/dark.css` matches the light stylesheets.
+- `tests/winget-manifest.test.js`: the winget manifests written from a release's `SHA256SUMS.txt`.
+- `tests/updates.test.js`: the update consent, background schedule, Check now, the ready banner, and installing after a safety backup.
+- `tests/data-folder.test.js` and `tests/login-item.test.js`: moving the old `Waqt` data folder, including locked and interrupted moves, and pointing start with Windows at the renamed executable.
 - `tests/attachments.test.js`, `tests/backups.test.js` and `tests/drive-backup.test.js`: copying, export, checksums, restore, rotation, migration, validation and Drive-folder recovery.
 - **Desktop tests (Playwright):** `tests/desktop-smoke.cjs`, `tests/attachments-desktop.cjs` and `tests/photos-drive-desktop.cjs` drive the real Windows app with temporary data. They need Playwright (and JSZip for attachments), or the `WAQT_PLAYWRIGHT` and `WAQT_JSZIP` paths.
 
@@ -156,7 +171,31 @@ English is the source language. The pages and scripts contain English text; each
 
 ### Releasing
 
-Bump `version` in `package.json` and push a matching tag, such as `v1.4.1`. `.github/workflows/release.yml` runs the tests, builds the installer and publishes it to Releases with `SHA256SUMS.txt` and build provenance. Running the workflow by hand only builds the files and publishes nothing. Code signing needs a SignPath (free for open source), Azure Trusted Signing or certificate account, which can then be added to the installer step.
+Bump `version` in `package.json` and push a matching tag, such as `v1.4.1`. `.github/workflows/release.yml` runs the tests, builds the installer and publishes it to Releases with `SHA256SUMS.txt`, build provenance, and the `latest.yml` and `.blockmap` files the app's updater reads. Running the workflow by hand only builds the files and publishes nothing. [RELEASING.md](RELEASING.md) has the full checklist, and [docs/distribution/winget](docs/distribution/winget/README.md) the winget manifests.
+
+## Code signing policy
+
+Windows releases are being prepared for code signing through the SignPath Foundation open-source program (application pending). Once approved:
+
+Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+Every signed file is built automatically by GitHub Actions from this repository, and every release needs manual approval before it's signed. Release installers are also published with `SHA256SUMS.txt` and GitHub build provenance (see [Verify the download](#verify-the-download)).
+
+Team roles:
+
+- **Committers and reviewers:** [@sarmadiq9090-coder](https://github.com/sarmadiq9090-coder). Changes from anyone else arrive as pull requests and are reviewed before merging.
+- **Approvers:** [@sarmadiq9090-coder](https://github.com/sarmadiq9090-coder), the repository owner.
+
+## Privacy
+
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
+
+In detail:
+
+- Tasks, notes, attachments and settings are stored only on your device. Remember Me has no account, analytics or telemetry.
+- Backups are copied only to folders you choose. For a Google Drive folder, Google's own Drive app does the syncing, under Google's privacy policy.
+- Links you click, such as the Google Drive download page, open in your default browser.
+- If you allow automatic updates, or choose **Check now**, Remember Me contacts GitHub Releases for this repository to check for and download new versions. That's a standard HTTPS request, covered by [GitHub's privacy statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement), and none of your data is included.
 
 ## Acknowledgements
 

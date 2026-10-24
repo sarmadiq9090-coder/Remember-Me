@@ -7,8 +7,10 @@ const { attachmentIds, validateAttachment } = require('./attachments');
 const { LOCALES, DEFAULT: DEFAULT_LOCALE } = require('../ui/translate');
 
 function initialState() {
-  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: DEFAULT_LOCALE, digits: 'auto', weekStart: 'auto', hijri: false, theme: 'system' } };
+  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: DEFAULT_LOCALE, weekStart: 6, theme: 'system', autoUpdate: null } };
 }
+// Minutes between repeated alert sounds; 0 is off. Data from before the setting has no value, meaning off.
+const REMIND_AGAIN = [0, 2, 5, 15];
 function title(value) {
   if (typeof value !== 'string' || !value.trim() || value.trim().length > 200) throw new Error('Write a title of 1 to 200 characters.');
   return value.trim();
@@ -94,9 +96,13 @@ function saveTask(state, input, now = new Date()) {
     const changed = fields.dueAt !== task.dueAt;
     // A new time, or a repeat switched on or changed, anchors the series at the time the editor shows,
     // which for a snoozed task is the snoozed time rather than the original one.
-    const anchor = changed || (fields.repeat !== 'none' && fields.repeat !== task.repeat);
+    const repeatChanged = fields.repeat !== 'none' && fields.repeat !== task.repeat;
+    // onlyThisTime moves one occurrence of an unchanged series and keeps its anchor and rule, as a snooze does.
+    const onlyThisTime = input.onlyThisTime === true && fields.repeat !== 'none' && !repeatChanged && !!task.scheduleAt;
+    const anchor = !onlyThisTime && (changed || repeatChanged);
+    if (onlyThisTime) { if ('repeatFrom' in rule && task.repeatFrom) rule.repeatFrom = task.repeatFrom; if (changed) task.snoozedAt = null; }
     // A new time or a new repeat mode restarts monthly/yearly counting from the new due date.
-    if ('repeatFrom' in rule && (changed || fields.repeat !== task.repeat)) rule.repeatFrom = fields.dueAt;
+    else if ('repeatFrom' in rule && (changed || fields.repeat !== task.repeat)) rule.repeatFrom = fields.dueAt;
     Object.assign(task, fields, { updatedAt: now.toISOString() });
     applyRule(task, rule);
     setEarly(task, input.remindBefore);
@@ -199,6 +205,18 @@ function purgeTrash(state, now = new Date(), all = false) {
   state.tasks = state.tasks.filter(keep); state.notes = state.notes.filter(keep);
   return before - state.tasks.length - state.notes.length;
 }
+// Moves a repeating task to its next occurrence without recording a completion.
+// Returns false when expectedDueAt shows the occurrence was already handled.
+function skipOccurrence(state, id, expectedDueAt, now = new Date()) {
+  const task = state.tasks.find(t => t.id === id && !t.completedAt && !t.deletedAt);
+  if (!task || task.repeat === 'none' || !task.scheduleAt) throw new Error('Only active repeating tasks can be skipped.');
+  if (stale(task, expectedDueAt)) return false;
+  task.dueAt = nextOccurrence(task.scheduleAt, task.repeat, now, task);
+  task.scheduleAt = task.dueAt;
+  task.snoozedAt = null;
+  task.updatedAt = now.toISOString();
+  return true;
+}
 // Returns false when expectedDueAt shows the reminder was already handled.
 function snoozeTask(state, id, until, now = new Date(), { expectedDueAt } = {}) {
   const task = state.tasks.find(t => t.id === id && !t.completedAt && !t.deletedAt);
@@ -279,14 +297,20 @@ function validateState(data) {
   const defaults = initialState().settings;
   const saved = data.settings && typeof data.settings === 'object' && !Array.isArray(data.settings) ? data.settings : {};
   data.settings = { ...defaults, ...saved };
-  for (const key of ['sound', 'startAtLogin', 'hijri']) if (typeof data.settings[key] !== 'boolean') data.settings[key] = defaults[key];
-  if (!['auto', 'arab', 'latn'].includes(data.settings.digits)) data.settings.digits = 'auto';
+  // The Hijri date and digit style options were removed; data saved while they existed drops the fields.
+  delete data.settings.hijri;
+  delete data.settings.digits;
+  for (const key of ['sound', 'startAtLogin']) if (typeof data.settings[key] !== 'boolean') data.settings[key] = defaults[key];
   if (!['system', 'light', 'dark'].includes(data.settings.theme)) data.settings.theme = 'system';
-  if (!['auto', 0, 1, 6].includes(data.settings.weekStart)) data.settings.weekStart = 'auto';
+  // Saturday is the first weekday unless Sunday or Monday was chosen (older data has no value).
+  if (![0, 1, 6].includes(data.settings.weekStart)) data.settings.weekStart = 6;
   data.settings.alertSide = data.settings.alertSide === 'left' ? 'left' : 'right';
   // Saved choices are kept. Settings written before the language option existed were Arabic.
   if (!('language' in saved) && Object.keys(saved).length) data.settings.language = 'ar';
   if (!LOCALES.some(l => l.code === data.settings.language)) data.settings.language = DEFAULT_LOCALE;
+  if (data.settings.remindAgain !== undefined && !REMIND_AGAIN.includes(data.settings.remindAgain)) data.settings.remindAgain = 0;
+  // null until the user answers the one-time question about automatic updates.
+  if (data.settings.autoUpdate !== true && data.settings.autoUpdate !== false) data.settings.autoUpdate = null;
   return data;
 }
 // Antivirus scanners, the search indexer and sync clients briefly lock new files on Windows.
@@ -342,4 +366,4 @@ class Store {
     this.state = draft;
   }
 }
-module.exports = { importTasks, normalizeChecklist, toggleStep, normalizeTags, EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, alertQueue, nextOccurrence, validateState, Store, writeDurable, renameWithRetry };
+module.exports = { importTasks, normalizeChecklist, toggleStep, normalizeTags, EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, alertQueue, nextOccurrence, validateState, Store, writeDurable, renameWithRetry, REMIND_AGAIN, skipOccurrence };

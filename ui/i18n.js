@@ -1,14 +1,13 @@
 // Interface language. Pages and scripts hold English source text; translations come from
 // ui/locales/<code>.json through the main process (the windows have no network or file access).
-let uiLanguage = 'en', uiDigits = 'auto', uiLocale = findLocale('en'), uiMessages = {}, uiFallback = {};
+let uiLanguage = 'en', uiLocale = findLocale('en'), uiMessages = {}, uiFallback = {};
 const originalText = new WeakMap();
 const originalAttrs = new WeakMap();
 const localeCache = new Map();
 function tr(key, params) { return translate(uiMessages, uiFallback, uiLocale.intl, key, params, value => num(value)); }
-// Accepts a language code, or { language, digits } as the alert window receives it.
-async function setLanguage(language, digits) {
-  if (language && typeof language === 'object') ({ language, digits } = language);
-  uiDigits = digits === 'arab' || digits === 'latn' ? digits : 'auto';
+// Accepts a language code, or { language } as the alert window receives it.
+async function setLanguage(language) {
+  if (language && typeof language === 'object') ({ language } = language);
   const code = findLocale(language).code;
   if (!localeCache.has(code)) localeCache.set(code, api('locale', { code }).catch(error => { localeCache.delete(code); throw error; }));
   const data = await localeCache.get(code);

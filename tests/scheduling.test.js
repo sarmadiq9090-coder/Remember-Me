@@ -89,6 +89,30 @@ test('a day with the app closed brings back every missed reminder once, and the 
   assert.ok(s.tasks.filter(t => t.repeat === 'daily').every(t => Date.parse(t.dueAt) > next.getTime()));
 });
 
+test('an unanswered alert beeps again on the chosen interval, at most 6 times, and stops once handled', () => {
+  const { createRepeatBeep, MAX_REPEATS } = require('../src/repeat-beep');
+  const { validateState } = require('../src/core');
+  let now = 0, start = 0, beeps = [];
+  const update = createRepeatBeep(() => beeps.push((now - start) / 60000), () => now);
+  const phase = () => { start = now; beeps = []; };
+  const run = (minutes, id = 'a', interval = 2) => { for (let i = 0; i < minutes * 60; i++) { update(id, interval); now += 1000; } };
+  run(30);
+  assert.deepEqual(beeps, [2, 4, 6, 8, 10, 12], 'Every 2 minutes after the first sound, then silent');
+  assert.equal(MAX_REPEATS, 6);
+  phase(); update(null, 2); run(5);
+  assert.deepEqual(beeps, [2, 4], 'A completed or snoozed alert starts over for the next one');
+  phase(); run(5, 'b');
+  assert.deepEqual(beeps, [2, 4], 'The next reminder in the queue gets its own count');
+  phase(); run(20, 'c', 0);
+  assert.deepEqual(beeps, [], 'Off means no repeats');
+  phase(); run(3, 'c', 5); update('d', 5); run(6, 'd', 5);
+  assert.deepEqual(beeps, [5 + 3], 'Acting on the alert restarts the wait');
+  const state = { version: 1, tasks: [], notes: [], settings: { remindAgain: 7 } };
+  assert.equal(validateState(state).settings.remindAgain, 0, 'Bad values become Off');
+  assert.equal(validateState({ version: 1, tasks: [], notes: [], settings: { remindAgain: 15 } }).settings.remindAgain, 15);
+  assert.equal(validateState({ version: 1, tasks: [], notes: [] }).settings.remindAgain, undefined, 'Older data stays as it was and means Off');
+});
+
 test('monthly and yearly repeats keep their day, clamping to short months without drifting', () => {
   process.env.TZ = 'Asia/Baghdad';
   const s = initialState();
@@ -164,4 +188,31 @@ test('early notifications start at the chosen lead time and stop at the due time
   completeTask(s, daily.id, new Date('2026-10-24T10:05:00Z'));
   assert.equal(upcomingTasks(s, new Date('2026-10-25T09:00:00Z')).map(x => x.title).join(), 'يومي', 'The next occurrence keeps its lead time');
   assert.ok(!('remindBefore' in validateState({ ...initialState(), tasks: [{ ...t, remindBefore: 'soon' }] }).tasks[0]));
+});
+
+test('skip and only-this-time follow every repeat mode, and skip ignores trashed tasks', () => {
+  const { skipOccurrence, trashItem } = require('../src/core');
+  process.env.TZ = 'Asia/Baghdad';
+  const s = initialState();
+  const rent = saveTask(s, { title: 'rent', dueAt: new Date(2027, 0, 31, 9).toISOString(), repeat: 'monthly' });
+  assert.equal(skipOccurrence(s, rent.id, rent.dueAt, new Date(2027, 0, 31, 8)), true);
+  assert.equal(new Date(rent.dueAt).toDateString(), new Date(2027, 1, 28).toDateString(), 'January 31 skips to February 28');
+  skipOccurrence(s, rent.id, rent.dueAt, new Date(2027, 1, 28, 8));
+  assert.equal(new Date(rent.dueAt).toDateString(), new Date(2027, 2, 31).toDateString(), 'and back to the 31st, without drifting');
+  assert.equal(s.tasks.filter(t => t.completedAt).length, 0);
+  const work = saveTask(s, { title: 'work', dueAt: new Date(2026, 9, 22, 9).toISOString(), repeat: 'days', repeatDays: [0, 1, 2, 3, 4] });
+  skipOccurrence(s, work.id, work.dueAt, new Date(2026, 9, 22, 8)); // Thursday
+  assert.deepEqual([new Date(work.dueAt).getDay(), new Date(work.dueAt).getDate()], [0, 25], 'Thursday skips to Sunday');
+  const water = saveTask(s, { title: 'water', dueAt: new Date(2026, 9, 1, 7).toISOString(), repeat: 'interval', repeatEvery: 3 });
+  skipOccurrence(s, water.id, water.dueAt, new Date(2026, 9, 1, 6));
+  assert.equal(new Date(water.dueAt).getDate(), 4);
+  trashItem(s, 'tasks', water.id, new Date(2026, 9, 2));
+  assert.throws(() => skipOccurrence(s, water.id, undefined, new Date(2026, 9, 2)), /repeating/, 'A trashed task cannot be skipped');
+
+  // Moving one monthly occurrence keeps the series on its day and its monthly count.
+  const bill = saveTask(s, { title: 'bill', dueAt: new Date(2027, 0, 31, 9).toISOString(), repeat: 'monthly' });
+  saveTask(s, { ...bill, dueAt: new Date(2027, 1, 2, 9).toISOString(), onlyThisTime: true });
+  assert.deepEqual([bill.dueAt, bill.scheduleAt, bill.repeatFrom], [new Date(2027, 1, 2, 9).toISOString(), new Date(2027, 0, 31, 9).toISOString(), new Date(2027, 0, 31, 9).toISOString()]);
+  completeTask(s, bill.id, new Date(2027, 1, 2, 9, 5));
+  assert.equal(new Date(bill.dueAt).toDateString(), new Date(2027, 1, 28).toDateString(), 'The next occurrence is the usual end-of-month one');
 });

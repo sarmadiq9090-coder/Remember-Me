@@ -171,14 +171,24 @@ test('deleted items wait 30 days in the trash, out of every list and alert, and 
   assert.equal(loaded.tasks[0].deletedAt, null, 'A malformed deletion date restores the task rather than hiding it');
   assert.throws(() => trashItem(s, 'settings', 'x'));
 });
-test('digit style, first weekday and Hijri settings default to the previous behaviour and reject unknown values', () => {
+test('the week starts on Saturday unless Sunday or Monday was chosen', () => {
   const { validateState } = require('../src/core');
   const base = initialState();
-  assert.deepEqual([base.settings.digits, base.settings.weekStart, base.settings.hijri], ['auto', 'auto', false]);
-  const ok = validateState({ ...base, settings: { ...base.settings, digits: 'latn', weekStart: 1, hijri: true } }).settings;
-  assert.deepEqual([ok.digits, ok.weekStart, ok.hijri], ['latn', 1, true]);
-  const bad = validateState({ ...base, settings: { ...base.settings, digits: 'roman', weekStart: 3, hijri: 'yes' } }).settings;
-  assert.deepEqual([bad.digits, bad.weekStart, bad.hijri], ['auto', 'auto', false]);
+  assert.equal(base.settings.weekStart, 6);
+  assert.equal(validateState({ ...base, settings: { ...base.settings, weekStart: 1 } }).settings.weekStart, 1);
+  assert.equal(validateState({ ...base, settings: { ...base.settings, weekStart: 0 } }).settings.weekStart, 0);
+  for (const weekStart of [3, 'auto', '6', null]) assert.equal(validateState({ ...base, settings: { ...base.settings, weekStart } }).settings.weekStart, 6, String(weekStart));
+  assert.equal(validateState({ ...base, settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'en' } }).settings.weekStart, 6, 'v1.4.0 data has no weekStart and gets Saturday');
+});
+test('data saved with the removed Hijri date and digit style options still loads, without those fields', () => {
+  const { validateState } = require('../src/core');
+  const old = JSON.parse(JSON.stringify({ ...initialState(), settings: { ...initialState().settings, hijri: true, digits: 'arab' } }));
+  saveTask(old, { title: 'kept' });
+  const loaded = validateState(old);
+  assert.ok(!('hijri' in loaded.settings) && !('digits' in loaded.settings));
+  assert.equal(loaded.tasks[0].title, 'kept');
+  const odd = validateState({ ...initialState(), settings: { hijri: 'yes', digits: 'roman' } }).settings;
+  assert.ok(!('hijri' in odd) && !('digits' in odd));
 });
 test('tags are trimmed, de-duplicated, limited and kept through edits, repeats and loading', () => {
   const { normalizeTags, validateState } = require('../src/core');
@@ -306,4 +316,39 @@ test('the preview alert shows only on its own and never comes back after a real 
   assert.deepEqual([queue.alerts.map(t => t.id), queue.preview], [[real.id], null], 'A real reminder replaces the preview and clears it');
   completeTask(s, real.id, now);
   assert.deepEqual(alertQueue(s, queue.preview, now).alerts, [], 'After Done the alert closes; the preview does not appear late');
+});
+test('skipping an occurrence moves a repeating task on without recording a completion', () => {
+  const { skipOccurrence } = require('../src/core');
+  const s = initialState(), now = new Date(2026, 9, 23, 8);
+  const t = saveTask(s, { title: 'daily', dueAt: new Date(2026, 9, 23, 9).toISOString(), repeat: 'daily' });
+  const seen = t.dueAt;
+  assert.equal(skipOccurrence(s, t.id, seen, now), true);
+  assert.equal(t.dueAt, new Date(2026, 9, 24, 9).toISOString());
+  assert.equal(t.scheduleAt, t.dueAt);
+  assert.equal(s.tasks.filter(x => x.completedAt).length, 0, 'No completed copy');
+  assert.equal(skipOccurrence(s, t.id, seen, now), false, 'A stale expected time is a no-op');
+  assert.equal(t.dueAt, new Date(2026, 9, 24, 9).toISOString());
+  snoozeTask(s, t.id, new Date(2026, 9, 24, 11).toISOString(), new Date(2026, 9, 24, 9));
+  assert.equal(skipOccurrence(s, t.id, t.dueAt, new Date(2026, 9, 24, 9, 1)), true);
+  assert.deepEqual([t.dueAt, t.snoozedAt], [new Date(2026, 9, 25, 9).toISOString(), null], 'A snoozed occurrence skips to the series time');
+  const once = saveTask(s, { title: 'once', dueAt: new Date(2026, 9, 23, 9).toISOString() });
+  assert.throws(() => skipOccurrence(s, once.id, once.dueAt, now), /repeating/);
+  completeTask(s, once.id, now);
+  assert.throws(() => skipOccurrence(s, once.id, undefined, now), /repeating/);
+});
+test('moving one occurrence with onlyThisTime keeps the series at its usual time', () => {
+  const s = initialState();
+  const monday = new Date(2026, 9, 26, 9); // Monday 09:00
+  const t = saveTask(s, { title: 'weekly meeting', dueAt: monday.toISOString(), repeat: 'weekly' });
+  saveTask(s, { ...t, dueAt: new Date(2026, 9, 26, 11).toISOString(), onlyThisTime: true });
+  assert.deepEqual([t.dueAt, t.scheduleAt], [new Date(2026, 9, 26, 11).toISOString(), monday.toISOString()]);
+  completeTask(s, t.id, new Date(2026, 9, 26, 11, 5));
+  assert.equal(t.dueAt, new Date(2026, 10, 2, 9).toISOString(), 'The following Monday at 09:00');
+  saveTask(s, { ...t, dueAt: new Date(2026, 10, 2, 11).toISOString() });
+  assert.equal(t.scheduleAt, new Date(2026, 10, 2, 11).toISOString(), 'Without the flag the series moves');
+  saveTask(s, { ...t, dueAt: new Date(2026, 10, 2, 12).toISOString(), repeat: 'daily', onlyThisTime: true });
+  assert.equal(t.scheduleAt, new Date(2026, 10, 2, 12).toISOString(), 'A changed repeat re-anchors whatever the flag says');
+  const once = saveTask(s, { title: 'once', dueAt: monday.toISOString() });
+  saveTask(s, { ...once, dueAt: new Date(2026, 9, 26, 11).toISOString(), onlyThisTime: true });
+  assert.equal(once.scheduleAt, once.dueAt, 'The flag means nothing for a one-time task');
 });
