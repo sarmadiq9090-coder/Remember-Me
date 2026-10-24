@@ -19,16 +19,35 @@ const views = {
   trash: [msg("Trash"), msg("Recently deleted"), msg("Deleted items stay here for 30 days, then are removed for good."), ""],
   settings: [msg("Settings"), msg("Remember Me, your way"), msg("Small details that make the space feel yours."), ""],
 };
-// An optional undo callback adds an Undo button (or one named by label) and keeps the message up a little longer.
-function toast(message, undo, label = tr("Undo")) {
-  const el = $('toast'); el.textContent = message;
-  if (undo) {
-    const button = document.createElement('button'); button.type = 'button'; button.className = 'toast-action'; button.textContent = label;
-    button.addEventListener('click', async () => { el.hidden = true; try { await undo(); await refresh(); } catch (e) { toast(e.message); } }, { once: true });
+// An optional action adds a button: Undo (also Ctrl+Z), or one named by label, such as Restart now. The message
+// stays up longer then, and while the pointer or focus is on it. After an undo, focus returns to the mark (see focusMark).
+let toastUndo = null, toastDelay = 0;
+function toast(message, action, { label, mark } = {}) {
+  const el = $('toast'); el.textContent = message; toastUndo = null;
+  if (action) {
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'toast-action'; button.textContent = label || tr("Undo");
+    let ran = false;
+    const run = async () => {
+      if (ran) return; ran = true;
+      hideToast();
+      try { await action(); await refresh(); restoreFocus(mark); } catch (e) { toast(e.message); }
+    };
+    if (!label) {
+      toastUndo = run;
+      const kbd = document.createElement('kbd'); kbd.textContent = 'Ctrl Z'; button.append(' ', kbd); button.setAttribute('aria-keyshortcuts', 'Control+Z');
+    }
+    button.addEventListener('click', run);
     el.append(' ', button);
   }
-  el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, undo ? 7000 : 4500);
+  el.hidden = false; toastDelay = action ? 10000 : 4500; holdToast();
 }
+function hideToast() { clearTimeout(toastTimer); $('toast').hidden = true; toastUndo = null; }
+function holdToast() { const el = $('toast'); clearTimeout(toastTimer); if (!el.hidden && !el.matches(':hover, :focus-within')) toastTimer = setTimeout(hideToast, toastDelay); }
+for (const type of ['mouseenter', 'mouseleave', 'focusin', 'focusout']) $('toast').addEventListener(type, () => setTimeout(holdToast));
+document.addEventListener('keydown', e => {
+  const typing = e.target.matches?.('textarea, input:not([type=checkbox], [type=radio], [type=button])');
+  if (e.ctrlKey && !e.shiftKey && !e.altKey && e.code === 'KeyZ' && toastUndo && !typing && !document.querySelector('dialog[open]')) { e.preventDefault(); toastUndo(); }
+});
 async function refresh() {
   try {
     state = await api('state');

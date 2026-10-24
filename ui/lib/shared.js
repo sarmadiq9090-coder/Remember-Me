@@ -80,9 +80,10 @@ if (typeof setTimeout === 'function') setTimeout(showPage, 2000);
 // The app icon drawn with the --mark-* theme tokens, so it matches every palette and mode (issue #18).
 // Same artwork as assets/icon.svg; small marks use the simplified glyph of assets/icon-small.svg.
 // The Windows icon files stay fixed purple. Any element with data-brand-mark ("small" for the glyph) gets one.
+// A name gives the gradient a fixed id, so markup that is rebuilt only when it changes (the About card) stays equal.
 let brandMarks = 0;
-function brandMark(small = false) {
-  const id = `brand-tile-${++brandMarks}`;
+function brandMark(small = false, name = '') {
+  const id = `brand-tile-${name || ++brandMarks}`;
   const tile = `<defs><linearGradient id="${id}" x2="1" y2="1"><stop class="mark-tile-1"/><stop offset="1" class="mark-tile-2"/></linearGradient></defs>`;
   return small
     ? `<svg class="brand-svg mark-small" viewBox="0 0 16 16" aria-hidden="true">${tile}<rect width="16" height="16" rx="3.5" fill="url(#${id})"/><g class="mark-glyph"><rect x="6" y="1.5" width="2" height="2" rx=".75"/><path d="M3 6.5a4 4 0 0 1 8 0V9l1 1v1H2v-1l1-1z"/><path d="M5.5 12h3a1.5 1.5 0 0 1-3 0z"/></g><circle class="mark-badge" cx="12" cy="12" r="3.5" stroke-width="1"/><path class="mark-check" d="m10.4 12 1.1 1.1 2.1-2.3" stroke-width="1.25"/></svg>`

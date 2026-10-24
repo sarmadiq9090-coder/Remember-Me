@@ -43,7 +43,7 @@ true (see "Keeping this document current").
 | The two pages (main window, sticky alert) | `ui/index.html`, `ui/alert.html` |
 | Main window scripts: plain scripts loaded in order, sharing one scope (state, render, cards, editors, trash, settings, events, boot) | `ui/main/*.js` |
 | Alert window script | `ui/alert/alert.js` |
-| Shared by both windows: languages (`translate.js`, `i18n.js`), helpers and icons (`shared.js`), search, alert formatting | `ui/lib/*.js` |
+| Shared by both windows: languages (`translate.js`, `i18n.js`), helpers and icons (`shared.js`), keeping keyboard focus when lists are rebuilt (`focus.js`), search, alert formatting | `ui/lib/*.js` |
 | Stylesheets and theme tokens | `ui/styles/*.css` |
 | Translations | `ui/locales/*.json` |
 | Packaging, installer, winget manifests, icon generator, screenshots | `tools/` |

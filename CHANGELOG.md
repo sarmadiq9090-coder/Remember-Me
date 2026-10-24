@@ -91,6 +91,7 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 - An early notice no longer pops up right after you snooze, finish, skip or move a task into its lead time, and resuming after a pause brings no burst of notices. [#25]
 - Clicking an early notice, also later in Action Center, opens the app reliably. [#25]
 - While an update downloads, the windows refresh only every 10% instead of every second, and the alert is never redrawn for it. [#25]
+- Keyboard and screen-reader use in the main window: focus stays on the task, step or button you were on when the list refreshes, and after Done or Delete it moves to the next task; switches and checkboxes show a focus ring; **Undo** also works with Ctrl+Z, waits while you point at it or tab to it, and stays 10 seconds; dialogs and repeated buttons are named with their item; text, placeholders and switches meet WCAG contrast in every palette. [#43]
 
 ### Security
 
@@ -143,3 +144,4 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 [#37]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/37
 [#38]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/38
 [#39]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/39
+[#43]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/43

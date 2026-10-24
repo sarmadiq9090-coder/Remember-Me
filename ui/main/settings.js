@@ -17,7 +17,7 @@ for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-l
   try {
     const saved = await api('settings', settingsPayload()); await refresh();
     // Native date and time fields take a new language only when the app starts again.
-    if (saved?.restart) toast(tr("Settings saved. Date and time fields switch to the new language after a restart."), () => api('relaunch'), tr("Restart now"));
+    if (saved?.restart) toast(tr("Settings saved. Date and time fields switch to the new language after a restart."), () => api('relaunch'), { label: tr("Restart now") });
     else toast(tr('Settings saved.'));
   }
   catch (err) { toast(err.message); } await refresh();
