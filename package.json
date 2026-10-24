@@ -2,7 +2,7 @@
   "name": "remember-me",
   "version": "1.4.0",
   "description": "تطبيق مهام وملاحظات وتذكيرات عربي وإنجليزي لويندوز",
-  "main": "src/main.js",
+  "main": "src/main/index.js",
   "private": true,
   "author": "Sarmad",
   "license": "MIT",

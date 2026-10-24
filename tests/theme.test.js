@@ -99,15 +99,15 @@ test('window backgrounds follow the palette and mode', () => {
 test('windows get the palette through the preload and keep plain page URLs', () => {
   // The desktop tests (and fromPage) find windows by URLs ending in /index.html and /alert.html,
   // so a query string such as ?palette= hid the main window from them (PR #35).
-  const main = fs.readFileSync(path.join(__dirname, '../src/main.js'), 'utf8');
+  const main = fs.readFileSync(path.join(__dirname, '../src/main/index.js'), 'utf8');
   const loads = [...main.matchAll(/loadFile\(([^;]*)\);/g)].map(m => m[1]);
   assert.ok(loads.length >= 2);
-  for (const args of loads) assert.match(args, /^path\.join\(__dirname, '\.\.\/ui\/\w+\.html'\)$/, `loadFile(${args}) adds nothing to the URL`);
+  for (const args of loads) assert.match(args, /^path\.join\(__dirname, '\.\.\/\.\.\/ui\/\w+\.html'\)$/, `loadFile(${args}) adds nothing to the URL`);
   assert.match(main, /additionalArguments: \[`--waqt-palette=\$\{store\.state\.settings\.palette\}`\]/);
   const run = argv => {
     let exposed;
     const electron = { contextBridge: { exposeInMainWorld: (name, api) => { exposed = api; } }, ipcRenderer: {} };
-    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/preload.js'), 'utf8'), { require: () => electron, process: { argv } });
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/main/preload.js'), 'utf8'), { require: () => electron, process: { argv } });
     return exposed.palette;
   };
   assert.equal(run(['electron.exe', '--type=renderer', '--waqt-palette=forest']), 'forest');

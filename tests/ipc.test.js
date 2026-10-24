@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { checkRequest, fromPage, ALERT_ACTIONS } = require('../src/ipc');
+const { checkRequest, fromPage, ALERT_ACTIONS } = require('../src/main/ipc');
 
 test('requests are limited to known actions, the alert window to its own subset', () => {
   assert.deepEqual(checkRequest('state'), {});
@@ -65,7 +65,7 @@ test('openLink takes a link ID from the fixed list, never a URL, and not from th
 
 test('ARCHITECTURE.md lists every IPC action', () => {
   const doc = require('node:fs').readFileSync(path.join(__dirname, '..', 'ARCHITECTURE.md'), 'utf8');
-  const { ACTIONS } = require('../src/ipc');
+  const { ACTIONS } = require('../src/main/ipc');
   const missing = [...ACTIONS, ...ALERT_ACTIONS].filter(action => !doc.includes('`' + action + '`'));
   assert.deepEqual(missing, [], 'Add these actions to the IPC table in ARCHITECTURE.md');
 });

@@ -4,23 +4,23 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const { randomUUID } = require('node:crypto');
-const { REMIND_AGAIN, PALETTES, noteLook, Store, saveTask, completeTask, nextOccurrence, skipOccurrence, undoComplete, toggleStep, snoozeTask, dueTasks, alertQueue, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core/tasks');
-const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./data/attachments');
-const { createPreviewService } = require('./data/image-preview');
-const { DriveBackup } = require('./data/drive-backup');
+const { REMIND_AGAIN, PALETTES, noteLook, Store, saveTask, completeTask, nextOccurrence, skipOccurrence, undoComplete, toggleStep, snoozeTask, dueTasks, alertQueue, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('../core/tasks');
+const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('../data/attachments');
+const { createPreviewService } = require('../data/image-preview');
+const { DriveBackup } = require('../data/drive-backup');
 const { checkRequest, fromPage } = require('./ipc');
-const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale, translate } = require('../ui/translate');
-const { alertBounds } = require('./core/placement');
-const { readBackup, safetyBackup, restoreBackup } = require('./data/backups');
-const { createRepeatBeep } = require('./core/repeat-beep');
-const { createLogger } = require('./platform/logger');
-const { Updates, configure: configureUpdater } = require('./platform/updates');
-const { migrateDataFolder } = require('./platform/data-folder');
-const { setLoginItem, refreshLoginItem } = require('./platform/login-item');
-const { windowColors } = require('./platform/themes');
-const { linkUrl, diagnostics } = require('./platform/about');
-const { UNTIL_RESUMED, isPaused, shownAlerts, createPause } = require('./core/pause');
-const { createEarlyNotices } = require('./core/early-notices');
+const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale, translate } = require('../../ui/translate');
+const { alertBounds } = require('../core/placement');
+const { readBackup, safetyBackup, restoreBackup } = require('../data/backups');
+const { createRepeatBeep } = require('../core/repeat-beep');
+const { createLogger } = require('../platform/logger');
+const { Updates, configure: configureUpdater } = require('../platform/updates');
+const { migrateDataFolder } = require('../platform/data-folder');
+const { setLoginItem, refreshLoginItem } = require('../platform/login-item');
+const { windowColors } = require('../platform/themes');
+const { linkUrl, diagnostics } = require('../platform/about');
+const { UNTIL_RESUMED, isPaused, shownAlerts, createPause } = require('../core/pause');
+const { createEarlyNotices } = require('../core/early-notices');
 const testMode = process.env.WAQT_TEST === '1';
 // Lets the desktop tests read early notifications without showing them.
 if (testMode) globalThis.waqtTest = { get early() { return earlyLog; } };
@@ -56,11 +56,11 @@ const earlyNotices = createEarlyNotices({ show: task => {
   return notification;
 } });
 function announceUpcoming(paused) { earlyNotices.announce(upcomingTasks(store.state), { silent: paused }); }
-const icon = path.join(__dirname, '../assets/icon.png');
+const icon = path.join(__dirname, '../../assets/icon.png');
 // Windows picks the matching size from the ICO for the title bar, taskbar and Alt+Tab.
-const windowIcon = path.join(__dirname, '../assets/icon.ico');
+const windowIcon = path.join(__dirname, '../../assets/icon.ico');
 // 16 px tray images; nativeImage also loads their @1.5x and @2x files for scaled displays.
-const trayIcon = waiting => path.join(__dirname, '../assets', waiting ? 'tray-waiting.png' : 'tray.png');
+const trayIcon = waiting => path.join(__dirname, '../../assets', waiting ? 'tray-waiting.png' : 'tray.png');
 // The tray shows a dotted variant while real reminders are waiting; trayWaiting avoids calling setImage every second.
 let trayWaiting = false;
 if (!app.requestSingleInstanceLock()) app.quit();
@@ -89,7 +89,7 @@ function createMain(visible = !process.argv.includes('--background')) {
     title: tr('Remember Me • Your day'), icon: windowIcon, show: false, backgroundColor: background('main'), autoHideMenuBar: true, webPreferences: options() });
   win.setMenu(null);
   secure(win);
-  win.loadFile(path.join(__dirname, '../ui/index.html'));
+  win.loadFile(path.join(__dirname, '../../ui/index.html'));
   win.on('session-end', () => { quitting = true; });
   win.on('close', e => { if (!quitting) { e.preventDefault(); win.hide(); } });
   // A page-initiated window.close() destroys the window without a cancelable close; rebuild it on demand.
@@ -130,7 +130,7 @@ const messageCache = new Map();
 function messages(code) {
   if (!messageCache.has(code)) {
     let data = {};
-    try { data = JSON.parse(fs.readFileSync(path.join(__dirname, '../ui/locales', code + '.json'), 'utf8')); } catch (error) { console.error('Locale ' + code + ' could not be read:', error.message); }
+    try { data = JSON.parse(fs.readFileSync(path.join(__dirname, '../../ui/locales', code + '.json'), 'utf8')); } catch (error) { console.error('Locale ' + code + ' could not be read:', error.message); }
     messageCache.set(code, data);
   }
   return messageCache.get(code);
@@ -201,7 +201,7 @@ function scanNow() {
       secure(alertWindow);
       alertWindow.setAlwaysOnTop(true, 'pop-up-menu');
       placeAlert();
-      alertWindow.loadFile(path.join(__dirname, '../ui/alert.html'));
+      alertWindow.loadFile(path.join(__dirname, '../../ui/alert.html'));
       alertWindow.once('ready-to-show', () => { if (alertWindow && activeAlerts().length) alertWindow.showInactive(); });
       alertWindow.on('session-end', () => { quitting = true; });
       alertWindow.on('close', event => { if (!quitting && activeAlerts().length) event.preventDefault(); });
@@ -264,7 +264,7 @@ async function start() {
   ipcMain.handle('waqt:action', async (event, action, payload) => {
     try {
       const fromAlert = !!alertWindow && event.sender === alertWindow.webContents;
-      const page = path.join(__dirname, '../ui', fromAlert ? 'alert.html' : 'index.html');
+      const page = path.join(__dirname, '../../ui', fromAlert ? 'alert.html' : 'index.html');
       if ((!fromAlert && event.sender !== mainWindow?.webContents) || !fromPage(event.senderFrame?.url, page)) throw new Error(tr("Request not allowed."));
       payload = checkRequest(action, payload, { fromAlert });
       let value;
