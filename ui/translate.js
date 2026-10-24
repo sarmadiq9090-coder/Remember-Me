@@ -7,6 +7,16 @@
   const LOCALES = [
     { code: 'en', name: 'English', dir: 'ltr', intl: 'en-US', chromium: 'en-US', weekStart: 0 },
     { code: 'ar', name: 'العربية', dir: 'rtl', intl: 'ar-IQ', chromium: 'ar', weekStart: 6 },
+    { code: 'es', name: 'Español', dir: 'ltr', intl: 'es-ES', chromium: 'es', weekStart: 1 },
+    { code: 'fr', name: 'Français', dir: 'ltr', intl: 'fr-FR', chromium: 'fr', weekStart: 1 },
+    { code: 'de', name: 'Deutsch', dir: 'ltr', intl: 'de-DE', chromium: 'de', weekStart: 1 },
+    { code: 'pt-BR', name: 'Português (Brasil)', dir: 'ltr', intl: 'pt-BR', chromium: 'pt-BR', weekStart: 0 },
+    { code: 'ru', name: 'Русский', dir: 'ltr', intl: 'ru-RU', chromium: 'ru', weekStart: 1 },
+    { code: 'zh-CN', name: '中文 (简体)', dir: 'ltr', intl: 'zh-CN', chromium: 'zh-CN', weekStart: 1 },
+    { code: 'ja', name: '日本語', dir: 'ltr', intl: 'ja-JP', chromium: 'ja', weekStart: 0 },
+    { code: 'tr', name: 'Türkçe', dir: 'ltr', intl: 'tr-TR', chromium: 'tr', weekStart: 1 },
+    { code: 'hi', name: 'हिन्दी', dir: 'ltr', intl: 'hi-IN', chromium: 'hi', weekStart: 0 },
+    { code: 'id', name: 'Bahasa Indonesia', dir: 'ltr', intl: 'id-ID', chromium: 'id', weekStart: 1 },
   ];
   const DEFAULT = 'en';
   function findLocale(code) { return LOCALES.find(l => l.code === code) || LOCALES[0]; }

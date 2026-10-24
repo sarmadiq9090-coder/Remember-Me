@@ -19,7 +19,7 @@ test('English is the source: every key the app uses has an English text, and not
 test('the locale registry lists each language once, by its own name, with a file and a direction', () => {
   assert.equal(DEFAULT, 'en');
   assert.equal(new Set(LOCALES.map(l => l.code)).size, LOCALES.length);
-  assert.deepEqual(LOCALES.map(l => l.code), ['en', 'ar']);
+  assert.deepEqual(LOCALES.map(l => l.code), ['en', 'ar', 'es', 'fr', 'de', 'pt-BR', 'ru', 'zh-CN', 'ja', 'tr', 'hi', 'id']);
   for (const locale of LOCALES) {
     assert.ok(fs.existsSync(path.join(__dirname, '../ui/locales', locale.code + '.json')), locale.code);
     assert.ok(['ltr', 'rtl'].includes(locale.dir) && locale.name && locale.intl && locale.chromium && [0, 1, 6].includes(locale.weekStart), locale.code);
@@ -61,6 +61,8 @@ test('lookups fall back to English, then to the key, and choose plural forms by 
   assert.equal(translate({}, en, 'en-US', key, { count: 3 }), 'Remember Me • 3 reminders waiting');
   assert.deepEqual([1, 2, 3, 11, 100].map(count => translate(ar, en, 'ar-IQ', key, { count })), ['ذكرني • تذكير واحد بانتظارك', 'ذكرني • تذكيران بانتظارك', 'ذكرني • 3 تذكيرات بانتظارك', 'ذكرني • 11 تذكيرًا بانتظارك', 'ذكرني • 100 تذكير بانتظارك']);
   assert.equal(translate(ar, en, 'ar-IQ', key, { count: 3 }, n => n.toLocaleString('ar-IQ')), 'ذكرني • ٣ تذكيرات بانتظارك', 'Numbers follow the chosen digits');
+  const ru = loadLocale('ru');
+  assert.deepEqual([1, 3, 5, 21].map(count => translate(ru, en, 'ru-RU', key, { count })), ['Remember Me • 1 напоминание ждёт', 'Remember Me • 3 напоминания ждут', 'Remember Me • 5 напоминаний ждут', 'Remember Me • 21 напоминание ждёт']);
   assert.equal(translate({}, en, 'en-US', 'Choose {name}', { other: 1 }), 'Choose {name}', 'Unknown placeholders stay visible');
 });
 
@@ -68,7 +70,7 @@ test('new installs start in English, saved languages are kept and unknown ones f
   assert.equal(initialState().settings.language, 'en');
   const v140 = { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'ar' } };
   assert.equal(validateState(structuredClone(v140)).settings.language, 'ar', 'A v1.4.0 file keeps Arabic');
-  for (const code of ['en', 'ar']) assert.equal(validateState({ ...structuredClone(v140), settings: { ...v140.settings, language: code } }).settings.language, code);
+  for (const code of ['en', 'fr', 'zh-CN', 'pt-BR']) assert.equal(validateState({ ...structuredClone(v140), settings: { ...v140.settings, language: code } }).settings.language, code);
   for (const code of ['xx', 'EN', 'ku', 5, null]) assert.equal(validateState({ ...structuredClone(v140), settings: { ...v140.settings, language: code } }).settings.language, 'en', String(code));
   const { language, ...older } = v140.settings;
   assert.equal(validateState({ ...structuredClone(v140), settings: older }).settings.language, 'ar', 'Settings from before the language option were Arabic');

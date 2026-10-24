@@ -32,7 +32,8 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 - **Attachments:** add PDFs, Excel sheets, documents, images or any other file to tasks and notes, up to 20 files per item and 50 MB per file. Images preview inline, including in the alert.
 - **Safe file handling:** programs, scripts, installers and shortcuts are revealed in File Explorer instead of being launched.
 - **Smart search (Ctrl+K):** searches tasks and notes, and matches Arabic text regardless of diacritics and common spelling variants.
-- **Arabic and English interfaces:** a full right-to-left Arabic UI and a left-to-right English UI, switchable in Settings. Mixed-language text keeps its reading order.
+- **12 interface languages:** English (the default), العربية (a full right-to-left interface), Español, Français, Deutsch, Português (Brasil), Русский, 中文 (简体), 日本語, Türkçe, हिन्दी and Bahasa Indonesia, switchable in Settings. Dates, numbers and plurals follow the chosen language, and mixed-language text keeps its reading order. The translations other than English and Arabic are machine-assisted; corrections from native speakers are very welcome (see [Translations](#translations)).
+- **Tags and checklists:** tag tasks and filter or sort by tag or title, and break a task into steps you tick off from the list; a repeating task starts each occurrence with its steps unticked.
 - **Local-first data:** atomic saves, an automatic `.bak` copy and automatic recovery if the data file is damaged.
 - **Backups:** export a full backup with all attachments and checksums, restore one from Settings after it's verified, or copy daily backups into a synced Google Drive folder.
 - **Dark mode and display options:** light, dark or follow Windows; Arabic-Indic or Western digits; choose the first day of the week; and an optional Hijri (Umm al-Qura) date.
@@ -71,7 +72,7 @@ gh attestation verify .\Remember-Me-Setup-1.4.0-x64.exe --repo sarmadiq9090-code
 - **Recurring tasks:** missed occurrences roll forward to the next future one when you complete the task. Snoozing never changes the original repeat time.
 - **Attachments:** while editing a task or note, choose **Add files**. Files are copied into Remember Me's data folder, so moving or deleting the original doesn't break the attachment. Removing an attachment from one item doesn't affect other items.
 - **Opening files:** click an attachment to open it with the default Windows app. Excel files need a compatible app such as Excel.
-- **Settings:** alert sound, start with Windows, alert position (left or right) and interface language.
+- **Settings:** alert sound, start with Windows, alert position (left or right), interface language, appearance, digits, first day of the week and the Hijri date.
 - **Shortcuts:** Ctrl+N creates a task or note, Ctrl+K focuses search.
 
 The bell button at the top shows a **preview alert**. Snoozing a preview only closes it, while reminders you set on tasks are real.
@@ -140,8 +141,18 @@ Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable
 - `tests/scheduling.test.js`: repeats across daylight-saving time, time-zone changes and the clock moving backwards; 20 reminders in the same minute; a full day of missed reminders among thousands of tasks.
 - `tests/ipc.test.js`: only the app's own pages are accepted, the alert window gets a limited set of actions, and payloads are validated.
 - `tests/search.test.js`: Arabic-aware search matching.
+- `tests/i18n.test.js`: every message has English text, Arabic is complete, translations keep placeholders and plural forms, fallbacks to English, and saved languages are kept.
+- `tests/placement.test.js`, `tests/interchange.test.js` and `tests/dark-theme.test.js`: alert placement beside the taskbar, CSV and iCalendar import/export, and that `ui/dark.css` matches the light stylesheets.
 - `tests/attachments.test.js`, `tests/backups.test.js` and `tests/drive-backup.test.js`: copying, export, checksums, restore, rotation, migration, validation and Drive-folder recovery.
 - **Desktop tests (Playwright):** `tests/desktop-smoke.cjs`, `tests/attachments-desktop.cjs` and `tests/photos-drive-desktop.cjs` drive the real Windows app with temporary data. They need Playwright (and JSZip for attachments), or the `WAQT_PLAYWRIGHT` and `WAQT_JSZIP` paths.
+
+### Translations
+
+English is the source language. The pages and scripts contain English text; each translation lives in `ui/locales/<code>.json` and maps the English text (the key) to the translation, and any missing entry falls back to English. Messages with a count use plural forms (`zero`, `one`, `two`, `few`, `many`, `other`, as defined by the language), and `{name}` placeholders must be kept.
+
+- **Fix a translation:** edit the language's JSON file and open a pull request. Native speakers are especially welcome to review the machine-assisted languages.
+- **Add a language:** add an entry to `LOCALES` in `ui/translate.js` (code, its own name, `ltr` or `rtl`, the `Intl` locale, the Chromium `.pak` name and the first day of the week), then copy `ui/locales/en.json` to `ui/locales/<code>.json` and translate the values. The packaged app keeps Chromium's built-in strings for every language listed there.
+- **Check:** `node tools/i18n-keys.cjs` lists the keys each language is missing, and `pnpm test` fails if English is incomplete, Arabic is incomplete, or a translation drops a placeholder.
 
 ### Releasing
 
