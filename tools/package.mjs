@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const version = require('../package.json').version;
-const { FEED, UPDATER_CACHE } = require('../src/updates.js');
+const { FEED, UPDATER_CACHE } = require('../src/platform/updates.js');
 const { flipFuses, getCurrentFuseWire, FuseVersion, FuseV1Options } = require('@electron/fuses');
 // The values getCurrentFuseWire reports ('0' and '1' in the fuse wire).
 const FuseState = { DISABLE: 48, ENABLE: 49 };

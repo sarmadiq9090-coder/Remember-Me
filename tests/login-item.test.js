@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
-const { refreshLoginItem } = require('../src/login-item');
+const { refreshLoginItem } = require('../src/platform/login-item');
 const dir = 'C:\\Users\\me\\AppData\\Local\\Programs\\ذكرني - Remember Me';
 const exe = path.join(dir, 'Remember Me.exe'), old = path.join(dir, 'Waqt.exe');
 

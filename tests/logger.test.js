@@ -3,10 +3,11 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { createLogger, redact } = require('../src/logger');
-const { Store, saveTask } = require('../src/core');
-const { DriveBackup } = require('../src/drive-backup');
-const { importFiles, attachmentPath } = require('../src/attachments');
+const { createLogger, redact } = require('../src/platform/logger');
+const { saveTask } = require('../src/core/tasks');
+const { Store } = require('../src/core/store');
+const { DriveBackup } = require('../src/data/drive-backup');
+const { importFiles, attachmentPath } = require('../src/data/attachments');
 
 test('the log rotates at its size limit and keeps three files', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-log-'));

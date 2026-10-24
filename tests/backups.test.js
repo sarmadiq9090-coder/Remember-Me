@@ -3,9 +3,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { Store, saveTask } = require('../src/core');
-const { importFiles, exportBackup, attachmentPath, BACKUP_INFO } = require('../src/attachments');
-const { readBackup, restoreBackup } = require('../src/backups');
+const { saveTask } = require('../src/core/tasks');
+const { Store } = require('../src/core/store');
+const { importFiles, exportBackup, attachmentPath, BACKUP_INFO } = require('../src/data/attachments');
+const { readBackup, restoreBackup } = require('../src/data/backups');
 
 async function setup(title, bytes) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-backups-'));
@@ -72,7 +73,7 @@ test('restoring replaces the data and files, after saving a safety copy of the c
 });
 
 test('rotation keeps the newest automatic copies locally and in Drive, and never touches manual or older backups', async () => {
-  const { DriveBackup } = require('../src/drive-backup');
+  const { DriveBackup } = require('../src/data/drive-backup');
   const { root, data, store } = await setup('مهمة', Buffer.from('x'));
   const sync = path.join(root, 'Drive'); fs.mkdirSync(sync);
   const drive = new DriveBackup(data, () => store.state);
@@ -101,7 +102,7 @@ test('rotation keeps the newest automatic copies locally and in Drive, and never
 });
 
 test('backups made under the old Waqt name are still restored and rotated, safety copies excepted', async () => {
-  const { rotateBackups } = require('../src/backups');
+  const { rotateBackups } = require('../src/data/backups');
   const { root, data, store } = await setup('قديمة', Buffer.from('x'));
   const parent = path.join(root, 'backups'); fs.mkdirSync(parent);
   const pause = () => new Promise(r => setTimeout(r, 5));

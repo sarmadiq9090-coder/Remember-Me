@@ -7,10 +7,12 @@ const root = path.join(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const literal = String.raw`(['"])((?:\\.|(?!\1).)*)\1`;
 const unescape = text => text.replace(/\\(['"\\])/g, '$1').replace(/\\n/g, '\n');
-const SCRIPTS = ['ui/app.js', 'ui/alert.js', 'ui/shared.js', 'ui/i18n.js', 'src/main.js'];
+// The main process translates with tr() in any of its files (entry, windows, tray, IPC handlers).
+const mainFiles = fs.readdirSync(path.join(root, 'src/main'), { recursive: true }).map(String).filter(name => name.endsWith('.js')).map(name => 'src/main/' + name.split(path.sep).join('/'));
+const SCRIPTS = ['ui/app.js', 'ui/alert.js', 'ui/shared.js', 'ui/i18n.js', ...mainFiles];
 // The data modules throw English messages that the main process translates. Messages for users
 // start with a capital letter; lowercase ones ('invalid kind') are for developers only.
-const MODULES = ['src/core.js', 'src/attachments.js', 'src/backups.js', 'src/drive-backup.js', 'src/ipc.js'];
+const MODULES = ['src/core/tasks.js', 'src/core/store.js', 'src/core/records.js', 'src/data/attachments.js', 'src/data/backups.js', 'src/data/drive-backup.js', 'src/main/ipc.js'];
 const PAGES = ['ui/index.html', 'ui/alert.html'];
 function collectKeys() {
   const keys = new Set();

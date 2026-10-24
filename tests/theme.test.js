@@ -3,8 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const { FILE, parseTheme, windowColors } = require('../src/themes');
-const { PALETTES, NOTE_COLORS, NOTE_STYLES, noteLook, initialState, validateState } = require('../src/core');
+const { FILE, parseTheme, windowColors } = require('../src/platform/themes');
+const { PALETTES, NOTE_COLORS, NOTE_STYLES, noteLook, initialState, validateState } = require('../src/core/tasks');
 
 const css = fs.readFileSync(FILE, 'utf8');
 const palettes = parseTheme(css);
@@ -99,15 +99,17 @@ test('window backgrounds follow the palette and mode', () => {
 test('windows get the palette through the preload and keep plain page URLs', () => {
   // The desktop tests (and fromPage) find windows by URLs ending in /index.html and /alert.html,
   // so a query string such as ?palette= hid the main window from them (PR #35).
-  const main = fs.readFileSync(path.join(__dirname, '../src/main.js'), 'utf8');
+  // The main process source, however it is split into files.
+  const mainDir = path.join(__dirname, '../src/main');
+  const main = fs.readdirSync(mainDir, { recursive: true }).map(String).filter(name => name.endsWith('.js')).map(name => fs.readFileSync(path.join(mainDir, name), 'utf8')).join('\n');
   const loads = [...main.matchAll(/loadFile\(([^;]*)\);/g)].map(m => m[1]);
   assert.ok(loads.length >= 2);
-  for (const args of loads) assert.match(args, /^path\.join\(__dirname, '\.\.\/ui\/\w+\.html'\)$/, `loadFile(${args}) adds nothing to the URL`);
+  for (const args of loads) assert.match(args, /^path\.join\(__dirname, '\.\.\/\.\.\/ui\/\w+\.html'\)$/, `loadFile(${args}) adds nothing to the URL`);
   assert.match(main, /additionalArguments: \[`--waqt-palette=\$\{store\.state\.settings\.palette\}`\]/);
   const run = argv => {
     let exposed;
     const electron = { contextBridge: { exposeInMainWorld: (name, api) => { exposed = api; } }, ipcRenderer: {} };
-    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/preload.js'), 'utf8'), { require: () => electron, process: { argv } });
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/main/preload.js'), 'utf8'), { require: () => electron, process: { argv } });
     return exposed.palette;
   };
   assert.equal(run(['electron.exe', '--type=renderer', '--waqt-palette=forest']), 'forest');

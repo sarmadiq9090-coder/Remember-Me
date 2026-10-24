@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { LINKS, linkUrl, windowsVersion, diagnostics } = require('../src/about');
+const { LINKS, linkUrl, windowsVersion, diagnostics } = require('../src/platform/about');
 
 test('every About link is an exact https address on the project’s GitHub', () => {
   assert.deepEqual([...LINKS.keys()].sort(), ['github', 'issues', 'license', 'privacy', 'releases', 'repo']);

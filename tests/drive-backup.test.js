@@ -3,10 +3,11 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { DriveBackup } = require('../src/drive-backup');
-const { Store, saveTask } = require('../src/core');
-const { importFiles } = require('../src/attachments');
-const { isImage } = require('../src/image-preview');
+const { DriveBackup } = require('../src/data/drive-backup');
+const { saveTask } = require('../src/core/tasks');
+const { Store } = require('../src/core/store');
+const { importFiles } = require('../src/data/attachments');
+const { isImage } = require('../src/data/image-preview');
 test('Drive backup contains text and images locally and in the selected sync folder; daily copies are bounded', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-drive-'));
   const data = path.join(root, 'data'), sync = path.join(root, 'Google Drive');
@@ -132,7 +133,7 @@ test('a retry days later uploads the current data, not the snapshot left pending
   assert.notEqual((await backup.run()).lastLocalPath, pending);
 });
 test('saving the Drive settings retries a rename locked by antivirus, and a failing save never hides the backup error', async () => {
-  const { writeDurable, renameWithRetry } = require('../src/core');
+  const { writeDurable, renameWithRetry } = require('../src/core/store');
   assert.equal(typeof writeDurable, 'function'); assert.equal(typeof renameWithRetry, 'function');
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-drive-locked-'));
   const data = path.join(root, 'data'), sync = path.join(root, 'Drive');

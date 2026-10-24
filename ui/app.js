@@ -318,7 +318,7 @@ function renderUpdatesCard() {
   setMarkup($('updates-card'), `<h2>${tr("Updates")}</h2><label class="setting-row"><div><strong>${tr("Check for updates automatically")}</strong><p>${tr("Checks GitHub once a day and downloads new versions in the background. Nothing else is sent.")}</p></div><input class="switch" id="setting-updates" type="checkbox"></label><div class="setting-row"><p id="update-status">${esc(updateStatus(updates))}</p><button class="soft-button" data-update="checkUpdates"${busy ? ' disabled' : ''}>${tr("Check now")}</button></div>`);
   $('setting-updates').checked = state.settings.autoUpdate === true;
 }
-// Settings → About. Links are sent as IDs from main's fixed list (src/about.js), never as URLs.
+// Settings → About. Links are sent as IDs from main's fixed list (src/platform/about.js), never as URLs.
 const ABOUT_LINKS = [
   ['github', 'user', msg('Developed by Sarmad'), null, 'github.com/sarmadiq9090-coder'],
   ['repo', 'code', msg('Source code on GitHub'), null, 'github.com/sarmadiq9090-coder/Remember-Me'],
@@ -489,7 +489,7 @@ function renderAppearance() {
   if (appearanceSaving) return;
   for (const [name, value] of [['theme-mode', state.settings.theme], ['palette', state.settings.palette]]) card.querySelector(`input[name="${name}"][value="${value}"]`).checked = true;
 }
-// Note editor: paper colors and styles as radio groups, with a live preview (ids match src/core.js).
+// Note editor: paper colors and styles as radio groups, with a live preview (ids match src/core/tasks.js).
 const NOTE_COLORS = [['cream', msg('Cream')], ['yellow', msg('Yellow')], ['orange', msg('Orange')], ['red', msg('Red')], ['pink', msg('Pink')], ['purple', msg('Purple')], ['blue', msg('Blue')], ['green', msg('Green')], ['gray', msg('Gray')], ['white', msg('White')]];
 const NOTE_STYLES = [['plain', msg('Plain card')], ['sticky', msg('Sticky note')], ['lined', msg('Lined paper')]];
 let noteLookLanguage;

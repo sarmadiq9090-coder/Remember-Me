@@ -67,7 +67,9 @@ async function photos(page, selector, count) {
     let alert;
     for (let i = 0; i < 80; i++) { alert = app.windows().find(p => p.url().endsWith('/alert.html')); if (alert) break; await new Promise(r => setTimeout(r, 100)); }
     assert.ok(alert); alert.on('pageerror', error => errors.push(error.message));
-    await photos(alert, '#alert-files img[data-preview-id]', 2);
+    // The redesigned alert shows thumbnails only for a task without text; this one has a note, so it lists both files.
+    await alert.locator('#alert-files [data-file-id]').nth(1).waitFor();
+    assert.equal(await alert.locator('#alert-files [data-file-id]').count(), 2);
     assert.ok((await alert.locator('#alert-note').textContent()).includes('PNG'));
     assert.equal(await alert.evaluate(() => document.getElementById('snooze-until').getBoundingClientRect().bottom < innerHeight), true);
     await alert.screenshot({ path: path.join(root, 'screenshots/reminder-photos.png') });

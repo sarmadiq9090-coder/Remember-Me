@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { LOCALES, DEFAULT, findLocale, translate } = require('../ui/translate');
 const { collectKeys, loadLocale } = require('../tools/i18n-keys.cjs');
-const { initialState, validateState } = require('../src/core');
+const { initialState, validateState } = require('../src/core/tasks');
 const en = loadLocale('en');
 const placeholders = value => [...new Set(JSON.stringify(value).match(/\{\w+\}/g) || [])].sort();
 const FORMS = ['zero', 'one', 'two', 'few', 'many', 'other'];

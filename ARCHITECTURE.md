@@ -11,24 +11,35 @@ true (see "Keeping this document current").
 
 | Responsibility | Where |
 |---|---|
-| App lifecycle, windows, tray, scheduler loop, IPC handler | `src/main.js` |
-| Bridge into the pages (`window.waqt`) | `src/preload.js` |
-| IPC allowlists and payload checks | `src/ipc.js` |
-| Task logic, data validation, durable `Store` | `src/core.js` |
-| "Remind me again" sound timer | `src/repeat-beep.js` |
-| Alert window placement next to the taskbar | `src/placement.js` |
-| Attachments: import, lookup, orphan cleanup, backup export | `src/attachments.js` |
-| Backup reading, verification, restore, rotation | `src/backups.js` |
-| Google Drive folder backups | `src/drive-backup.js` |
-| Image thumbnails | `src/image-preview.js` |
-| Local log | `src/logger.js` |
-| Moving the data folder from `Waqt` to `Remember Me` | `src/data-folder.js` |
-| Start with Windows entry | `src/login-item.js` |
-| Pausing reminders from the tray | `src/pause.js` |
-| "Coming up" notifications, each once and kept clickable | `src/early-notices.js` |
-| Update checks, download and install policy | `src/updates.js` |
-| About card: link allowlist and diagnostic info | `src/about.js` |
-| Palette colors for window backgrounds, read from `ui/theme.css` | `src/themes.js` |
+| App lifecycle: data folder, log, single-instance lock, start and quit | `src/main/index.js` |
+| Main and alert windows, theme, page options | `src/main/windows.js` |
+| Tray icon, menu (pause, About, exit) and tooltip | `src/main/tray.js` |
+| Scan loop, alert queue, sounds, early notices, preview and undo window | `src/main/scheduler.js` |
+| Interface text in the main process (`tr()`, `errorText()`) | `src/main/i18n.js` |
+| IPC entry point and handler registry | `src/main/handlers/index.js` |
+| IPC handlers, one file per area | `src/main/handlers/*.js` |
+| IPC allowlists and payload checks | `src/main/ipc.js` |
+| Bridge into the pages (`window.waqt`) | `src/main/preload.js` |
+| Task logic and data validation (`saveTask`, `completeTask`, `validateState`, …) | `src/core/tasks.js` |
+| The data.json file layer (`Store`, `writeDurable`) | `src/core/store.js` |
+| When a repeating task comes back (`nextOccurrence`) | `src/core/repeat.js` |
+| Attachment ids, record checks and limits | `src/core/records.js` |
+| English errors with a translation key (`UserError`) | `src/core/errors.js` |
+| "Remind me again" sound timer | `src/core/repeat-beep.js` |
+| Alert window placement next to the taskbar | `src/core/placement.js` |
+| Pausing reminders from the tray | `src/core/pause.js` |
+| "Coming up" notifications, each once and kept clickable | `src/core/early-notices.js` |
+| Attachment files: import, lookup, orphan cleanup, backup export | `src/data/attachments.js` |
+| Backup reading, verification, restore, rotation | `src/data/backups.js` |
+| Google Drive folder backups | `src/data/drive-backup.js` |
+| Image thumbnails | `src/data/image-preview.js` |
+| CSV and iCalendar import and export | `src/data/interchange.js` |
+| Local log | `src/platform/logger.js` |
+| Moving the data folder from `Waqt` to `Remember Me` | `src/platform/data-folder.js` |
+| Start with Windows entry | `src/platform/login-item.js` |
+| Update checks, download and install policy | `src/platform/updates.js` |
+| About card: link allowlist and diagnostic info | `src/platform/about.js` |
+| Palette colors for window backgrounds, read from `ui/theme.css` | `src/platform/themes.js` |
 | Main window and sticky alert pages, shared scripts and CSS | `ui/` |
 | Packaging, installer, winget manifests, icon generator | `tools/` |
 | Unit tests (`node --test`) and Playwright desktop suites (`*-desktop.cjs`, `desktop-smoke.cjs`) | `tests/` |
@@ -57,7 +68,8 @@ works for a window that is still being created.
 
 ## IPC actions and validation
 
-Every request goes through one `ipcMain.handle('waqt:action')` handler, which:
+Every request goes through one `ipcMain.handle('waqt:action')`, registered by the handler registry,
+which:
 
 1. accepts it only from the main window or the alert window, and only when the sending frame is the
    window's own bundled page (`fromPage`);
@@ -65,8 +77,14 @@ Every request goes through one `ipcMain.handle('waqt:action')` handler, which:
    limits the alert window to `ALERT_ACTIONS`, requires a plain-object payload, requires a short
    string `id` for `ID_ACTIONS`, checks `expectedDueAt` for `DUE_ACTIONS`, and accepts `openLink`
    only with a `link` ID from the About module's fixed list;
-3. runs the action. Anything that changes data goes through `store.change()`, after which the
-   scheduler rescans and both windows are told to refresh.
+3. runs the action's handler. Anything that changes data goes through `store.change()`, after which
+   the scheduler rescans and both windows are told to refresh, unless the handler is `readOnly`.
+
+Each area's handler file exports `(ctx) => ({ action: { run(payload, { event, fromAlert }), readOnly } })`.
+`ctx` is the main process's shared context: the store, windows, services, `tr()` and Electron's
+`dialog`, `shell` and `clipboard` (passed in so the handlers load in plain Node tests). At startup the
+registry throws if an allowed action has no handler, has two, or a handler is not allowed;
+`tests/handlers.test.js` checks the same and pins the `readOnly` set.
 
 | Group | Actions |
 |---|---|
@@ -174,8 +192,8 @@ Chromium locale) and formats messages, including plural forms through `Intl.Plur
 `{name}` placeholders. Missing keys fall back to English.
 
 - The main process reads the locale files and serves them to the windows through the `locale`
-  action, since the pages have no file access. `tr()` in `src/main.js` translates the tray, dialogs
-  and errors; modules throw English errors (`UserError` in `src/errors.js` carries a key and values).
+  action, since the pages have no file access. `tr()` in the main process (`src/main/i18n.js`) translates the tray, dialogs
+  and errors; modules throw English errors (`UserError` in `src/core/errors.js` carries a key and values).
 - In the pages, `setLanguage()` in `ui/i18n.js` translates static text and attributes on each switch
   and sets `lang` and `dir`; user content sits in `translate="no"` containers. Scripts call `tr()`.
 - Dates and numbers always use Western digits (`-u-nu-latn`). CSS uses logical properties, so the

@@ -3,8 +3,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { Store, saveTask } = require('../src/core');
-const { migrateDataFolder } = require('../src/data-folder');
+const { saveTask } = require('../src/core/tasks');
+const { Store } = require('../src/core/store');
+const { migrateDataFolder } = require('../src/platform/data-folder');
 const now = () => new Date('2026-10-24T08:30:00.000Z');
 const locked = (from, to) => { const error = new Error(`EPERM: operation not permitted, rename '${from}' -> '${to}'`); error.code = 'EPERM'; throw error; };
 

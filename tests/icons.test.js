@@ -36,7 +36,9 @@ test('tray images exist at 1x, 1.5x and 2x, normal and waiting', () => {
 });
 
 test('the main process uses the ICO for windows and the tray images for the tray', () => {
-  const main = fs.readFileSync(path.join(__dirname, '../src/main.js'), 'utf8');
+  // The main process source, however it is split into files.
+  const mainDir = path.join(__dirname, '../src/main');
+  const main = fs.readdirSync(mainDir, { recursive: true }).map(String).filter(name => name.endsWith('.js')).map(name => fs.readFileSync(path.join(mainDir, name), 'utf8')).join('\n');
   assert.match(main, /assets\/icon\.ico/);
   assert.match(main, /'tray-waiting\.png' : 'tray\.png'/);
   assert.doesNotMatch(main, /new Tray\(nativeImage\.createFromPath\(icon\)\)/, 'The tray no longer downsamples the 256 px PNG');

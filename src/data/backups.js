@@ -1,10 +1,10 @@
 'use strict';
-const { UserError } = require('./errors');
+const { UserError } = require('../core/errors');
 const fs = require('node:fs');
 const fsp = fs.promises;
 const path = require('node:path');
 const { createHash } = require('node:crypto');
-const { validateState } = require('./core');
+const { validateState } = require('../core/tasks');
 const { BACKUP_INFO, attachmentPath, exportBackup, hashFile } = require('./attachments');
 // Folder names of the app's own backups. Versions up to 1.4 used the old internal name, Waqt.
 const BACKUP_PREFIXES = ['RememberMe-backup-', 'Waqt-backup-'];

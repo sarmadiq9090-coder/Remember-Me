@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { taskbarEdge, alertBounds } = require('../src/placement');
+const { taskbarEdge, alertBounds } = require('../src/core/placement');
 const display = (bounds, workArea) => ({ bounds, workArea });
 const full = { x: 0, y: 0, width: 1920, height: 1080 };
 

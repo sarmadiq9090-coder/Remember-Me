@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { UNTIL_RESUMED, pauseEnd, isPaused, shownAlerts, createPause } = require('../src/pause');
-const { initialState, validateState } = require('../src/core');
+const { UNTIL_RESUMED, pauseEnd, isPaused, shownAlerts, createPause } = require('../src/core/pause');
+const { initialState, validateState } = require('../src/core/tasks');
 
 // A pause controller over a fake settings store and clock.
 function setup(start, saved = null) {
