@@ -89,7 +89,7 @@ function taskCard(t) {
   const due = t.dueAt ? `<span class="${overdue ? 'overdue' : ''}">${icon('clock')}${esc(dateLabel(t.dueAt))}${overdue ? ` • ${tr('حان الموعد','Due now')}` : ''}</span>` : `<span>${tr('دون موعد','No due date')}</span>`;
   return `<article class="task-row ${t.completedAt ? 'completed' : ''}" data-id="${esc(t.id)}">
     <button class="task-check" data-action="${t.completedAt ? 'reopen' : 'complete'}" aria-label="${t.completedAt ? tr('إعادة فتح','Reopen') : tr('إكمال','Complete')} ${esc(t.title)}" title="${t.completedAt ? tr('إعادة فتح دون موعد','Reopen without due date') : tr('تم الإنجاز','Mark complete')}">${t.completedAt ? icon('check') : ''}</button>
-    <div class="task-info"><div ${!t.completedAt ? 'data-action="edit" tabindex="0" role="button" class="task-edit-target"' : ''}><div class="task-name" dir="auto">${esc(t.title)}</div>${t.body ? `<p class="task-body" dir="auto">${esc(t.body)}</p>` : ''}<div class="task-meta">${due}${t.repeat !== 'none' ? `<span>${icon('repeat')}${t.repeat === 'daily' ? tr('يوميًا','Daily') : tr('أسبوعيًا','Weekly')}</span>` : ''}${t.snoozedAt && !t.completedAt ? `<span>${tr('مؤجّلة','Snoozed')}</span>` : ''}</div></div>${t.attachments?.length ? `<div class="file-chips">${attachmentChips(t.attachments)}</div>` : ''}</div>
+    <div class="task-info"><div ${!t.completedAt ? 'data-action="edit" tabindex="0" role="button" class="task-edit-target"' : ''}><div class="task-name" dir="auto">${esc(t.title)}</div>${t.body ? `<p class="task-body" dir="auto">${esc(t.body)}</p>` : ''}<div class="task-meta">${due}${t.repeat !== 'none' ? `<span>${icon('repeat')}${esc(repeatLabel(t))}</span>` : ''}${t.snoozedAt && !t.completedAt ? `<span>${tr('مؤجّلة','Snoozed')}</span>` : ''}</div></div>${t.attachments?.length ? `<div class="file-chips">${attachmentChips(t.attachments)}</div>` : ''}</div>
     ${t.priority !== 'normal' ? `<span class="priority ${t.priority}">${t.priority === 'high' ? tr('أولوية عالية','High priority') : tr('متوسطة','Medium')}</span>` : ''}<div class="task-actions">${!t.completedAt ? `<button class="icon-button" data-action="edit" title="${tr('تعديل المهمة','Edit task')}" aria-label="${tr('تعديل المهمة','Edit task')}">${icon('edit')}</button>` : ''}<button class="icon-button" data-action="delete" title="${tr('حذف المهمة','Delete task')}" aria-label="${tr('حذف المهمة','Delete task')}">${icon('trash')}</button></div></article>`;
 }
 function renderNotes() {
@@ -108,12 +108,37 @@ function openTaskEditor(task) {
   $('task-due').value = localDateValue(task?.dueAt || Date.now() + 3600000);
   originalTaskDue = task?.dueAt || null; originalTaskDueValue = $('task-due').value;
   $('task-repeat').value = task?.repeat || 'none';
+  repeatDays = [...(task?.repeatDays || [new Date(task?.dueAt || Date.now() + 3600000).getDay()])];
+  $('task-every').value = task?.repeatEvery || 2;
+  toggleRepeat();
   taskAttachments = [...(task?.attachments || [])]; renderEditorFiles('task');
   $('task-dialog-title').textContent = task?.id ? tr('تفاصيل المهمة','Task details') : tr('مساحة لمهمة جديدة','Space for a new task');
   toggleReminder();
   $('task-dialog').showModal(); $('task-title').focus();
 }
 window.openTaskEditor = openTaskEditor;
+// Week order follows the interface: Saturday first in Arabic, Sunday first in English.
+function weekOrder() { const start = uiLanguage === 'en' ? 0 : 6; return Array.from({ length: 7 }, (_, i) => (start + i) % 7); }
+function weekdayName(day, style = 'short') { return new Date(2026, 9, 25 + day).toLocaleDateString(uiLanguage === 'en' ? 'en-US' : 'ar-IQ', { weekday: style }); }
+let repeatDays = [];
+function renderRepeatDays() {
+  $('repeat-days').innerHTML = weekOrder().map(d => `<button type="button" data-day="${d}" aria-pressed="${repeatDays.includes(d)}" title="${esc(weekdayName(d, 'long'))}">${esc(weekdayName(d))}</button>`).join('');
+}
+function toggleRepeat() {
+  $('repeat-days-field').hidden = $('task-repeat').value !== 'days';
+  $('repeat-every-field').hidden = $('task-repeat').value !== 'interval';
+  renderRepeatDays();
+}
+function repeatLabel(t) {
+  if (t.repeat === 'days') {
+    const days = weekOrder().filter(d => (t.repeatDays || []).includes(d)), order = weekOrder();
+    const contiguous = days.length >= 3 && days.length < 7 && days.every((d, i) => !i || order.indexOf(d) === order.indexOf(days[i - 1]) + 1);
+    if (days.length === 7) return tr('يوميًا', 'Daily');
+    return contiguous ? `${weekdayName(days[0])} – ${weekdayName(days.at(-1))}` : days.map(d => weekdayName(d)).join(tr('، ', ', '));
+  }
+  if (t.repeat === 'interval') { const n = t.repeatEvery; return uiLanguage === 'en' ? `Every ${n} days` : n === 2 ? 'كل يومين' : n <= 10 ? `كل ${n} أيام` : `كل ${n} يومًا`; }
+  return { daily: tr('يوميًا', 'Daily'), weekly: tr('أسبوعيًا', 'Weekly'), monthly: tr('شهريًا', 'Monthly'), yearly: tr('سنويًا', 'Yearly') }[t.repeat] || '';
+}
 function toggleReminder() { $('reminder-fields').hidden = !$('task-reminder').checked; $('task-due').required = $('task-reminder').checked; }
 function openNoteEditor(note) {
   $('note-form').reset(); $('note-error').textContent = '';
@@ -180,13 +205,16 @@ $('empty-note').addEventListener('click', () => openNoteEditor());
 $('search').addEventListener('input', e => { query = e.target.value.trim().toLowerCase(); render(); });
 $('sort').addEventListener('change', render);
 $('task-reminder').addEventListener('change', toggleReminder);
+$('task-repeat').addEventListener('change', toggleRepeat);
+$('repeat-days').addEventListener('click', e => { const b = e.target.closest('[data-day]'); if (!b) return; const d = Number(b.dataset.day); repeatDays = repeatDays.includes(d) ? repeatDays.filter(x => x !== d) : [...repeatDays, d]; if (!repeatDays.length) repeatDays = [d]; renderRepeatDays(); });
+document.querySelectorAll('[data-workdays]').forEach(b => b.addEventListener('click', () => { repeatDays = b.dataset.workdays.split(',').map(Number); renderRepeatDays(); }));
 document.querySelectorAll('[data-delay]').forEach(b => b.addEventListener('click', () => $('task-due').value = localDateValue(Date.now() + Number(b.dataset.delay) * 60000)));
 document.querySelectorAll('.close-dialog').forEach(b => b.addEventListener('click', () => b.closest('dialog').close()));
 $('task-form').addEventListener('submit', async e => {
   e.preventDefault(); const submit = e.submitter; submit.disabled = true;
   try {
     await api('saveTask', { id: $('task-id').value || undefined, title: $('task-title').value, body: $('task-body').value, attachments: taskAttachments, category: state.tasks.find(t => t.id === $('task-id').value)?.category || 'personal', priority: $('task-priority').value,
-      dueAt: $('task-reminder').checked ? (originalTaskDue && $('task-due').value === originalTaskDueValue ? originalTaskDue : new Date($('task-due').value).toISOString()) : null, repeat: $('task-reminder').checked ? $('task-repeat').value : 'none' });
+      dueAt: $('task-reminder').checked ? (originalTaskDue && $('task-due').value === originalTaskDueValue ? originalTaskDue : new Date($('task-due').value).toISOString()) : null, repeat: $('task-reminder').checked ? $('task-repeat').value : 'none', repeatDays, repeatEvery: Number($('task-every').value) });
     $('task-dialog').close(); await refresh(); toast(tr('حُفظت المهمة. خطوة جديدة في مكانها.','Task saved. Your next step is in place.'));
   } catch (err) { $('task-error').textContent = err.message; } finally { submit.disabled = false; }
 });
