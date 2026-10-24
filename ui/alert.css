@@ -1,53 +1,53 @@
-/* Colors use the theme tokens of ui/theme.css; the fallbacks are the default light palette. */
-.alert-body{background:var(--surface,#ffffff);height:100vh;overflow:hidden}
-.alert-shell{height:100vh;border:1px solid var(--border,#ddd4ed);border-top:4px solid var(--accent,#7960ca);display:flex;flex-direction:column}
-.alert-shell.overdue{border-top-color:var(--danger,#c4473d)}
+/* Every color is a theme token from ui/theme.css. */
+.alert-body{background:var(--surface);height:100vh;overflow:hidden}
+.alert-shell{height:100vh;border:1px solid var(--border);border-top:4px solid var(--accent);display:flex;flex-direction:column}
+.alert-shell.overdue{border-top-color:var(--danger)}
 .alert-header{display:flex;align-items:center;gap:9px;padding:12px 18px 8px;-webkit-app-region:drag}
 .alert-header strong{font-size:15px}
 .alert-brand-mark{width:26px;height:26px;object-fit:contain}
-.alert-queue{display:flex;align-items:center;gap:2px;margin-inline-start:auto;font-size:12px;color:var(--muted,#5f6170);-webkit-app-region:no-drag}
-.alert-queue button{width:28px;height:28px;border-radius:7px;color:var(--ink-2,#4d4560)}.alert-queue button:hover{background:var(--hover,#f1edf8)}
+.alert-queue{display:flex;align-items:center;gap:2px;margin-inline-start:auto;font-size:12px;color:var(--muted);-webkit-app-region:no-drag}
+.alert-queue button{width:28px;height:28px;border-radius:7px;color:var(--ink-2)}.alert-queue button:hover{background:var(--hover)}
 .alert-queue svg{width:16px;height:16px}
 .alert-queue span{min-width:44px;text-align:center}
 .alert-content{margin:0;flex:1;min-height:0;overflow:auto;padding:2px 20px 8px;text-align:start}
 .alert-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
-.chip{display:inline-flex;align-items:center;font-size:12px;line-height:1.4;padding:3px 9px;border-radius:20px;background:var(--accent-soft,#f0ebfa);color:var(--accent-ink,#5b45a8)}
-.chip.red{background:var(--danger-soft,#fcebea);color:var(--danger,#a8322a);font-weight:600}
-.chip.amber{background:var(--warning-soft,#fcf2df);color:var(--warning-ink,#835300)}
+.chip{display:inline-flex;align-items:center;font-size:12px;line-height:1.4;padding:3px 9px;border-radius:20px;background:var(--accent-soft);color:var(--accent-ink)}
+.chip.red{background:var(--danger-soft);color:var(--danger);font-weight:600}
+.chip.amber{background:var(--warning-soft);color:var(--warning-ink)}
 .alert-content h1{font-size:20px;line-height:1.35;font-weight:700;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.alert-when{font-size:13px;color:var(--ink,#252839);margin:6px 0 4px}
+.alert-when{font-size:13px;color:var(--ink);margin:6px 0 4px}
 .alert-when b{font-weight:600}
-.overdue .alert-when b{color:var(--danger,#b3261e)}
-.alert-note{font-size:13px;line-height:1.55;color:var(--muted,#5f6170);white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.overdue .alert-when b{color:var(--danger)}
+.alert-note{font-size:13px;line-height:1.55;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .alert-files{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;max-height:76px;overflow:auto}
-.alert-file{max-width:100%;gap:6px;border:1px solid var(--border-strong,#e4e1ee);background:var(--surface-2,#fbfaff);border-radius:8px;padding:3px 9px 3px 4px;font-size:12px;color:var(--ink-2,#3d3359)}
+.alert-file{max-width:100%;gap:6px;border:1px solid var(--border-strong);background:var(--surface-2);border-radius:8px;padding:3px 9px 3px 4px;font-size:12px;color:var(--ink-2)}
 .alert-file bdi{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
 .alert-file img{width:30px;height:30px;object-fit:cover;border-radius:5px}
 .alert-file .file-badge{height:22px;min-width:30px;font-size:11px}
-.alert-nudge{font-size:12px;line-height:1.5;color:var(--warning-ink,#835300);margin-top:8px}
+.alert-nudge{font-size:12px;line-height:1.5;color:var(--warning-ink);margin-top:8px}
 .alert-done{width:100%;flex-direction:column;gap:2px;margin-top:14px;padding:10px 14px;font-size:15px}
 .alert-done-label{display:inline-flex;align-items:center;gap:7px}
 .alert-done svg{width:18px;height:18px}
 .alert-done small{font-size:12px;font-weight:400}
-.alert-label{font-size:12px;font-weight:600;color:var(--muted,#5f6170);margin:14px 0 7px}
+.alert-label{font-size:12px;font-weight:600;color:var(--muted);margin:14px 0 7px}
 .snooze-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-.snooze-grid button{justify-content:space-between;gap:4px;border:1px solid var(--border-strong,#e4e1ee);background:var(--surface-2,#fbfaff);border-radius:8px;padding:8px 9px;font-size:13px;color:var(--ink,#3d3359);text-align:start;min-width:0}
+.snooze-grid button{justify-content:space-between;gap:4px;border:1px solid var(--border-strong);background:var(--surface-2);border-radius:8px;padding:8px 9px;font-size:13px;color:var(--ink);text-align:start;min-width:0}
 .snooze-grid button{min-height:44px;line-height:1.25}.snooze-grid button span{min-width:0;overflow-wrap:anywhere}
-.snooze-grid button:hover{background:var(--hover,#f3effb);border-color:var(--accent-soft-2,#d6cbec)}
+.snooze-grid button:hover{background:var(--hover);border-color:var(--accent-soft-2)}
 .snooze-grid button[disabled]{opacity:.45;cursor:not-allowed}
-.snooze-grid kbd,.alert-skip kbd{font-size:11px;color:var(--muted,#5f6170);border-color:var(--border-strong,#dcd8e6);padding:0 5px}
+.snooze-grid kbd,.alert-skip kbd{font-size:11px;color:var(--muted);border-color:var(--border-strong);padding:0 5px}
 .custom-snooze{display:flex;gap:6px;margin-top:8px}
 .custom-snooze input{min-width:0;flex:1;font-size:13px;padding:8px 10px}
-.custom-snooze button{width:40px;background:var(--accent-soft,#f0ebfa);border:1px solid var(--accent-soft-2,#e1d8f2);border-radius:8px;color:var(--accent-ink,#5b45a8)}
+.custom-snooze button{width:40px;background:var(--accent-soft);border:1px solid var(--accent-soft-2);border-radius:8px;color:var(--accent-ink)}
 .custom-snooze svg{width:17px;height:17px}
-.alert-skip{gap:8px;margin-top:6px;padding:7px 4px;font-size:13px;color:var(--accent-ink,#5b45a8)}
-#alert-error{color:var(--danger,#b3261e);font-size:12px;margin-top:6px;line-height:1.6}
+.alert-skip{gap:8px;margin-top:6px;padding:7px 4px;font-size:13px;color:var(--accent-ink)}
+#alert-error{color:var(--danger);font-size:12px;margin-top:6px;line-height:1.6}
 #alert-error:empty{display:none}
-.alert-footer{display:flex;border-top:1px solid var(--border,#ececf2)}
-.alert-footer button{flex:1;padding:11px 8px;font-size:13px;color:var(--accent-ink,#5b45a8)}
-.alert-footer button:hover{background:var(--hover,#f7f4fc)}
-.alert-footer button+button{border-inline-start:1px solid var(--border,#ececf2)}
+.alert-footer{display:flex;border-top:1px solid var(--border)}
+.alert-footer button{flex:1;padding:11px 8px;font-size:13px;color:var(--accent-ink)}
+.alert-footer button:hover{background:var(--hover)}
+.alert-footer button+button{border-inline-start:1px solid var(--border)}
 .alert-footer button[hidden]+button{border:0}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.alert-undo{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 18px 6px;padding:8px 12px;border-radius:9px;background:var(--success-soft,#eef8f2);color:var(--success-ink,#2f6b4c);font-size:12px}.alert-undo span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.alert-undo button{color:var(--success-ink,#2f6b4c);font-weight:700;text-decoration:underline}
-.all-done .alert-content>*:not(#alert-all-done),.all-done .alert-footer,.all-done .alert-queue{display:none!important}.alert-all-done{margin:auto;padding:60px 10px;text-align:center;font-size:17px;font-weight:600;color:var(--accent-ink,#5e4c8c)}
+.alert-undo{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 18px 6px;padding:8px 12px;border-radius:9px;background:var(--success-soft);color:var(--success-ink);font-size:12px}.alert-undo span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.alert-undo button{color:var(--success-ink);font-weight:700;text-decoration:underline}
+.all-done .alert-content>*:not(#alert-all-done),.all-done .alert-footer,.all-done .alert-queue{display:none!important}.alert-all-done{margin:auto;padding:60px 10px;text-align:center;font-size:17px;font-weight:600;color:var(--accent-ink)}

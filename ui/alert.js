@@ -8,7 +8,8 @@ const current = () => tasks[index];
 const repeating = task => !!task && task.id !== '__preview' && task.repeat && task.repeat !== 'none';
 async function refreshAlert() {
   try {
-    await setLanguage(await api('language'));
+    const look = await api('language');
+    await setLanguage(look); applyPalette(look.palette);
     tasks = await api('alerts');
     // After the last Done the window stays briefly so it can be undone; show that instead of an empty card.
     document.body.classList.toggle('all-done', !tasks.length);

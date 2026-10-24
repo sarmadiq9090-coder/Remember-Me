@@ -28,8 +28,9 @@ true (see "Keeping this document current").
 | "Coming up" notifications, each once and kept clickable | `src/early-notices.js` |
 | Update checks, download and install policy | `src/updates.js` |
 | About card: link allowlist and diagnostic info | `src/about.js` |
+| Palette colors for window backgrounds, read from `ui/theme.css` | `src/themes.js` |
 | Main window and sticky alert pages, shared scripts and CSS | `ui/` |
-| Packaging, installer, winget manifests, icon and dark-theme generators | `tools/` |
+| Packaging, installer, winget manifests, icon generator | `tools/` |
 | Unit tests (`node --test`) and Playwright desktop suites (`*-desktop.cjs`, `desktop-smoke.cjs`) | `tests/` |
 | Lint rules (folder-agnostic) and editor settings | `eslint.config.cjs`, `.editorconfig` |
 
@@ -133,11 +134,14 @@ all data. The shape (`version` is always `1`):
     sourceId?: id,            // on completed copies of a repeating task
     attachments: [attachmentId], createdAt, updatedAt
   }],
-  notes: [{ id, title, body, color: 'cream'|'green'|'blue'|'pink', attachments, createdAt, updatedAt, deletedAt? }],
+  notes: [{ id, title, body, color: 'cream'|'yellow'|'orange'|'red'|'pink'|'purple'|'blue'|'green'|'gray'|'white',
+           style?: 'plain'|'sticky'|'lined',  // absent (v1.4.0 notes) shows as plain
+           attachments, createdAt, updatedAt, deletedAt? }],
   attachments: [{ id, name, size, addedAt }],
   settings: {
     sound: true, startAtLogin: false, alertSide: 'right'|'left', language: 'en'|'ar'|'es'|…,  // a code from LOCALES in ui/translate.js; new installs use 'en'
     weekStart: 6|0|1, theme: 'system'|'light'|'dark',
+    palette: 'lavender'|'ocean'|'forest'|'sunset'|'graphite'|'contrast',  // ui/theme.css
     autoUpdate: null|true|false,  // consent to background update checks; null means not asked yet
     remindAgain?: 0|2|5|15,   // minutes between repeated alert sounds; absent means off
     pausedUntil: null|'<ISO time>'|'manual'  // reminders paused from the tray; null means not paused
@@ -324,8 +328,10 @@ which Chromium keeps bounded. Backups never include them.
   `tray.png` and `tray-waiting.png` (16 px, with `@1.5x` and `@2x` files that `nativeImage` loads on
   scaled displays) and `docs/icon-preview.png`. Windows use `icon.ico`, the tray uses the tray
   images, and the packager and installer embed `icon.ico`. `tests/icons.test.js` checks the sizes.
-- `tools/dark-theme.cjs` regenerates `ui/dark.css` from the light stylesheets (a test checks it is
-  up to date).
+- Colors: `ui/theme.css` defines every color as a token (`--accent`, `--surface`, `--ink`…) for each
+  palette in light and dark (`[data-palette]` on <html>, `prefers-color-scheme` from nativeTheme), plus
+  the note papers (`[data-paper]`). `styles.css` and `alert.css` only use tokens. `tests/theme.test.js`
+  checks WCAG contrast for every palette and mode and fails on hard-coded colors in those stylesheets.
 
 ## Keeping this document current
 

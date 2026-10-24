@@ -46,7 +46,9 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 - Release installers come with `SHA256SUMS.txt` and GitHub build provenance, so you can check a download. [#3]
 - **TODO:** 12 interface languages.
 - **TODO:** the redesigned alert window.
-- **TODO:** color themes and note pickers in **Settings → Appearance**.
+- **Settings → Appearance:** six color palettes (Lavender, Ocean, Forest, Sunset, Graphite and High contrast), each in light and dark, picked from preview cards and applied at once to the main window and the alert. [#35]
+- Notes come in ten paper colors, picked from swatches, and three styles: plain card, sticky note or lined paper. The editor shows a live preview. [#35]
+- The logo inside the app follows the chosen palette and light or dark mode (issue #18). [#35]
 
 ### Changed
 
@@ -123,3 +125,4 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 [#22]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/22
 [#23]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/23
 [#25]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/25
+[#35]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/35

@@ -8,7 +8,15 @@ const { LOCALES, DEFAULT: DEFAULT_LOCALE } = require('../ui/translate');
 const { validPause } = require('./pause');
 
 function initialState() {
-  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: DEFAULT_LOCALE, weekStart: 6, theme: 'system', autoUpdate: null, pausedUntil: null } };
+  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: DEFAULT_LOCALE, weekStart: 6, theme: 'system', palette: 'lavender', autoUpdate: null, pausedUntil: null } };
+}
+// Interface palettes in ui/theme.css; anything else shows Lavender.
+const PALETTES = ['lavender', 'ocean', 'forest', 'sunset', 'graphite', 'contrast'];
+// Note paper colors (ui/theme.css) and styles. Notes saved before styles existed have none and show as plain.
+const NOTE_COLORS = ['cream', 'yellow', 'orange', 'red', 'pink', 'purple', 'blue', 'green', 'gray', 'white'];
+const NOTE_STYLES = ['plain', 'sticky', 'lined'];
+function noteLook({ color, style } = {}) {
+  return { color: NOTE_COLORS.includes(color) ? color : 'cream', style: NOTE_STYLES.includes(style) ? style : 'plain' };
 }
 // Minutes between repeated alert sounds; 0 is off. Data from before the setting has no value, meaning off.
 const REMIND_AGAIN = [0, 2, 5, 15];
@@ -319,7 +327,8 @@ function validateState(data) {
   for (const note of data.notes) {
     title(note.title);
     if (typeof note.id !== 'string' || typeof note.body !== 'string') throw new Error('Invalid note data.');
-    if (!['cream', 'green', 'blue', 'pink'].includes(note.color)) note.color = 'cream';
+    if (!NOTE_COLORS.includes(note.color)) note.color = 'cream';
+    if (note.style !== undefined && !NOTE_STYLES.includes(note.style)) note.style = 'plain';
   }
   const defaults = initialState().settings;
   const saved = data.settings && typeof data.settings === 'object' && !Array.isArray(data.settings) ? data.settings : {};
@@ -329,6 +338,7 @@ function validateState(data) {
   delete data.settings.digits;
   for (const key of ['sound', 'startAtLogin']) if (typeof data.settings[key] !== 'boolean') data.settings[key] = defaults[key];
   if (!['system', 'light', 'dark'].includes(data.settings.theme)) data.settings.theme = 'system';
+  if (!PALETTES.includes(data.settings.palette)) data.settings.palette = 'lavender';
   // Saturday is the first weekday unless Sunday or Monday was chosen (older data has no value).
   if (![0, 1, 6].includes(data.settings.weekStart)) data.settings.weekStart = 6;
   data.settings.alertSide = data.settings.alertSide === 'left' ? 'left' : 'right';
@@ -395,4 +405,4 @@ class Store {
     this.state = draft;
   }
 }
-module.exports = { importTasks, normalizeChecklist, toggleStep, normalizeTags, EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, alertQueue, nextOccurrence, validateState, Store, writeDurable, renameWithRetry, REMIND_AGAIN, skipOccurrence };
+module.exports = { importTasks, normalizeChecklist, toggleStep, normalizeTags, PALETTES, NOTE_COLORS, NOTE_STYLES, noteLook, EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, alertQueue, nextOccurrence, validateState, Store, writeDurable, renameWithRetry, REMIND_AGAIN, skipOccurrence };

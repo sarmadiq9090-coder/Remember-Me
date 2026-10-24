@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const { randomUUID } = require('node:crypto');
-const { REMIND_AGAIN, Store, saveTask, completeTask, nextOccurrence, skipOccurrence, undoComplete, toggleStep, snoozeTask, dueTasks, alertQueue, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
+const { REMIND_AGAIN, PALETTES, noteLook, Store, saveTask, completeTask, nextOccurrence, skipOccurrence, undoComplete, toggleStep, snoozeTask, dueTasks, alertQueue, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
 const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
@@ -17,6 +17,7 @@ const { createLogger } = require('./logger');
 const { Updates, configure: configureUpdater } = require('./updates');
 const { migrateDataFolder } = require('./data-folder');
 const { setLoginItem, refreshLoginItem } = require('./login-item');
+const { windowColors } = require('./themes');
 const { linkUrl, diagnostics } = require('./about');
 const { UNTIL_RESUMED, isPaused, shownAlerts, createPause } = require('./pause');
 const { createEarlyNotices } = require('./early-notices');
@@ -67,20 +68,25 @@ else {
   app.on('second-instance', () => showMain());
   app.whenReady().then(start).catch(error => { log.error('start-failed', error); dialog.showErrorBox(tr('Remember Me could not start'), errorText(error)); app.quit(); });
 }
-// Window backgrounds match ui/dark.css so opening a window never flashes the other theme.
-function background(light, dark) { return nativeTheme.shouldUseDarkColors ? dark : light; }
+// Window backgrounds match the page's palette and mode (ui/theme.css), so opening a window never flashes another theme.
+function background(kind) { return windowColors(store.state.settings.palette, nativeTheme.shouldUseDarkColors)[kind]; }
 function applyTheme() {
   nativeTheme.themeSource = store.state.settings.theme;
-  for (const [win, light, dark] of [[mainWindow, '#f7f8fa', '#181d27'], [alertWindow, '#ffffff', '#15171e']]) if (win && !win.isDestroyed()) win.setBackgroundColor(background(light, dark));
+  for (const [win, kind] of [[mainWindow, 'main'], [alertWindow, 'alert']]) if (win && !win.isDestroyed()) win.setBackgroundColor(background(kind));
 }
-function options() { return { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }; }
+// The preload hands the saved palette to the page so its first paint already uses it; later changes arrive
+// with waqt:update. Page URLs stay plain file paths: the desktop tests and fromPage() match on them.
+function options() {
+  return { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true,
+    additionalArguments: [`--waqt-palette=${store.state.settings.palette}`] };
+}
 function secure(win) {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', e => e.preventDefault());
 }
 function createMain(visible = !process.argv.includes('--background')) {
   const win = mainWindow = new BrowserWindow({ width: 1250, height: 850, minWidth: 900, minHeight: 650,
-    title: tr('Remember Me • Your day'), icon: windowIcon, show: false, backgroundColor: background('#f7f8fa', '#181d27'), autoHideMenuBar: true, webPreferences: options() });
+    title: tr('Remember Me • Your day'), icon: windowIcon, show: false, backgroundColor: background('main'), autoHideMenuBar: true, webPreferences: options() });
   win.setMenu(null);
   secure(win);
   win.loadFile(path.join(__dirname, '../ui/index.html'));
@@ -191,7 +197,7 @@ function scanNow() {
   if (tasks.length) {
     if (!alertWindow || alertWindow.isDestroyed()) {
       alertWindow = new BrowserWindow({ width: 410, height: 570, frame: false, resizable: false, minimizable: false,
-        maximizable: false, skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: background('#ffffff', '#15171e'), icon: windowIcon, webPreferences: options() });
+        maximizable: false, skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: background('alert'), icon: windowIcon, webPreferences: options() });
       secure(alertWindow);
       alertWindow.setAlwaysOnTop(true, 'pop-up-menu');
       placeAlert();
@@ -271,7 +277,7 @@ async function start() {
             next: t.repeat && t.repeat !== 'none' && t.scheduleAt ? nextOccurrence(t.scheduleAt, t.repeat, now, t) : null }));
           break;
         }
-        case 'language': value = { language: language() }; break;
+        case 'language': value = { language: language(), palette: store.state.settings.palette }; break;
         case 'locale': {
           const code = LOCALES.some(l => l.code === payload.code) ? payload.code : language();
           value = { ...findLocale(code), messages: messages(code), fallback: messages(DEFAULT_LOCALE) };
@@ -311,7 +317,7 @@ async function start() {
           if (!title || title.length > 200) throw new Error(tr('Add a note title of up to 200 characters.'));
           let note = s.notes.find(n => n.id === payload.id);
           if (!note) { note = { id: randomUUID(), createdAt: new Date().toISOString() }; s.notes.push(note); }
-          Object.assign(note, { title, body: String(payload.body || '').slice(0, 50000), attachments: attachmentIds(payload.attachments ?? note.attachments ?? []), color: ['cream', 'green', 'blue', 'pink'].includes(payload.color) ? payload.color : 'cream', updatedAt: new Date().toISOString() });
+          Object.assign(note, { title, body: String(payload.body || '').slice(0, 50000), attachments: attachmentIds(payload.attachments ?? note.attachments ?? []), ...noteLook(payload), updatedAt: new Date().toISOString() });
         }); break;
         case 'deleteNote': store.change(s => trashItem(s, 'notes', payload.id)); break;
         case 'restoreNote': store.change(s => restoreItem(s, 'notes', payload.id)); break;
@@ -375,7 +381,7 @@ async function start() {
         case 'settings': {
           const old = store.state.settings;
           const settings = { sound: !!payload.sound, startAtLogin: !!payload.startAtLogin, alertSide: payload.alertSide === 'left' ? 'left' : 'right', language: LOCALES.some(l => l.code === payload.language) ? payload.language : DEFAULT_LOCALE,
-            weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 6, theme: ['light', 'dark'].includes(payload.theme) ? payload.theme : 'system',
+            weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 6, theme: ['light', 'dark'].includes(payload.theme) ? payload.theme : 'system', palette: PALETTES.includes(payload.palette) ? payload.palette : 'lavender',
             remindAgain: REMIND_AGAIN.includes(payload.remindAgain) ? payload.remindAgain : 0 };
           if (old.startAtLogin !== settings.startAtLogin) setLogin(settings.startAtLogin);
           try { store.change(s => { s.settings = { ...s.settings, ...settings }; }); }

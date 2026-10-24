@@ -1,5 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
+// The palette the window was opened with (main's additionalArguments), applied before the first paint.
+const palette = (process.argv.find(arg => arg.startsWith('--waqt-palette=')) || '').slice('--waqt-palette='.length);
 contextBridge.exposeInMainWorld('waqt', {
+  palette,
   call: (action, payload) => ipcRenderer.invoke('waqt:action', action, payload),
   onUpdate: (callback) => { const listener = () => callback(); ipcRenderer.on('waqt:update', listener); return () => ipcRenderer.removeListener('waqt:update', listener); },
   // The tray asks the main window to show a section by name (only 'about' today).
