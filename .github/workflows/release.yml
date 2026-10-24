@@ -54,6 +54,8 @@ jobs:
           $lines = Get-ChildItem -Filter 'Remember-Me-Setup-*.exe' | ForEach-Object { '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name }
           Set-Content -Encoding ascii -NoNewline SHA256SUMS.txt -Value (($lines -join "`n") + "`n")
           Get-Content SHA256SUMS.txt
+      # For a winget-pkgs submission after the release; not uploaded to the release itself.
+      - run: node tools/winget-manifest.mjs --sums release/installer/SHA256SUMS.txt --out release/winget
       - uses: actions/attest-build-provenance@v2
         with:
           subject-path: release/installer/Remember-Me-Setup-*.exe
@@ -65,6 +67,11 @@ jobs:
             release/installer/Remember-Me-Setup-*.exe.blockmap
             release/installer/latest.yml
             release/installer/SHA256SUMS.txt
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: winget-manifests
+          path: release/winget/*.yaml
           if-no-files-found: error
       - name: Publish the release
         if: github.event_name == 'push'
