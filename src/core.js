@@ -84,23 +84,55 @@ function validateState(data) {
     attachmentMap.add(record.id);
   }
   for (const item of [...data.tasks, ...data.notes]) {
+    if (!item || typeof item !== 'object') throw new Error('بيانات المهام أو الملاحظات غير صالحة.');
     item.attachments = attachmentIds(item.attachments);
     if (item.attachments.some(id => !attachmentMap.has(id))) throw new Error('مرجع المرفق غير موجود.');
   }
   const ids = new Set();
   for (const task of data.tasks) {
-    taskInput(task);
+    // Out-of-range fields are normalized rather than rejected, so one odd value never hides the whole file.
+    const { body, priority, category, dueAt, repeat } = taskInput(task);
+    Object.assign(task, { body, priority, category, dueAt, repeat });
     if (typeof task.id !== 'string' || ids.has(task.id)) throw new Error('بيانات المهام غير صالحة.');
     ids.add(task.id);
-    date(task.scheduleAt); date(task.completedAt);
+    task.scheduleAt = date(task.scheduleAt); task.completedAt = date(task.completedAt);
+    if (task.repeat !== 'none' && !task.scheduleAt) task.scheduleAt = task.dueAt;
+    try { task.snoozedAt = date(task.snoozedAt); } catch { task.snoozedAt = null; }
   }
   for (const note of data.notes) {
     title(note.title);
     if (typeof note.id !== 'string' || typeof note.body !== 'string') throw new Error('بيانات الملاحظات غير صالحة.');
+    if (!['cream', 'green', 'blue', 'pink'].includes(note.color)) note.color = 'cream';
   }
-  data.settings = { ...initialState().settings, ...data.settings };
+  const defaults = initialState().settings;
+  const saved = data.settings && typeof data.settings === 'object' && !Array.isArray(data.settings) ? data.settings : {};
+  data.settings = { ...defaults, ...saved };
+  for (const key of ['sound', 'startAtLogin']) if (typeof data.settings[key] !== 'boolean') data.settings[key] = defaults[key];
+  data.settings.alertSide = data.settings.alertSide === 'left' ? 'left' : 'right';
   data.settings.language = data.settings.language === 'en' ? 'en' : 'ar';
   return data;
+}
+// Antivirus scanners, the search indexer and sync clients briefly lock new files on Windows.
+const LOCKED = new Set(['EPERM', 'EACCES', 'EBUSY']);
+function renameWithRetry(from, to, attempts = 10) {
+  for (let i = 1; ; i++) {
+    try { return fs.renameSync(from, to); }
+    catch (error) {
+      if (!LOCKED.has(error.code) || i >= attempts) throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25 * i);
+    }
+  }
+}
+function writeDurable(file, text) {
+  const temporary = file + '.tmp';
+  const fd = fs.openSync(temporary, 'w');
+  try { fs.writeFileSync(fd, text, 'utf8'); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+  renameWithRetry(temporary, file);
+}
+function copyDurable(from, to) {
+  fs.copyFileSync(from, to);
+  const fd = fs.openSync(to, 'r+');
+  try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
 }
 class Store {
   constructor(directory) {
@@ -113,8 +145,7 @@ class Store {
       try {
         this.state = validateState(JSON.parse(fs.readFileSync(this.file + '.bak', 'utf8')));
         fs.copyFileSync(this.file, this.file + '.damaged-' + Date.now());
-        fs.writeFileSync(this.file + '.recovered', JSON.stringify(this.state, null, 2), 'utf8');
-        fs.renameSync(this.file + '.recovered', this.file);
+        writeDurable(this.file, JSON.stringify(this.state, null, 2));
         this.recovered = true;
       } catch { throw new Error('تعذّر قراءة البيانات والنسخة الاحتياطية. احتفظنا بالملفات دون تغيير في: ' + directory); }
     }
@@ -123,11 +154,8 @@ class Store {
     const draft = structuredClone(this.state);
     const result = fn(draft);
     validateState(draft);
-    const temporary = this.file + '.tmp';
-    const fd = fs.openSync(temporary, 'w');
-    try { fs.writeFileSync(fd, JSON.stringify(draft, null, 2), 'utf8'); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
-    if (fs.existsSync(this.file)) fs.copyFileSync(this.file, this.file + '.bak');
-    fs.renameSync(temporary, this.file);
+    if (fs.existsSync(this.file)) copyDurable(this.file, this.file + '.bak');
+    writeDurable(this.file, JSON.stringify(draft, null, 2));
     this.state = draft;
     return result;
   }

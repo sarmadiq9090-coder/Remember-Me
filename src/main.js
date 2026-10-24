@@ -1,11 +1,12 @@
 'use strict';
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session } = require('electron');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { Store, saveTask, completeTask, snoozeTask, dueTasks } = require('./core');
-const { attachmentIds, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
+const { attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
+const { checkRequest, fromPage } = require('./ipc');
 const testMode = process.env.WAQT_TEST === '1';
 app.setName('ذكرني');
 app.setPath('userData', testMode && process.env.WAQT_DATA_DIR ? process.env.WAQT_DATA_DIR : path.join(app.getPath('appData'), 'Waqt'));
@@ -30,6 +31,7 @@ function createMain() {
   mainWindow.setMenu(null);
   secure(mainWindow);
   mainWindow.loadFile(path.join(__dirname, '../ui/index.html'));
+  mainWindow.on('session-end', () => { quitting = true; });
   mainWindow.on('close', e => { if (!quitting) { e.preventDefault(); mainWindow.hide(); } });
   mainWindow.once('ready-to-show', () => { if (!process.argv.includes('--background')) mainWindow.show(); });
 }
@@ -63,7 +65,9 @@ function rebuildTrayMenu() {
   ]));
 }
 function activeAlerts() { const tasks = dueTasks(store.state); return tasks.length ? tasks : (preview ? [preview] : []); }
-function scan() {
+// The scheduler must survive any single failure; an exception here would otherwise repeat every second.
+function scan() { try { scanNow(); } catch (error) { console.error('Reminder scan failed:', error); } }
+function scanNow() {
   const tasks = activeAlerts();
   const current = new Set(tasks.map(t => t.id));
   const newlyDue = tasks.some(t => !previousDue.has(t.id));
@@ -77,6 +81,7 @@ function scan() {
       placeAlert();
       alertWindow.loadFile(path.join(__dirname, '../ui/alert.html'));
       alertWindow.once('ready-to-show', () => { if (alertWindow && activeAlerts().length) alertWindow.showInactive(); });
+      alertWindow.on('session-end', () => { quitting = true; });
       alertWindow.on('close', event => { if (!quitting && activeAlerts().length) event.preventDefault(); });
       alertWindow.on('closed', () => { alertWindow = null; });
     } else if (!alertWindow.isVisible()) alertWindow.showInactive();
@@ -91,6 +96,9 @@ function setLogin(enabled) {
   app.setLoginItemSettings({ openAtLogin: enabled, path: process.execPath, args: ['--background'] });
 }
 async function start() {
+  // The UI needs no camera, microphone, notifications, location or other browser permissions.
+  session.defaultSession.setPermissionRequestHandler((contents, permission, callback) => callback(false));
+  session.defaultSession.setPermissionCheckHandler(() => false);
   store = new Store(app.getPath('userData'));
   driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, notifyViews);
   createMain();
@@ -100,8 +108,10 @@ async function start() {
   tray.on('click', showMain);
   ipcMain.handle('waqt:action', async (event, action, payload) => {
     try {
-      if (![mainWindow?.webContents, alertWindow?.webContents].includes(event.sender)) throw new Error('طلب غير مسموح.');
-      if (event.sender === alertWindow?.webContents && !['alerts', 'language', 'complete', 'snooze', 'open', 'openAttachment', 'imagePreview'].includes(action)) throw new Error('طلب غير مسموح.');
+      const fromAlert = !!alertWindow && event.sender === alertWindow.webContents;
+      const page = path.join(__dirname, '../ui', fromAlert ? 'alert.html' : 'index.html');
+      if ((!fromAlert && event.sender !== mainWindow?.webContents) || !fromPage(event.senderFrame?.url, page)) throw new Error(nativeText('طلب غير مسموح.', 'Request not allowed.'));
+      payload = checkRequest(action, payload, { fromAlert, text: nativeText });
       let value;
       switch (action) {
         case 'state': value = { ...store.state, dataPath: app.getPath('userData'), packaged: app.isPackaged, recovered: store.recovered, driveBackup: driveBackup.status() }; break;
@@ -140,9 +150,8 @@ async function start() {
         }
         case 'openAttachment': {
           if (event.sender === alertWindow?.webContents && !activeAlerts().some(t => (t.attachments || []).includes(payload.id))) throw new Error('المرفق لا يتبع تنبيهًا نشطًا.');
-          const { file } = resolveAttachment(store.state, app.getPath('userData'), payload.id);
-          // Executable/script attachments are revealed rather than launched by the app.
-          if (/\.(exe|com|bat|cmd|ps1|vbs|vbe|js|jse|wsf|wsh|msi|scr|lnk|url|hta|reg)$/i.test(file)) shell.showItemInFolder(file);
+          const { file, record } = resolveAttachment(store.state, app.getPath('userData'), payload.id);
+          if (opensAsProgram(record.name)) shell.showItemInFolder(file);
           else {
             const error = await shell.openPath(file);
             if (error) throw new Error('تعذّر فتح الملف. تأكد من وجود برنامج مناسب لهذا النوع، مثل قارئ PDF أو Excel.');
@@ -200,6 +209,7 @@ async function start() {
   screen.on('display-removed', placeAlert);
   scan();
 }
+app.on('web-contents-created', (event, contents) => contents.on('will-attach-webview', e => e.preventDefault()));
 app.on('activate', showMain);
 app.on('window-all-closed', () => {});
 app.on('before-quit', () => { quitting = true; clearInterval(interval); clearInterval(backupInterval); });
