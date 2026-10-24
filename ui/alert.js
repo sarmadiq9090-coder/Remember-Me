@@ -146,12 +146,15 @@ $('alert-undo-button').addEventListener('click', async () => {
   $('alert-undo').hidden = true;
   try { await api('undoComplete', { id, copyId }); await refreshAlert(); } catch (e) { $('alert-error').textContent = e.message; }
 });
-$('alert-complete').addEventListener('click', () => act('complete'));
-$('alert-skip').addEventListener('click', () => act('skip'));
+// A click from the keyboard (Enter or Space on a focused button) has detail 0; it acts only
+// after the user has interacted with the window, like the shortcuts below.
+const userClick = e => e.detail > 0 || guard.engaged;
+$('alert-complete').addEventListener('click', e => { if (userClick(e)) act('complete'); });
+$('alert-skip').addEventListener('click', e => { if (userClick(e)) act('skip'); });
 $('alert-prev').addEventListener('click', () => move(-1));
 $('alert-next').addEventListener('click', () => move(1));
 $('snooze-grid').addEventListener('click', e => {
-  const button = e.target.closest('[data-preset]'); if (!button || button.disabled) return;
+  const button = e.target.closest('[data-preset]'); if (!button || button.disabled || !userClick(e)) return;
   if (button.dataset.preset === 'pick') return $('snooze-form').hidden ? openPicker() : closePicker();
   act('snooze', snoozeTime(button.dataset.preset, new Date()).toISOString());
 });
@@ -161,7 +164,7 @@ $('snooze-form').addEventListener('submit', e => {
   if (!Number.isFinite(d.getTime())) { $('alert-error').textContent = tr('Choose a valid time.'); return; }
   act('snooze', d.toISOString());
 });
-$('alert-snooze-all').addEventListener('click', () => snoozeAll(snoozeTime('1h', new Date()).toISOString()));
+$('alert-snooze-all').addEventListener('click', e => { if (userClick(e)) snoozeAll(snoozeTime('1h', new Date()).toISOString()); });
 $('alert-open').addEventListener('click', async () => {
   const task = current();
   try { await api('open', task && task.id !== '__preview' ? { id: task.id } : undefined); } catch (e) { $('alert-error').textContent = e.message; }
@@ -170,11 +173,19 @@ $('alert-files').addEventListener('click', async e => {
   const file = e.target.closest('[data-file-id]'); if (!file) return;
   try { await api('openAttachment', { id: file.dataset.fileId }); } catch (err) { $('alert-error').textContent = err.message; }
 });
+// The window appears without focus; keys typed elsewhere that land here must not act on it.
+const guard = createInteractionGuard();
+window.addEventListener('blur', () => guard.reset());
+document.addEventListener('pointerdown', () => guard.pointer(), true);
+document.addEventListener('keyup', e => guard.key(e), true);
 // Enter is Done, 1-6 the presets, S skips a repeat, arrows move through the queue (mirrored in
 // right-to-left languages). Escape never closes the alert; it only closes the date picker.
 document.addEventListener('keydown', e => {
+  guard.key(e);
   if (e.key === 'Escape') { e.preventDefault(); if (!$('snooze-form').hidden) closePicker(); return; }
   if (e.ctrlKey || e.altKey || e.metaKey || !current() || e.target.closest?.('input, form')) return;
+  // Also stops Enter or Space from pressing the focused button.
+  if (isShortcut(e) && !guard.allows(e)) { e.preventDefault(); return; }
   const digit = /^(Digit|Numpad)([1-6])$/.exec(e.code);
   if (e.key === 'Enter' && !e.target.closest?.('button')) { e.preventDefault(); act('complete'); }
   else if (digit) { e.preventDefault(); document.querySelectorAll('[data-preset]')[Number(digit[2]) - 1].click(); }

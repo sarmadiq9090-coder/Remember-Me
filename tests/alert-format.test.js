@@ -1,6 +1,6 @@
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { SNOOZE_PRESETS, snoozeTime, isOverdue, overdueAge, dueWhen } = require('../ui/alert-format');
+const { SNOOZE_PRESETS, snoozeTime, isOverdue, overdueAge, dueWhen, isShortcut, createInteractionGuard } = require('../ui/alert-format');
 const originalTZ = process.env.TZ;
 after(() => { if (originalTZ === undefined) delete process.env.TZ; else process.env.TZ = originalTZ; });
 
@@ -54,4 +54,24 @@ test('overdue age and the due day read naturally in English and Arabic', () => {
   assert.equal(dueWhen(new Date(2026, 9, 20, 8, 0).toISOString(), now, 'en-US').day, 'Tue, Oct 20');
   assert.equal(dueWhen(new Date(2026, 9, 23, 20, 32).toISOString(), now, 'ar-IQ-u-nu-latn').day, 'أمس');
   assert.doesNotMatch(Object.values(dueWhen(new Date(2026, 9, 23, 20, 32).toISOString(), now, 'ar-IQ-u-nu-latn')).join(' '), /[٠-٩]/, 'Western digits');
+});
+
+test('alert shortcuts wait for the user to interact with the window, and held keys never act', () => {
+  const key = (k, code = '', repeat = false) => ({ key: k, code, repeat });
+  const enter = key('Enter', 'Enter');
+  assert.ok(isShortcut(enter) && isShortcut(key(' ', 'Space')) && isShortcut(key('3', 'Digit3')) && isShortcut(key('3', 'Numpad3')) && isShortcut(key('s', 'KeyS')));
+  assert.ok(!isShortcut(key('Tab', 'Tab')) && !isShortcut(key('7', 'Digit7')) && !isShortcut(key('ArrowLeft', 'ArrowLeft')) && !isShortcut(key('Alt', 'AltLeft')));
+  const guard = createInteractionGuard();
+  assert.equal(guard.allows(enter), false, 'Focus alone, as when the window appears, is not enough');
+  guard.key(enter); guard.key(key('2', 'Digit2'));
+  assert.equal(guard.allows(enter), false, 'Shortcut keys typed into the window do not engage it');
+  guard.key(key('Tab', 'Tab', true));
+  assert.equal(guard.allows(enter), false, 'Nor does a held key');
+  guard.key(key('Alt', 'AltLeft'));
+  assert.equal(guard.allows(enter), true, 'Releasing Alt after Alt+Tab counts as the user arriving');
+  assert.equal(guard.allows(key('Enter', 'Enter', true)), false, 'A held Enter never acts');
+  guard.reset();
+  assert.equal(guard.allows(enter), false, 'Losing focus starts over');
+  guard.pointer();
+  assert.equal(guard.allows(key('1', 'Digit1')), true, 'A click in the window engages it');
 });

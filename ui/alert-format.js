@@ -37,7 +37,23 @@
       : due.toLocaleDateString(intl, { weekday: 'short', day: 'numeric', month: 'short', ...(due.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}) });
     return { day, time: due.toLocaleTimeString(intl, { hour: 'numeric', minute: '2-digit' }) };
   }
-  const api = { SNOOZE_PRESETS, snoozeTime, isOverdue, overdueAge, dueWhen };
+  // Keys that act on the reminder: Enter and Space (which also press a focused button), 1-6 and S.
+  function isShortcut(e) { return e.key === 'Enter' || e.key === ' ' || /^(Digit|Numpad)[1-6]$/.test(e.code || '') || e.code === 'KeyS'; }
+  // The alert appears without taking focus, but focus can still land on it while the user types
+  // elsewhere. Shortcuts act only after the user has interacted with the window: a pointer press,
+  // or pressing or releasing a key that is not a shortcut (Tab, the arrows, or Alt after Alt+Tab).
+  // Held keys never act. reset() when the window loses focus.
+  function createInteractionGuard() {
+    let engaged = false;
+    return {
+      get engaged() { return engaged; },
+      reset() { engaged = false; },
+      pointer() { engaged = true; },
+      key(e) { if (!e.repeat && !isShortcut(e)) engaged = true; },
+      allows(e) { return engaged && !e.repeat; },
+    };
+  }
+  const api = { SNOOZE_PRESETS, snoozeTime, isOverdue, overdueAge, dueWhen, isShortcut, createInteractionGuard };
   if (typeof module === 'object' && module.exports) module.exports = api;
-  else Object.assign(root, { SNOOZE_PRESETS, snoozeTime, isOverdue, overdueAge, dueWhen });
+  else Object.assign(root, { SNOOZE_PRESETS, snoozeTime, isOverdue, overdueAge, dueWhen, isShortcut, createInteractionGuard });
 })(this);
