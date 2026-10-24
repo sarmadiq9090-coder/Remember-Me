@@ -6,7 +6,7 @@ const vm = require('node:vm');
 
 // Loads the browser scripts that format dates, the way index.html and alert.html do.
 function loadUi(language) {
-  const context = vm.createContext({ document: { querySelectorAll: () => [], documentElement: { dataset: {} } }, location: { search: '' }, URLSearchParams });
+  const context = vm.createContext({ document: { querySelectorAll: () => [], documentElement: { dataset: {} } } });
   for (const file of ['i18n.js', 'shared.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../ui', file), 'utf8'), context, { filename: file });
   vm.runInContext(`uiLanguage = ${JSON.stringify(language)};`, context);
   return code => vm.runInContext(code, context);

@@ -41,10 +41,10 @@ function localDateValue(date) { const d = new Date(date); return new Date(d.getT
 function isToday(value) { return value && new Date(value).toDateString() === new Date().toDateString(); }
 function timeLabel(value) { return new Date(value).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }); }
 function dateLabel(value) { if (!value) return ''; const d = new Date(value); return `${isToday(value) ? tr('اليوم', 'Today') : d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' })}${tr('، ', ', ')}${timeLabel(value)}`; }
-// Interface palettes (ui/theme.css). The page URL carries the saved one, so the first paint already uses it.
+// Interface palettes (ui/theme.css). The preload carries the saved one, so the first paint already uses it.
 const PALETTES = ['lavender', 'ocean', 'forest', 'sunset', 'graphite', 'contrast'];
 function applyPalette(palette) { document.documentElement.dataset.palette = PALETTES.includes(palette) ? palette : 'lavender'; }
-applyPalette(new URLSearchParams(location.search).get('palette'));
+applyPalette(globalThis.waqt?.palette);
 // The app icon drawn with the --mark-* theme tokens, so it matches every palette and mode (issue #18).
 // Same artwork as assets/icon.svg; small marks use the simplified glyph of assets/icon-small.svg.
 // The Windows icon files stay fixed purple. Any element with data-brand-mark ("small" for the glyph) gets one.

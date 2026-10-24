@@ -69,13 +69,16 @@ else {
 }
 // Window backgrounds match the page's palette and mode (ui/theme.css), so opening a window never flashes another theme.
 function background(kind) { return windowColors(store.state.settings.palette, nativeTheme.shouldUseDarkColors)[kind]; }
-// The page applies the palette from its URL before the first paint; later changes arrive with waqt:update.
-function pageOptions() { return { query: { palette: store.state.settings.palette } }; }
 function applyTheme() {
   nativeTheme.themeSource = store.state.settings.theme;
   for (const [win, kind] of [[mainWindow, 'main'], [alertWindow, 'alert']]) if (win && !win.isDestroyed()) win.setBackgroundColor(background(kind));
 }
-function options() { return { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }; }
+// The preload hands the saved palette to the page so its first paint already uses it; later changes arrive
+// with waqt:update. Page URLs stay plain file paths: the desktop tests and fromPage() match on them.
+function options() {
+  return { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true,
+    additionalArguments: [`--waqt-palette=${store.state.settings.palette}`] };
+}
 function secure(win) {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', e => e.preventDefault());
@@ -85,7 +88,7 @@ function createMain(visible = !process.argv.includes('--background')) {
     title: nativeText('ذكرني • مساحة ليومك', 'Remember Me • Your day'), icon: windowIcon, show: false, backgroundColor: background('main'), autoHideMenuBar: true, webPreferences: options() });
   win.setMenu(null);
   secure(win);
-  win.loadFile(path.join(__dirname, '../ui/index.html'), pageOptions());
+  win.loadFile(path.join(__dirname, '../ui/index.html'));
   win.on('session-end', () => { quitting = true; });
   win.on('close', e => { if (!quitting) { e.preventDefault(); win.hide(); } });
   // A page-initiated window.close() destroys the window without a cancelable close; rebuild it on demand.
@@ -188,7 +191,7 @@ function scanNow() {
       secure(alertWindow);
       alertWindow.setAlwaysOnTop(true, 'pop-up-menu');
       placeAlert();
-      alertWindow.loadFile(path.join(__dirname, '../ui/alert.html'), pageOptions());
+      alertWindow.loadFile(path.join(__dirname, '../ui/alert.html'));
       alertWindow.once('ready-to-show', () => { if (alertWindow && activeAlerts().length) alertWindow.showInactive(); });
       alertWindow.on('session-end', () => { quitting = true; });
       alertWindow.on('close', event => { if (!quitting && activeAlerts().length) event.preventDefault(); });

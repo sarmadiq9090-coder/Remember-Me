@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 const { FILE, parseTheme, windowColors } = require('../src/themes');
 const { PALETTES, NOTE_COLORS, NOTE_STYLES, noteLook, initialState, validateState } = require('../src/core');
 
@@ -93,6 +94,24 @@ test('window backgrounds follow the palette and mode', () => {
   assert.deepEqual(windowColors('ocean', false), { main: palettes.ocean.light.bg, alert: palettes.ocean.light.surface });
   assert.deepEqual(windowColors('contrast', true), { main: palettes.contrast.dark.bg, alert: palettes.contrast.dark.surface });
   assert.deepEqual(windowColors('neon', true), windowColors('lavender', true), 'Unknown palettes use Lavender');
+});
+
+test('windows get the palette through the preload and keep plain page URLs', () => {
+  // The desktop tests (and fromPage) find windows by URLs ending in /index.html and /alert.html,
+  // so a query string such as ?palette= hid the main window from them (PR #35).
+  const main = fs.readFileSync(path.join(__dirname, '../src/main.js'), 'utf8');
+  const loads = [...main.matchAll(/loadFile\(([^;]*)\);/g)].map(m => m[1]);
+  assert.ok(loads.length >= 2);
+  for (const args of loads) assert.match(args, /^path\.join\(__dirname, '\.\.\/ui\/\w+\.html'\)$/, `loadFile(${args}) adds nothing to the URL`);
+  assert.match(main, /additionalArguments: \[`--waqt-palette=\$\{store\.state\.settings\.palette\}`\]/);
+  const run = argv => {
+    let exposed;
+    const electron = { contextBridge: { exposeInMainWorld: (name, api) => { exposed = api; } }, ipcRenderer: {} };
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/preload.js'), 'utf8'), { require: () => electron, process: { argv } });
+    return exposed.palette;
+  };
+  assert.equal(run(['electron.exe', '--type=renderer', '--waqt-palette=forest']), 'forest');
+  assert.equal(run(['electron.exe', '--type=renderer']), '', 'No flag: the page falls back to Lavender');
 });
 
 test('settings keep the theme mode and fall back to Lavender for unknown palettes', () => {
