@@ -15,6 +15,7 @@
               --focus focus ring (3:1)
    Status     --danger, --on-danger, --danger-soft · --success (icons), --success-soft, --success-ink
               --warning-soft, --warning-ink
+   Brand mark --mark-tile-1/--mark-tile-2 tile gradient · --mark-glyph bell · --mark-rays · --mark-badge, --mark-check, --mark-ring
    Other      --hero-* the dark welcome card · --art-1/--art-2 its illustration · --toast-bg/--toast-ink
               --backdrop dialog backdrop · --shadow shadow color
    Note paper (independent of the palette, per note color) --paper, --paper-edge, --paper-ink, --paper-muted,
@@ -113,9 +114,18 @@
   --accent-line:color-mix(in srgb,var(--accent) 35%,var(--border));
   --art-edge:color-mix(in srgb,var(--art-1),var(--art-2));
   --art-ink:color-mix(in srgb,var(--art-2) 45%,#1a1424);
+  /* The brand mark (shared.js brandMark): an accent tile with a light bell in light mode. */
+  --mark-tile-1:color-mix(in srgb,var(--accent) 75%,#fff);--mark-tile-2:var(--accent-hover);--mark-ring:var(--accent-hover);
+  --mark-glyph:var(--on-accent);--mark-rays:color-mix(in srgb,var(--on-accent) 65%,var(--accent));
+  --mark-badge:var(--success-soft);--mark-check:var(--success-ink);
   /* Older names, kept for rules written before the tokens. */
   --purple:var(--accent);--purple-light:var(--accent-soft);--green:var(--success);
 }
+/* In dark mode the mark is a tinted tile with an accent bell, so it doesn't glare in a dark sidebar. */
+@media (prefers-color-scheme:dark){:root,[data-palette]{
+  --mark-tile-1:var(--accent-soft-2);--mark-tile-2:var(--accent-soft);--mark-ring:var(--accent-soft);
+  --mark-glyph:var(--accent);--mark-rays:color-mix(in srgb,var(--accent) 60%,var(--accent-soft-2));
+}}
 /* Note paper. Light papers use dark ink and dark papers light ink, at least 4.5:1 for both. */
 [data-paper]{--paper-ink:#2b2620;--paper-muted:#5c544b;--paper-tape:#ffffff8c;--paper-margin:#e0707099;--paper-rule:color-mix(in srgb,var(--paper-edge),var(--paper-ink) 12%)}
 [data-paper=cream]{--paper:#fbf5e9;--paper-edge:#e9e1d3}

@@ -150,8 +150,21 @@
 .palette-card:has(input:checked) .palette-tick{display:flex}
 .palette-mock{display:flex;height:88px;overflow:hidden;border:1px solid var(--border);border-radius:8px;background:var(--bg)}
 .palette-mock i{display:block;border-radius:3px}
+/* Brand mark from shared.js brandMark(), colored by the --mark-* tokens of the nearest palette. */
+:is([data-brand-mark],.about-icon,.mock-logo){display:block;flex-shrink:0}
+.brand-svg{display:block;width:100%;height:100%}
+.mark-tile-1{stop-color:var(--mark-tile-1)}
+.mark-tile-2{stop-color:var(--mark-tile-2)}
+.mark-glyph{fill:var(--mark-glyph)}
+.mark-clapper{fill:none;stroke:var(--mark-glyph);stroke-linecap:round}
+.mark-rays{fill:none;stroke:var(--mark-rays);stroke-linecap:round}
+.mark-badge{fill:var(--mark-badge);stroke:var(--mark-ring)}
+.mark-check{fill:none;stroke:var(--mark-check);stroke-linecap:round;stroke-linejoin:round}
+/* At 16 px the badge is a solid success dot with a surface-colored check, as in assets/icon-small.svg. */
+.mark-small .mark-badge{fill:var(--success)}
+.mark-small .mark-check{stroke:var(--surface)}
 .mock-side{display:flex;flex-direction:column;gap:5px;width:32%;padding:8px 6px;background:var(--surface);border-inline-end:1px solid var(--border)}
-.mock-logo{width:14px;height:14px;margin-bottom:3px;background:var(--accent)}
+.mock-logo{width:16px;height:16px;margin-bottom:2px}
 .mock-nav{height:7px;background:var(--hover)}
 .mock-nav.on{background:var(--accent-soft-2);border-inline-start:3px solid var(--accent-ink)}
 .mock-page{display:flex;flex:1;flex-direction:column;gap:5px;padding:8px;min-width:0}

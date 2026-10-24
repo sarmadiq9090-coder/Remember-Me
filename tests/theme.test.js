@@ -47,6 +47,20 @@ test('text, buttons and focus rings meet WCAG contrast in every palette and mode
   assert.deepEqual(failures, []);
 });
 
+test('the brand mark stands out from its tile in every palette and mode', () => {
+  // ui/theme.css: light marks put --on-accent on an accent tile, dark marks put --accent on an accent-soft tile.
+  const failures = [];
+  for (const id of PALETTES) for (const mode of MODES) {
+    const t = palettes[id][mode];
+    const pairs = mode === 'light' ? [['on-accent', 'accent-hover']] : [['accent', 'accent-soft-2'], ['accent', 'accent-soft']];
+    // The 16 px glyph draws a surface-colored check on a solid success dot.
+    for (const [fg, bg] of [...pairs, ['surface', 'success'], ['success-ink', 'success-soft']]) if (contrast(t[fg], t[bg]) < 3) failures.push(`${id} ${mode}: ${fg} on ${bg}`);
+  }
+  assert.deepEqual(failures, []);
+  const shared = fs.readFileSync(path.join(__dirname, '../ui/shared.js'), 'utf8');
+  assert.ok(!/#[0-9a-f]{3,8}\b/i.test(shared.slice(shared.indexOf('function brandMark'), shared.indexOf('function hydrateBrandMarks'))), 'The mark uses tokens, not fixed colors');
+});
+
 test('light and dark variants are actually light and dark', () => {
   for (const id of PALETTES) {
     assert.ok(luminance(palettes[id].light.bg) > 0.8 && luminance(palettes[id].light.ink) < 0.05, `${id} light`);
