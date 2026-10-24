@@ -10,6 +10,8 @@ const icons = {
   search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
   bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
   arrowLeft: '<path d="M20 12H4m6-6-6 6 6 6"/>',
+  chevronBack: '<path d="m15 6-6 6 6 6"/>',
+  chevronForward: '<path d="m9 6 6 6-6 6"/>',
   list: '<path d="M9 6h12M9 12h12M9 18h12M3 6h.1M3 12h.1M3 18h.1"/>',
   sort: '<path d="M4 6h16M7 12h10M10 18h4"/>',
   flag: '<path d="M4 22V3m0 1c5-5 10 5 16 0v11c-6 5-11-5-16 0"/>',
@@ -39,6 +41,20 @@ document.addEventListener('invalid', e => {
   field.setCustomValidity(field.validity.valueMissing ? tr('Please fill in this field.') : field.validity.badInput || field.validity.typeMismatch ? tr('Please enter a valid value.') : '');
 }, true);
 document.addEventListener('input', e => e.target.setCustomValidity?.(''), true);
+// Week order for the repeat-day picker and labels: Saturday first unless the user chose another day.
+function weekOrder(weekStart) { const start = [0, 1, 6].includes(weekStart) ? weekStart : 6; return Array.from({ length: 7 }, (_, i) => (start + i) % 7); }
+function weekdayName(day, style = 'short') { return new Date(2026, 9, 25 + day).toLocaleDateString(locale(), { weekday: style }); }
+// A short description of a task's repeat rule, such as "Sun – Thu" or "Every 3 days".
+function repeatLabel(t, weekStart) {
+  if (t.repeat === 'days') {
+    const days = weekOrder(weekStart).filter(d => (t.repeatDays || []).includes(d)), order = weekOrder(weekStart);
+    const contiguous = days.length >= 3 && days.length < 7 && days.every((d, i) => !i || order.indexOf(d) === order.indexOf(days[i - 1]) + 1);
+    if (days.length === 7) return tr("Daily");
+    return contiguous ? `${weekdayName(days[0])} – ${weekdayName(days.at(-1))}` : days.map(d => weekdayName(d)).join(tr(", "));
+  }
+  if (t.repeat === 'interval') { const n = t.repeatEvery; return tr('Every {count} days', { count: n }); }
+  return { daily: tr("Daily"), weekly: tr("Weekly"), monthly: tr("Monthly"), yearly: tr("Yearly") }[t.repeat] || '';
+}
 function localDateValue(date) { const d = new Date(date); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }
 function isToday(value) { return value && new Date(value).toDateString() === new Date().toDateString(); }
 function timeLabel(value) { return new Date(value).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }); }

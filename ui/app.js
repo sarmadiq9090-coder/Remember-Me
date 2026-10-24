@@ -33,6 +33,11 @@ async function refresh() {
     trash = [...state.tasks.filter(t => t.deletedAt).map(item => ({ kind: 'Task', item })), ...state.notes.filter(n => n.deletedAt).map(item => ({ kind: 'Note', item }))].sort((a, b) => Date.parse(b.item.deletedAt) - Date.parse(a.item.deletedAt));
     state.tasks = state.tasks.filter(t => !t.deletedAt); state.notes = state.notes.filter(n => !n.deletedAt);
     await setLanguage(state.settings.language); render();
+    // The tray's New task, or Open task in the alert, asked for an editor.
+    if (state.openTask && !document.querySelector('dialog[open]')) {
+      const task = state.openTask === 'new' ? null : state.tasks.find(t => t.id === state.openTask);
+      if (state.openTask === 'new' || (task && !task.completedAt)) openTaskEditor(task || undefined);
+    }
   } catch (e) { toast(e.message); }
 }
 function todayEnd() { const d = new Date(); d.setHours(23, 59, 59, 999); return d.getTime(); }
@@ -164,7 +169,7 @@ function taskCard(t) {
   const due = t.dueAt ? `<span class="${overdue ? 'overdue' : ''}">${icon('clock')}${esc(dateLabel(t.dueAt))}${overdue ? ` • ${tr("Due now")}` : ''}</span>` : `<span>${tr("No due date")}</span>`;
   return `<article class="task-row ${t.completedAt ? 'completed' : ''}" data-id="${esc(t.id)}">
     <button class="task-check" data-action="${t.completedAt ? 'reopen' : 'complete'}" aria-label="${t.completedAt ? tr("Reopen") : tr("Complete")} ${esc(t.title)}" title="${t.completedAt ? tr("Reopen without due date") : tr("Mark complete")}">${t.completedAt ? icon('check') : ''}</button>
-    <div class="task-info"><div ${!t.completedAt ? 'data-action="edit" tabindex="0" role="button" class="task-edit-target"' : ''}><div class="task-name" dir="auto">${esc(t.title)}</div>${t.body ? `<p class="task-body" dir="auto">${esc(t.body)}</p>` : ''}<div class="task-meta">${due}${t.repeat !== 'none' ? `<span>${icon('repeat')}${esc(repeatLabel(t))}</span>` : ''}${(t.tags || []).map(tag => `<span class="tag-chip"><bdi>#${esc(tag)}</bdi></span>`).join('')}${t.remindBefore && !t.completedAt ? `<span title="${tr("Early notice")}">${icon('bell')}${esc($('task-before').querySelector(`option[value="${t.remindBefore}"]`)?.textContent || '')}</span>` : ''}${t.snoozedAt && !t.completedAt ? `<span>${tr("Snoozed")}</span>` : ''}</div></div>${stepsMarkup(t)}${t.attachments?.length ? `<div class="file-chips">${attachmentChips(t.attachments)}</div>` : ''}</div>
+    <div class="task-info"><div ${!t.completedAt ? 'data-action="edit" tabindex="0" role="button" class="task-edit-target"' : ''}><div class="task-name" dir="auto">${esc(t.title)}</div>${t.body ? `<p class="task-body" dir="auto">${esc(t.body)}</p>` : ''}<div class="task-meta">${due}${t.repeat !== 'none' ? `<span>${icon('repeat')}${esc(repeatLabel(t, state.settings.weekStart))}</span>` : ''}${(t.tags || []).map(tag => `<span class="tag-chip"><bdi>#${esc(tag)}</bdi></span>`).join('')}${t.remindBefore && !t.completedAt ? `<span title="${tr("Early notice")}">${icon('bell')}${esc($('task-before').querySelector(`option[value="${t.remindBefore}"]`)?.textContent || '')}</span>` : ''}${t.snoozedAt && !t.completedAt ? `<span>${tr("Snoozed")}</span>` : ''}</div></div>${stepsMarkup(t)}${t.attachments?.length ? `<div class="file-chips">${attachmentChips(t.attachments)}</div>` : ''}</div>
     ${t.priority !== 'normal' ? `<span class="priority ${t.priority}">${t.priority === 'high' ? tr("High priority") : tr("Medium")}</span>` : ''}<div class="task-actions">${!t.completedAt && t.repeat !== 'none' ? `<button class="icon-button" data-action="skip" title="${tr("Skip this time")}" aria-label="${tr("Skip this time")}: ${esc(t.title)}">${icon('skip')}</button>` : ''}${!t.completedAt ? `<button class="icon-button" data-action="edit" title="${tr("Edit task")}" aria-label="${tr("Edit task")}">${icon('edit')}</button>` : ''}<button class="icon-button" data-action="delete" title="${tr("Delete task")}" aria-label="${tr("Delete task")}">${icon('trash')}</button></div></article>`;
 }
 function renderNotes() {
@@ -198,7 +203,6 @@ function openTaskEditor(task) {
   toggleReminder();
   $('task-dialog').showModal(); $('task-title').focus();
 }
-window.openTaskEditor = openTaskEditor;
 // 'Only this time' moves one occurrence of a repeating task and keeps the series at its usual time.
 let editingSeries = null;
 const onlyOnce = document.createElement('label');
@@ -208,8 +212,6 @@ $('task-due').closest('label').after(onlyOnce);
 function toggleOnlyOnce() { onlyOnce.hidden = !(editingSeries && $('task-reminder').checked && $('task-repeat').value === originalTaskRepeat); }
 $('task-repeat').addEventListener('change', toggleOnlyOnce);
 // Week order follows the interface: Saturday first in Arabic, Sunday first in English.
-function weekOrder() { const chosen = state?.settings?.weekStart; const start = [0, 1, 6].includes(chosen) ? chosen : uiLocale.weekStart; return Array.from({ length: 7 }, (_, i) => (start + i) % 7); }
-function weekdayName(day, style = 'short') { return new Date(2026, 9, 25 + day).toLocaleDateString(locale(), { weekday: style }); }
 let repeatDays = [];
 let steps = [];
 // Steps keep their ids while editing so ticks survive renaming or reordering.
@@ -222,22 +224,12 @@ function stepsMarkup(t) {
   return `<ul class="step-list" aria-label="${tr("Steps")} ${num(done)}/${num(t.checklist.length)}">${t.checklist.map(s => `<li><label><input type="checkbox" data-toggle-step="${esc(s.id)}" ${s.done ? 'checked' : ''} ${t.completedAt ? 'disabled' : ''}><span dir="auto" class="${s.done ? 'step-done' : ''}">${esc(s.text)}</span></label></li>`).join('')}</ul>`;
 }
 function renderRepeatDays() {
-  $('repeat-days').innerHTML = weekOrder().map(d => `<button type="button" data-day="${d}" aria-pressed="${repeatDays.includes(d)}" title="${esc(weekdayName(d, 'long'))}">${esc(weekdayName(d))}</button>`).join('');
+  $('repeat-days').innerHTML = weekOrder(state.settings.weekStart).map(d => `<button type="button" data-day="${d}" aria-pressed="${repeatDays.includes(d)}" title="${esc(weekdayName(d, 'long'))}">${esc(weekdayName(d))}</button>`).join('');
 }
 function toggleRepeat() {
   $('repeat-days-field').hidden = $('task-repeat').value !== 'days';
   $('repeat-every-field').hidden = $('task-repeat').value !== 'interval';
   renderRepeatDays();
-}
-function repeatLabel(t) {
-  if (t.repeat === 'days') {
-    const days = weekOrder().filter(d => (t.repeatDays || []).includes(d)), order = weekOrder();
-    const contiguous = days.length >= 3 && days.length < 7 && days.every((d, i) => !i || order.indexOf(d) === order.indexOf(days[i - 1]) + 1);
-    if (days.length === 7) return tr("Daily");
-    return contiguous ? `${weekdayName(days[0])} – ${weekdayName(days.at(-1))}` : days.map(d => weekdayName(d)).join(tr(", "));
-  }
-  if (t.repeat === 'interval') { const n = t.repeatEvery; return tr('Every {count} days', { count: n }); }
-  return { daily: tr("Daily"), weekly: tr("Weekly"), monthly: tr("Monthly"), yearly: tr("Yearly") }[t.repeat] || '';
 }
 function toggleReminder() { $('reminder-fields').hidden = !$('task-reminder').checked; $('task-due').required = $('task-reminder').checked; toggleOnlyOnce(); }
 function openNoteEditor(note) {

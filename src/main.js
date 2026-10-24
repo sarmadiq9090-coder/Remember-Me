@@ -2,7 +2,7 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, Notification, nativeTheme } = require('electron');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
-const { REMIND_AGAIN, Store, saveTask, completeTask, skipOccurrence, undoComplete, toggleStep, snoozeTask, dueTasks, alertQueue, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
+const { REMIND_AGAIN, Store, saveTask, completeTask, nextOccurrence, skipOccurrence, undoComplete, toggleStep, snoozeTask, dueTasks, alertQueue, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
 const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
@@ -81,6 +81,11 @@ function createMain(visible = !process.argv.includes('--background')) {
   win.on('closed', () => { if (mainWindow === win) mainWindow = null; });
   win.once('ready-to-show', () => { if (visible) win.show(); });
 }
+// The main window opens a task's editor (or a new one) on its next state read, which also
+// covers a window that is still being created.
+let openRequest = null;
+function takeOpenRequest() { const request = openRequest; openRequest = null; return request; }
+function openInMain(request) { openRequest = request; showMain(); notifyViews(); }
 function showMain() {
   if (!mainWindow) { if (!quitting) createMain(true); return; }
   if (mainWindow.isMinimized()) mainWindow.restore();
@@ -114,7 +119,7 @@ function rebuildTrayMenu() {
   if (!tray) return;
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: tr("Open Remember Me"), click: showMain },
-    { label: tr("New task"), click: () => { showMain(); mainWindow.webContents.send('waqt:update'); mainWindow.webContents.executeJavaScript('window.openTaskEditor?.()'); } },
+    { label: tr("New task"), click: () => openInMain('new') },
     { type: 'separator' },
     { label: tr("Exit and stop reminders"), click: async () => {
       const { response } = await dialog.showMessageBox(mainWindow, { type: 'question', title: tr("Close Remember Me"), message: tr("Reminders will stop until you open the app again."), buttons: [tr("Keep running"), tr("Exit")], defaultId: 0, cancelId: 0 });
@@ -195,8 +200,14 @@ async function start() {
       payload = checkRequest(action, payload, { fromAlert });
       let value;
       switch (action) {
-        case 'state': value = { ...store.state, dataPath: app.getPath('userData'), packaged: app.isPackaged, recovered: store.recovered, driveBackup: driveBackup.status(), updates: updates.status() }; break;
-        case 'alerts': value = activeAlerts().map(t => ({ ...t, files: (t.attachments || []).map(id => store.state.attachments.find(a => a.id === id)).filter(Boolean) })); break;
+        case 'state': value = { ...store.state, dataPath: app.getPath('userData'), packaged: app.isPackaged, recovered: store.recovered, driveBackup: driveBackup.status(), updates: updates.status(), openTask: takeOpenRequest() }; break;
+        case 'alerts': {
+          const now = new Date();
+          // next is when a repeating reminder comes back after Done, shown under the Done button.
+          value = activeAlerts().map(t => ({ ...t, files: (t.attachments || []).map(id => store.state.attachments.find(a => a.id === id)).filter(Boolean),
+            next: t.repeat && t.repeat !== 'none' && t.scheduleAt ? nextOccurrence(t.scheduleAt, t.repeat, now, t) : null }));
+          break;
+        }
         case 'language': value = { language: language() }; break;
         case 'locale': {
           const code = LOCALES.some(l => l.code === payload.code) ? payload.code : language();
@@ -357,7 +368,7 @@ async function start() {
           catch (error) { throw new Error(tr("Couldn't save a safety copy of your data, so the update was not installed. {reason}", { reason: errorText(error) })); }
           break;
         case 'dismissUpdate': updates.dismiss(); break;
-        case 'open': showMain(); break;
+        case 'open': openInMain(payload.id && store.state.tasks.some(t => t.id === payload.id && !t.deletedAt) ? payload.id : null); break;
         default: throw new Error(tr('Unknown action.'));
       }
       if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder', 'checkUpdates', 'installUpdate', 'dismissUpdate'].includes(action)) { scan(); notifyViews(); }

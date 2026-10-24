@@ -106,4 +106,4 @@
 .step-editor{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}.step-editor li{display:flex;align-items:center;gap:8px}.step-editor input[type=text]{flex:1;padding:7px 10px}.step-list{list-style:none;margin:6px 0 2px;padding:0;display:grid;gap:3px;font-size:12px}.step-list label{display:inline-flex;align-items:center;gap:7px;cursor:pointer}.step-done{text-decoration:line-through;opacity:.6}.steps-section{margin:4px 0 14px}
 /* Switch knobs and forward arrows follow the reading direction. */
 [dir=rtl]{--dir:-1}
-[dir=ltr] .icon-arrowLeft{transform:scaleX(-1)}
+[dir=ltr] .icon-arrowLeft,[dir=rtl] .icon-chevronBack,[dir=rtl] .icon-chevronForward{transform:scaleX(-1)}
