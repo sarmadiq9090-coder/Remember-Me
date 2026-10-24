@@ -188,6 +188,21 @@ function dueTasks(state, now = new Date()) {
   return state.tasks.filter(t => !t.completedAt && !t.deletedAt && t.dueAt && Date.parse(t.dueAt) <= now.getTime())
     .sort((a, b) => Date.parse(a.dueAt) - Date.parse(b.dueAt));
 }
+// Adds imported tasks one by one. Invalid rows and past one-time items are skipped, and a past
+// repeat resumes at its next occurrence, so importing a calendar never floods the alert queue.
+function importTasks(state, inputs, now = new Date()) {
+  let added = 0, skipped = 0;
+  for (const input of inputs) {
+    try {
+      const fields = { ...input, id: undefined, attachments: [], title: String(input.title || '').trim().slice(0, 200), body: String(input.body || '').slice(0, 20000) };
+      if (fields.dueAt && Date.parse(fields.dueAt) <= now.getTime() && !REPEATS.slice(1).includes(fields.repeat)) { skipped++; continue; }
+      const task = saveTask(state, fields, now);
+      if (task.repeat !== 'none' && Date.parse(task.dueAt) <= now.getTime()) task.dueAt = task.scheduleAt = nextOccurrence(task.dueAt, task.repeat, now, task);
+      added++;
+    } catch { skipped++; }
+  }
+  return { added, skipped };
+}
 // Open tasks whose early notification time has come but whose due time has not.
 function upcomingTasks(state, now = new Date()) {
   return state.tasks.filter(t => !t.completedAt && !t.deletedAt && t.remindBefore && t.dueAt && Date.parse(t.dueAt) > now.getTime() && Date.parse(t.dueAt) - t.remindBefore * 60000 <= now.getTime());
@@ -292,4 +307,4 @@ class Store {
     this.state = draft;
   }
 }
-module.exports = { normalizeChecklist, toggleStep, normalizeTags, EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, nextOccurrence, validateState, Store };
+module.exports = { importTasks, normalizeChecklist, toggleStep, normalizeTags, EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, nextOccurrence, validateState, Store };
