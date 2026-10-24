@@ -21,7 +21,7 @@ const english = new Map(Object.entries({
   'اللغة': 'Language', 'اختر لغة واجهة البرنامج.': 'Choose the app interface language.', 'العربية': 'Arabic', 'English': 'English',
   'شاهد التنبيه بنفسك': 'Preview the alert', 'جرّب شكله وأزرار الإنجاز والتأجيل.': 'Try its layout, complete button, and snooze options.', 'تجربة التنبيه': 'Preview alert',
   'بياناتك، على جهازك': 'Your data, on your device', 'يعمل ذكرني دون حساب أو اتصال بالإنترنت. تُحفظ المهام والملاحظات تلقائيًا مع نسخة احتياطية من آخر حفظ.': 'Remember Me works without an account or internet connection. Tasks and notes are saved automatically with a backup of the previous save.',
-  'تصدير نسخة احتياطية': 'Export backup', 'فتح مجلد البيانات': 'Open data folder', 'النسخ الاحتياطي إلى Google Drive': 'Backup to Google Drive',
+  'تصدير نسخة احتياطية': 'Export backup', 'استعادة من نسخة احتياطية': 'Restore from backup', 'فتح مجلد البيانات': 'Open data folder', 'النسخ الاحتياطي إلى Google Drive': 'Backup to Google Drive',
   'نسخة كاملة من المهام والملاحظات والصور والمرفقات. اختر مجلدًا داخل Google Drive المتزامن؛ يرفع تطبيق Google Drive الملفات إلى حسابك، ويحتفظ ذكرني بنسخة محلية أيضًا.': 'A complete copy of tasks, notes, images, and attachments. Choose a synced Google Drive folder; Google Drive uploads it to your account while Remember Me also keeps a local copy.',
   'اختيار مجلد Google Drive': 'Choose Google Drive folder', 'تثبيت Google Drive وتسجيل الدخول': 'Install Google Drive and sign in', 'نسخة تلقائية كل يوم': 'Automatic daily backup',
   'أثناء تشغيل ذكرني. تُعاد محاولة النسخ عند عودة مجلد Drive.': 'While Remember Me is running. Backup retries when the Drive folder returns.', 'نسخ احتياطي الآن': 'Back up now', 'فتح مجلد النسخ': 'Open backup folder',

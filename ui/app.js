@@ -203,7 +203,12 @@ for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-l
   try { await api('settings', { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value }); await refresh(); toast(tr('حُفظت الإعدادات.','Settings saved.')); }
   catch (err) { toast(err.message); } await refresh();
 });
-$('export-data').addEventListener('click', async () => { $('export-data').disabled = true; try { if (await api('export')) toast('حُفظ مجلد النسخة الاحتياطية مع جميع المرفقات.'); } catch (err) { toast(err.message); } finally { $('export-data').disabled = false; } });
+$('export-data').addEventListener('click', async () => { $('export-data').disabled = true; try { if (await api('export')) toast(tr('حُفظ مجلد النسخة الاحتياطية مع جميع المرفقات.', 'The backup folder was saved with all attachments.')); } catch (err) { toast(err.message); } finally { $('export-data').disabled = false; } });
+$('restore-data').addEventListener('click', async () => {
+  $('restore-data').disabled = true;
+  try { if (await api('restore')) { await refresh(); toast(tr('استُعيدت النسخة الاحتياطية. حُفظت بياناتك السابقة في مجلد النسخ.', 'Backup restored. Your previous data was saved in the backups folder.')); } }
+  catch (err) { toast(err.message); } finally { $('restore-data').disabled = false; }
+});
 $('open-data').addEventListener('click', async () => { try { await api('dataFolder'); } catch (err) { toast(err.message); } });
 async function driveAction(action, payload) { try { const value = await api(action, payload); await refresh(); return value; } catch (error) { toast(error.message); await refresh(); } }
 $('choose-drive-folder').addEventListener('click', () => driveAction('chooseDriveFolder'));

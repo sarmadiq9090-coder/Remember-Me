@@ -7,6 +7,7 @@ const { attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBac
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
 const { checkRequest, fromPage } = require('./ipc');
+const { readBackup, restoreBackup } = require('./backups');
 const testMode = process.env.WAQT_TEST === '1';
 app.setName('ذكرني');
 app.setPath('userData', testMode && process.env.WAQT_DATA_DIR ? process.env.WAQT_DATA_DIR : path.join(app.getPath('appData'), 'Waqt'));
@@ -190,8 +191,28 @@ async function start() {
         }
         case 'preview': preview = { id: '__preview', title: nativeText('حان وقت استراحة صغيرة ☕', 'Time for a short break ☕'), body: nativeText('هذا تنبيه تجريبي. يبقى ظاهرًا حتى تختار «تم» أو «ذكّرني لاحقًا». التأجيل هنا يغلق المعاينة فقط.', 'This is a preview alert. It stays visible until you choose Done or Snooze. Snoozing here only closes the preview.'), dueAt: new Date().toISOString(), priority: 'normal', category: 'personal' }; break;
         case 'export': {
-          const result = await dialog.showOpenDialog(mainWindow, { title: 'اختر مكان حفظ النسخة الاحتياطية مع المرفقات', properties: ['openDirectory', 'createDirectory'] });
+          const result = await dialog.showOpenDialog(mainWindow, { title: nativeText('اختر مكان حفظ النسخة الاحتياطية مع المرفقات', 'Choose where to save the backup with attachments'), properties: ['openDirectory', 'createDirectory'] });
           if (!result.canceled) value = await exportBackup(store.state, app.getPath('userData'), result.filePaths[0]);
+          break;
+        }
+        case 'restore': {
+          const result = await dialog.showOpenDialog(mainWindow, { title: nativeText('اختر مجلد نسخة احتياطية من ذكرني', 'Choose a Remember Me backup folder'), properties: ['openDirectory'], defaultPath: path.join(app.getPath('userData'), 'backups') });
+          if (result.canceled) break;
+          const backup = await readBackup(result.filePaths[0], { text: nativeText });
+          const { tasks, notes, attachments } = backup.state;
+          const when = backup.createdAt ? new Date(backup.createdAt).toLocaleString(language() === 'en' ? 'en-US' : 'ar-IQ') : nativeText('غير معروف', 'unknown');
+          const { response } = await dialog.showMessageBox(mainWindow, { type: 'warning', title: nativeText('استعادة نسخة احتياطية', 'Restore a backup'),
+            message: nativeText('ستحل هذه النسخة محل كل مهامك وملاحظاتك الحالية.', 'This backup will replace all your current tasks and notes.'),
+            detail: nativeText(`${tasks.length} مهمة، ${notes.length} ملاحظة، ${attachments.length} مرفق • تاريخ النسخة: ${when}
+${backup.verified ? 'تحققنا من سلامة كل الملفات.' : 'نسخة أقدم دون بصمات: تحققنا من وجود الملفات وأحجامها فقط.'}
+قبل الاستبدال نحفظ نسخة أمان من بياناتك الحالية في مجلد النسخ.`,
+              `${tasks.length} tasks, ${notes.length} notes, ${attachments.length} attachments • Backup date: ${when}
+${backup.verified ? 'Every file was verified.' : 'Older backup without checksums: only file presence and sizes were checked.'}
+A safety copy of your current data is saved in the backups folder first.`),
+            buttons: [nativeText('إلغاء', 'Cancel'), nativeText('استعادة', 'Restore')], defaultId: 0, cancelId: 0 });
+          if (response !== 1) break;
+          preview = null;
+          value = await restoreBackup(app.getPath('userData'), store, backup);
           break;
         }
         case 'dataFolder': await shell.openPath(app.getPath('userData')); break;
