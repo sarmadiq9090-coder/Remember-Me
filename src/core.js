@@ -16,33 +16,77 @@ function date(value) {
   if (typeof value !== 'string' || !Number.isFinite(Date.parse(value))) throw new Error('موعد غير صالح.');
   return new Date(value).toISOString();
 }
+// daily and weekly follow the previous occurrence; days repeats on chosen weekdays (0 = Sunday),
+// interval every N days, and monthly/yearly count from repeatFrom so the 31st never drifts.
+const REPEATS = ['none', 'daily', 'weekly', 'days', 'interval', 'monthly', 'yearly'];
+const RULE_FIELDS = ['repeatEvery', 'repeatDays', 'repeatFrom'];
+function repeatRule(input, repeat, dueAt) {
+  if (repeat === 'interval') return { repeatEvery: Number.isInteger(input.repeatEvery) ? Math.min(365, Math.max(2, input.repeatEvery)) : 2 };
+  if (repeat === 'days') {
+    const days = Array.isArray(input.repeatDays) ? [...new Set(input.repeatDays.filter(d => Number.isInteger(d) && d >= 0 && d <= 6))].sort() : [];
+    return { repeatDays: days.length ? days : [new Date(dueAt).getDay()] };
+  }
+  if (repeat === 'monthly' || repeat === 'yearly') { let from = null; try { from = date(input.repeatFrom); } catch { /* reset below */ } return { repeatFrom: from || dueAt }; }
+  return {};
+}
+// Keeps only the rule fields the task's repeat mode uses.
+function applyRule(task, rule) { for (const key of RULE_FIELDS) delete task[key]; Object.assign(task, rule); }
 function taskInput(input) {
   const dueAt = date(input.dueAt);
-  const repeat = ['none', 'daily', 'weekly'].includes(input.repeat) ? input.repeat : 'none';
+  const repeat = REPEATS.includes(input.repeat) ? input.repeat : 'none';
   if (repeat !== 'none' && !dueAt) throw new Error('حدّد موعدًا للمهمة المتكررة.');
   return { title: title(input.title), body: String(input.body || '').slice(0, 20000),
     priority: ['normal', 'medium', 'high'].includes(input.priority) ? input.priority : 'normal',
-    category: ['personal', 'work', 'study'].includes(input.category) ? input.category : 'personal', dueAt, repeat };
+    category: ['personal', 'work', 'study'].includes(input.category) ? input.category : 'personal', dueAt, repeat, rule: repeat === 'none' ? {} : repeatRule(input, repeat, dueAt) };
 }
 function saveTask(state, input, now = new Date()) {
-  const fields = taskInput(input);
+  const { rule, ...fields } = taskInput(input);
   let task = input.id ? state.tasks.find(t => t.id === input.id) : null;
   fields.attachments = attachmentIds(input.attachments ?? task?.attachments ?? []);
   if (input.id && !task) throw new Error('المهمة لم تعد موجودة.');
   if (task) {
     if (task.completedAt) throw new Error('أعد فتح المهمة قبل تعديلها.');
     const changed = fields.dueAt !== task.dueAt;
+    // A new time or a new repeat mode restarts monthly/yearly counting from the new due date.
+    if ('repeatFrom' in rule && (changed || fields.repeat !== task.repeat)) rule.repeatFrom = fields.dueAt;
     Object.assign(task, fields, { updatedAt: now.toISOString() });
+    applyRule(task, rule);
     if (changed) { task.scheduleAt = fields.dueAt; task.snoozedAt = null; }
   } else {
-    task = { ...fields, id: randomUUID(), scheduleAt: fields.dueAt, createdAt: now.toISOString(), updatedAt: now.toISOString(), completedAt: null, snoozedAt: null };
+    if ('repeatFrom' in rule) rule.repeatFrom = fields.dueAt;
+    task = { ...fields, ...rule, id: randomUUID(), scheduleAt: fields.dueAt, createdAt: now.toISOString(), updatedAt: now.toISOString(), completedAt: null, snoozedAt: null };
     state.tasks.push(task);
   }
   return task;
 }
-function nextOccurrence(value, repeat, now) {
+const DAY = 86400000;
+function monthsLater(start, months) {
+  const next = new Date(start.getFullYear(), start.getMonth() + months, 1, start.getHours(), start.getMinutes(), start.getSeconds(), start.getMilliseconds());
+  next.setDate(Math.min(start.getDate(), new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()));
+  return next;
+}
+// The first occurrence after both `value` (the current one) and `now`, in local time.
+function nextOccurrence(value, repeat, now, rule = {}) {
+  const current = new Date(value);
+  if (repeat === 'monthly' || repeat === 'yearly') {
+    const start = new Date(rule.repeatFrom || value), step = repeat === 'yearly' ? 12 : 1;
+    const elapsed = (current.getFullYear() - start.getFullYear()) * 12 + current.getMonth() - start.getMonth();
+    const behind = (now.getFullYear() - start.getFullYear()) * 12 + now.getMonth() - start.getMonth();
+    let months = Math.max(Math.floor(elapsed / step) * step + step, Math.floor((behind - 1) / step) * step);
+    let next = monthsLater(start, months);
+    while (next <= now || next <= current) next = monthsLater(start, months += step);
+    return next.toISOString();
+  }
+  if (repeat === 'days') {
+    const days = rule.repeatDays?.length ? rule.repeatDays : [current.getDay()];
+    let next = new Date(current);
+    // After a long gap, restart from yesterday at the same local time instead of walking every day.
+    if (now - next > 8 * DAY) next = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, current.getHours(), current.getMinutes(), current.getSeconds(), current.getMilliseconds());
+    do next.setDate(next.getDate() + 1); while (!days.includes(next.getDay()) || next <= now);
+    return next.toISOString();
+  }
   const next = new Date(value);
-  const step = repeat === 'weekly' ? 7 : 1;
+  const step = repeat === 'weekly' ? 7 : repeat === 'interval' ? rule.repeatEvery || 2 : 1;
   next.setDate(next.getDate() + step);
   const days = Math.max(0, Math.floor((now.getTime() - next.getTime()) / 86400000));
   next.setDate(next.getDate() + Math.floor(days / step) * step);
@@ -53,8 +97,10 @@ function completeTask(state, id, now = new Date()) {
   const task = state.tasks.find(t => t.id === id);
   if (!task || task.completedAt) return;
   if (task.repeat !== 'none' && task.scheduleAt) {
-    state.tasks.push({ ...task, id: randomUUID(), repeat: 'none', sourceId: task.id, completedAt: now.toISOString() });
-    task.dueAt = nextOccurrence(task.scheduleAt, task.repeat, now);
+    const done = { ...task, id: randomUUID(), repeat: 'none', sourceId: task.id, completedAt: now.toISOString() };
+    applyRule(done, {});
+    state.tasks.push(done);
+    task.dueAt = nextOccurrence(task.scheduleAt, task.repeat, now, task);
     task.scheduleAt = task.dueAt;
     task.snoozedAt = null;
     task.updatedAt = now.toISOString();
@@ -91,8 +137,9 @@ function validateState(data) {
   const ids = new Set();
   for (const task of data.tasks) {
     // Out-of-range fields are normalized rather than rejected, so one odd value never hides the whole file.
-    const { body, priority, category, dueAt, repeat } = taskInput(task);
+    const { body, priority, category, dueAt, repeat, rule } = taskInput(task);
     Object.assign(task, { body, priority, category, dueAt, repeat });
+    applyRule(task, rule);
     if (typeof task.id !== 'string' || ids.has(task.id)) throw new Error('بيانات المهام غير صالحة.');
     ids.add(task.id);
     task.scheduleAt = date(task.scheduleAt); task.completedAt = date(task.completedAt);

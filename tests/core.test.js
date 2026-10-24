@@ -116,7 +116,7 @@ test('loading normalizes out-of-range fields instead of rejecting the file, and 
   assert.deepEqual(validateState(JSON.parse(JSON.stringify(valid))), before);
 
   const odd = JSON.parse(JSON.stringify(valid));
-  Object.assign(odd.tasks[0], { priority: 'urgent', category: 42, repeat: 'monthly', snoozedAt: 'yesterday' });
+  Object.assign(odd.tasks[0], { priority: 'urgent', category: 42, repeat: 'fortnightly', snoozedAt: 'yesterday' });
   odd.tasks.push({ ...odd.tasks[0], id: 'legacy', repeat: 'weekly', scheduleAt: null });
   odd.notes[0].color = 'neon';
   odd.settings = 'broken';
