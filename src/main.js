@@ -6,6 +6,7 @@ const { Store, saveTask, completeTask, snoozeTask, dueTasks } = require('./core'
 const { attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
+const { checkRequest, fromPage } = require('./ipc');
 const testMode = process.env.WAQT_TEST === '1';
 app.setName('ذكرني');
 app.setPath('userData', testMode && process.env.WAQT_DATA_DIR ? process.env.WAQT_DATA_DIR : path.join(app.getPath('appData'), 'Waqt'));
@@ -104,8 +105,10 @@ async function start() {
   tray.on('click', showMain);
   ipcMain.handle('waqt:action', async (event, action, payload) => {
     try {
-      if (![mainWindow?.webContents, alertWindow?.webContents].includes(event.sender)) throw new Error('طلب غير مسموح.');
-      if (event.sender === alertWindow?.webContents && !['alerts', 'language', 'complete', 'snooze', 'open', 'openAttachment', 'imagePreview'].includes(action)) throw new Error('طلب غير مسموح.');
+      const fromAlert = !!alertWindow && event.sender === alertWindow.webContents;
+      const page = path.join(__dirname, '../ui', fromAlert ? 'alert.html' : 'index.html');
+      if ((!fromAlert && event.sender !== mainWindow?.webContents) || !fromPage(event.senderFrame?.url, page)) throw new Error(nativeText('طلب غير مسموح.', 'Request not allowed.'));
+      payload = checkRequest(action, payload, { fromAlert, text: nativeText });
       let value;
       switch (action) {
         case 'state': value = { ...store.state, dataPath: app.getPath('userData'), packaged: app.isPackaged, recovered: store.recovered, driveBackup: driveBackup.status() }; break;
