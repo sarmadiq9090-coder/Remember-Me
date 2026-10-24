@@ -10,12 +10,15 @@ const { checkRequest, fromPage } = require('./ipc');
 const { alertBounds } = require('./placement');
 const { readBackup, restoreBackup } = require('./backups');
 const { createRepeatBeep } = require('./repeat-beep');
+const { createLogger } = require('./logger');
 const testMode = process.env.WAQT_TEST === '1';
 // Lets the desktop tests read early notifications without showing them.
 if (testMode) globalThis.waqtTest = { get early() { return earlyLog; } };
 app.setName('ذكرني');
 app.setPath('userData', testMode && process.env.WAQT_DATA_DIR ? process.env.WAQT_DATA_DIR : path.join(app.getPath('appData'), 'Waqt'));
 app.setAppUserModelId('com.waqt.reminder');
+// Local log for bug reports: ids, counts and outcomes only, never task or note content.
+const log = createLogger(app.getPath('userData'));
 let mainWindow, alertWindow, tray, store, quitting = false, interval, preview = null, driveBackup, backupInterval;
 const imagePreview = createPreviewService(nativeImage);
 let previousDue = new Set();
@@ -46,7 +49,7 @@ let trayWaiting = false;
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => showMain());
-  app.whenReady().then(start).catch(error => { dialog.showErrorBox('تعذّر تشغيل ذكرني', error.message); app.quit(); });
+  app.whenReady().then(start).catch(error => { log.error('start-failed', error); dialog.showErrorBox('تعذّر تشغيل ذكرني', error.message); app.quit(); });
 }
 // Window backgrounds match ui/dark.css so opening a window never flashes the other theme.
 function background(light, dark) { return nativeTheme.shouldUseDarkColors ? dark : light; }
@@ -102,7 +105,15 @@ function rebuildTrayMenu() {
 }
 function activeAlerts() { const queue = alertQueue(store.state, preview); preview = queue.preview; return queue.alerts; }
 // The scheduler must survive any single failure; an exception here would otherwise repeat every second.
-function scan() { try { scanNow(); } catch (error) { console.error('Reminder scan failed:', error); } }
+// A failure that repeats every second is logged once, then again only if it changes or every 10 minutes.
+let lastScanError = { message: '', at: 0 };
+function scan() {
+  try { scanNow(); }
+  catch (error) {
+    console.error('Reminder scan failed:', error);
+    if (error?.message !== lastScanError.message || Date.now() - lastScanError.at > 600000) { lastScanError = { message: error?.message, at: Date.now() }; log.error('scan-failed', error); }
+  }
+}
 function scanNow() {
   announceUpcoming();
   const tasks = activeAlerts();
@@ -132,7 +143,7 @@ function scanNow() {
 }
 function purgeExpiredTrash() {
   const limit = Date.now() - TRASH_DAYS * 86400000;
-  if ([...store.state.tasks, ...store.state.notes].some(i => i.deletedAt && Date.parse(i.deletedAt) <= limit)) store.change(s => purgeTrash(s));
+  if ([...store.state.tasks, ...store.state.notes].some(i => i.deletedAt && Date.parse(i.deletedAt) <= limit)) log.info('trash-purged', { count: store.change(s => purgeTrash(s)) });
 }
 function setLogin(enabled) {
   if (testMode) return;
@@ -144,9 +155,11 @@ async function start() {
   session.defaultSession.setPermissionRequestHandler((contents, permission, callback) => callback(false));
   session.defaultSession.setPermissionCheckHandler(() => false);
   store = new Store(app.getPath('userData'));
+  log.info('start', { version: app.getVersion(), packaged: app.isPackaged, tasks: store.state.tasks.length, notes: store.state.notes.length, attachments: store.state.attachments.length });
+  if (store.recovered) log.warn('data-recovered-from-bak');
   nativeTheme.themeSource = store.state.settings.theme;
   nativeTheme.on('updated', applyTheme);
-  driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, notifyViews, { text: nativeText });
+  driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, notifyViews, { text: nativeText, log });
   createMain();
   tray = new Tray(nativeImage.createFromPath(icon));
   rebuildTrayMenu();
@@ -275,6 +288,7 @@ async function start() {
           if (result.canceled) break;
           const skipped = [];
           value = { folder: await exportBackup(store.state, app.getPath('userData'), result.filePaths[0], { skipped }), skipped };
+          log.info('export', { attachments: store.state.attachments.length, skipped: skipped.length });
           break;
         }
         case 'restore': {
@@ -295,6 +309,7 @@ A safety copy of your current data is saved in the backups folder first.`),
           if (response !== 1) break;
           preview = null;
           value = await restoreBackup(app.getPath('userData'), store, backup);
+          log.info('restore', { tasks: tasks.length, notes: notes.length, attachments: attachments.length, verified: backup.verified });
           break;
         }
         case 'storage': value = await storageUsage(store.state, app.getPath('userData')); break;
@@ -307,7 +322,7 @@ A safety copy of your current data is saved in the backups folder first.`),
             detail: nativeText('لا تتبع هذه الملفات أي مهمة أو ملاحظة، بما فيها المهام المكتملة. النسخ الاحتياطية تحتفظ بنسخها الخاصة.', 'No task or note uses these files, including completed tasks. Backups keep their own copies.'),
             buttons: [nativeText('إلغاء', 'Cancel'), nativeText('حذف', 'Delete')], defaultId: 0, cancelId: 0 });
           if (response !== 1) break;
-          await removeOrphans(store, app.getPath('userData'));
+          log.info('clean-orphans', { count: (await removeOrphans(store, app.getPath('userData'))).count });
           value = await storageUsage(store.state, app.getPath('userData'));
           break;
         }
@@ -317,13 +332,13 @@ A safety copy of your current data is saved in the backups folder first.`),
       }
       if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder'].includes(action)) { scan(); notifyViews(); }
       return { ok: true, value };
-    } catch (error) { return { ok: false, error: error.message }; }
+    } catch (error) { log.warn('action-failed', error, { action: typeof action === 'string' ? action.slice(0, 40) : typeof action }); return { ok: false, error: error.message }; }
   });
   interval = setInterval(scan, 1000);
   purgeExpiredTrash();
-  backupInterval = setInterval(() => { driveBackup.tick(); try { purgeExpiredTrash(); } catch (error) { console.error('Trash purge failed:', error); } }, 60000);
+  backupInterval = setInterval(() => { driveBackup.tick(); try { purgeExpiredTrash(); } catch (error) { console.error('Trash purge failed:', error); log.error('trash-purge-failed', error); } }, 60000);
   if (!testMode) driveBackup.tick();
-  powerMonitor.on('resume', scan);
+  powerMonitor.on('resume', () => { log.info('resume'); scan(); });
   powerMonitor.on('unlock-screen', scan);
   screen.on('display-metrics-changed', placeAlert);
   screen.on('display-removed', placeAlert);
@@ -333,4 +348,4 @@ A safety copy of your current data is saved in the backups folder first.`),
 app.on('web-contents-created', (event, contents) => contents.on('will-attach-webview', e => e.preventDefault()));
 app.on('activate', showMain);
 app.on('window-all-closed', () => {});
-app.on('before-quit', () => { quitting = true; clearInterval(interval); clearInterval(backupInterval); });
+app.on('before-quit', () => { log.info('quit'); quitting = true; clearInterval(interval); clearInterval(backupInterval); });

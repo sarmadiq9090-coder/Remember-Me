@@ -15,6 +15,7 @@ src/attachments.js attachment import, lookup, orphan cleanup and backup export
 src/backups.js     reading, verifying, restoring and rotating backup folders
 src/drive-backup.js daily copies into a user-chosen Google Drive sync folder
 src/image-preview.js small cached thumbnails for image attachments
+src/logger.js      the rotating local log
 ui/                index.html (main window), alert.html (sticky alert), shared scripts and CSS
 tools/             packaging, installer, icon and dark-theme generators
 tests/             unit tests (node --test) and Playwright desktop suites (*.cjs)
@@ -74,6 +75,7 @@ data.json.damaged-<time>        a file that failed to load, kept untouched
 attachments/<id>/<name>         one folder per attachment
 backups/Waqt-backup-<time>/     automatic and safety backups
 drive-backup.json               Google Drive backup settings and status
+logs/remember-me.log[.1|.2]     the local log (see Logging)
 ```
 
 `Store` (in `src/core.js`) validates every change before writing it: it copies `data.json` to
@@ -119,7 +121,7 @@ trash for 30 days.
 
 ## Scheduler
 
-`scan()` runs every second, on resume and on unlock, and never throws (a failure is reported and the
+`scan()` runs every second, on resume and on unlock, and never throws (a failure is logged and the
 next tick tries again). Each scan:
 
 1. shows early notifications from `upcomingTasks()` (`remindBefore` minutes before `dueAt`), once per
@@ -153,6 +155,32 @@ past. A second timer, every minute, runs the Drive backup tick and removes trash
   snapshot is reused only while the data is unchanged and it is under a day old. Settings warns when
   the folder has been missing for more than a day. Optional rotation keeps only the newest automatic
   copies; manual exports and safety copies are never rotated.
+
+## Logging
+
+`src/logger.js` appends one JSON line per event to `logs/remember-me.log` in the data folder,
+rotating at 1 MB and keeping three files (at most 3 MB), so a user can attach it to a bug report.
+Settings' "Open data folder" shows it. It records:
+
+- `start` (version, whether packaged, and task, note and attachment counts), `quit` and `resume`;
+- `data-recovered-from-bak` when `data.json` could not be read and the `.bak` copy was loaded;
+- `start-failed`, `scan-failed` (once per distinct error, then at most every 10 minutes) and
+  `trash-purge-failed`;
+- `action-failed` with the IPC action name, for any request that returned an error;
+- `export`, `restore`, `clean-orphans`, `trash-purged`, `drive-backup`, `drive-backup-failed` and
+  `backup-rotation-failed`, with counts.
+
+It never records task, note or attachment titles, bodies or file names. Callers pass only ids,
+counts and outcomes. Error messages have every «…», "…" and '…' quotation blanked, because the
+app's messages and Node's file errors put names and paths there, and stack frames keep only
+`file:line:column`, so the Windows user name in the install path is not logged. Logging never
+throws.
+
+Chromium's own files: Electron starts no crash reporter unless `crashReporter.start()` is called,
+and the app never calls it, so no crash dumps are written or uploaded and no `Crashpad` folder is
+created. No `debug.log` is written unless Chromium logging is turned on with `--enable-logging`.
+The data folder also holds Chromium's caches (GPU and shader caches, Local Storage and so on),
+which Chromium keeps bounded. Backups never include them.
 
 ## Packaging and releases
 
