@@ -72,7 +72,7 @@ test('new installs start in English, saved languages are kept and unknown ones f
   assert.equal(validateState(structuredClone(v140)).settings.language, 'ar', 'A v1.4.0 file keeps Arabic');
   for (const code of ['en', 'fr', 'zh-CN', 'pt-BR']) assert.equal(validateState({ ...structuredClone(v140), settings: { ...v140.settings, language: code } }).settings.language, code);
   for (const code of ['xx', 'EN', 'ku', 5, null]) assert.equal(validateState({ ...structuredClone(v140), settings: { ...v140.settings, language: code } }).settings.language, 'en', String(code));
-  const { language, ...older } = v140.settings;
+  const older = { ...v140.settings }; delete older.language;
   assert.equal(validateState({ ...structuredClone(v140), settings: older }).settings.language, 'ar', 'Settings from before the language option were Arabic');
   assert.equal(validateState({ ...structuredClone(v140), settings: 'broken' }).settings.language, 'en');
 });

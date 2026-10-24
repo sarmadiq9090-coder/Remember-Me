@@ -123,6 +123,6 @@ function fromICS(text) {
     else if (key === 'CATEGORIES') current.tags = value.split(',').map(t => icsUnescape(t).trim()).filter(Boolean);
     else if (key === 'STATUS' && /^(COMPLETED|CANCELLED)$/i.test(value)) current.skip = true;
   }
-  return items.filter(i => !i.skip).map(({ skip, ...item }) => item);
+  return items.filter(i => !i.skip).map(item => { delete item.skip; return item; });
 }
 module.exports = { MAX_ITEMS, toCSV, fromCSV, toICS, fromICS };
