@@ -189,7 +189,9 @@ which Chromium keeps bounded. Backups never include them.
   and English Chromium locales.
 - `pnpm run installer` (`tools/installer.cjs`) turns that folder into a per-user NSIS installer,
   `release/installer/Remember-Me-Setup-<version>-x64.exe`.
-- `.github/workflows/test.yml` runs the unit tests on Windows for every pull request.
+- `.github/workflows/test.yml` runs the unit tests and ESLint on Windows for every pull request.
+  `.github/workflows/desktop.yml` packages the app and runs `tests/desktop-smoke.cjs` against the
+  packaged build with Playwright.
   `.github/workflows/release.yml` runs on a `v*` tag: it checks the tag against `package.json`,
   runs the tests, builds the installer, writes `SHA256SUMS.txt`, attests the build provenance and
   publishes a GitHub release.
