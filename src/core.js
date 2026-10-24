@@ -53,6 +53,22 @@ function normalizeTags(value) {
   }
   return out;
 }
+// Up to 50 checklist steps of up to 200 characters, each with a stable id.
+function normalizeChecklist(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  return value.filter(step => step && typeof step.text === 'string' && step.text.trim()).slice(0, 50).map(step => {
+    let id = typeof step.id === 'string' && /^[\w-]{1,40}$/.test(step.id) && !seen.has(step.id) ? step.id : randomUUID();
+    seen.add(id);
+    return { id, text: step.text.trim().slice(0, 200), done: step.done === true };
+  });
+}
+function setChecklist(task, value) { const steps = normalizeChecklist(value); if (steps.length) task.checklist = steps; else delete task.checklist; }
+function toggleStep(state, taskId, stepId) {
+  const step = state.tasks.find(t => t.id === taskId && !t.completedAt && !t.deletedAt)?.checklist?.find(s => s.id === stepId);
+  if (!step) throw new Error('هذه الخطوة لم تعد موجودة.');
+  step.done = !step.done;
+}
 function setTags(task, value) { const tags = normalizeTags(value); if (tags.length) task.tags = tags; else delete task.tags; }
 function setEarly(task, minutes) { const value = early(minutes, task.dueAt); if (value) task.remindBefore = value; else delete task.remindBefore; }
 function saveTask(state, input, now = new Date()) {
@@ -69,12 +85,14 @@ function saveTask(state, input, now = new Date()) {
     applyRule(task, rule);
     setEarly(task, input.remindBefore);
     setTags(task, input.tags ?? task.tags);
+    setChecklist(task, input.checklist ?? task.checklist);
     if (changed) { task.scheduleAt = fields.dueAt; task.snoozedAt = null; }
   } else {
     if ('repeatFrom' in rule) rule.repeatFrom = fields.dueAt;
     task = { ...fields, ...rule, id: randomUUID(), scheduleAt: fields.dueAt, createdAt: now.toISOString(), updatedAt: now.toISOString(), completedAt: null, snoozedAt: null };
     setEarly(task, input.remindBefore);
     setTags(task, input.tags);
+    setChecklist(task, input.checklist);
     state.tasks.push(task);
   }
   return task;
@@ -120,7 +138,10 @@ function completeTask(state, id, now = new Date()) {
   if (task.repeat !== 'none' && task.scheduleAt) {
     const done = { ...task, id: randomUUID(), repeat: 'none', sourceId: task.id, completedAt: now.toISOString() };
     applyRule(done, {});
+    if (done.checklist) done.checklist = done.checklist.map(step => ({ ...step }));
     state.tasks.push(done);
+    // The next occurrence starts with every step unticked; the history copy keeps what was done.
+    if (task.checklist) task.checklist = task.checklist.map(step => ({ ...step, done: false }));
     task.dueAt = nextOccurrence(task.scheduleAt, task.repeat, now, task);
     task.scheduleAt = task.dueAt;
     task.snoozedAt = null;
@@ -199,6 +220,7 @@ function validateState(data) {
     try { task.snoozedAt = date(task.snoozedAt); } catch { task.snoozedAt = null; }
     if ('remindBefore' in task) setEarly(task, task.remindBefore);
     if ('tags' in task) setTags(task, task.tags);
+    if ('checklist' in task) setChecklist(task, task.checklist);
   }
   for (const item of [...data.tasks, ...data.notes]) if ('deletedAt' in item) { try { item.deletedAt = date(item.deletedAt); } catch { item.deletedAt = null; } }
   for (const note of data.notes) {
@@ -270,4 +292,4 @@ class Store {
     this.state = draft;
   }
 }
-module.exports = { normalizeTags, EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, nextOccurrence, validateState, Store };
+module.exports = { normalizeChecklist, toggleStep, normalizeTags, EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, nextOccurrence, validateState, Store };

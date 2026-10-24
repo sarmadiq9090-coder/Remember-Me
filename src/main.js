@@ -2,7 +2,7 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, Notification, nativeTheme } = require('electron');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
-const { Store, saveTask, completeTask, undoComplete, snoozeTask, dueTasks, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
+const { Store, saveTask, completeTask, undoComplete, toggleStep, snoozeTask, dueTasks, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
 const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
@@ -169,6 +169,7 @@ async function start() {
           store.change(s => undoComplete(s, payload.id, String(payload.copyId || '')));
           undoable = null;
           break;
+        case 'toggleStep': store.change(s => toggleStep(s, payload.id, String(payload.stepId || ''))); break;
         case 'undoable': value = undoable && undoable.until > Date.now() ? undoable : null; break;
         case 'snooze':
           if (payload.id === '__preview') { if (!payload.until || Date.parse(payload.until) <= Date.now()) throw new Error('اختر وقتًا لاحقًا.'); preview = null; }

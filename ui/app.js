@@ -125,7 +125,7 @@ function taskCard(t) {
   const due = t.dueAt ? `<span class="${overdue ? 'overdue' : ''}">${icon('clock')}${esc(dateLabel(t.dueAt))}${overdue ? ` • ${tr('حان الموعد','Due now')}` : ''}</span>` : `<span>${tr('دون موعد','No due date')}</span>`;
   return `<article class="task-row ${t.completedAt ? 'completed' : ''}" data-id="${esc(t.id)}">
     <button class="task-check" data-action="${t.completedAt ? 'reopen' : 'complete'}" aria-label="${t.completedAt ? tr('إعادة فتح','Reopen') : tr('إكمال','Complete')} ${esc(t.title)}" title="${t.completedAt ? tr('إعادة فتح دون موعد','Reopen without due date') : tr('تم الإنجاز','Mark complete')}">${t.completedAt ? icon('check') : ''}</button>
-    <div class="task-info"><div ${!t.completedAt ? 'data-action="edit" tabindex="0" role="button" class="task-edit-target"' : ''}><div class="task-name" dir="auto">${esc(t.title)}</div>${t.body ? `<p class="task-body" dir="auto">${esc(t.body)}</p>` : ''}<div class="task-meta">${due}${t.repeat !== 'none' ? `<span>${icon('repeat')}${esc(repeatLabel(t))}</span>` : ''}${(t.tags || []).map(tag => `<span class="tag-chip"><bdi>#${esc(tag)}</bdi></span>`).join('')}${t.remindBefore && !t.completedAt ? `<span title="${tr('تنبيه مسبق', 'Early notice')}">${icon('bell')}${esc($('task-before').querySelector(`option[value="${t.remindBefore}"]`)?.textContent || '')}</span>` : ''}${t.snoozedAt && !t.completedAt ? `<span>${tr('مؤجّلة','Snoozed')}</span>` : ''}</div></div>${t.attachments?.length ? `<div class="file-chips">${attachmentChips(t.attachments)}</div>` : ''}</div>
+    <div class="task-info"><div ${!t.completedAt ? 'data-action="edit" tabindex="0" role="button" class="task-edit-target"' : ''}><div class="task-name" dir="auto">${esc(t.title)}</div>${t.body ? `<p class="task-body" dir="auto">${esc(t.body)}</p>` : ''}<div class="task-meta">${due}${t.repeat !== 'none' ? `<span>${icon('repeat')}${esc(repeatLabel(t))}</span>` : ''}${(t.tags || []).map(tag => `<span class="tag-chip"><bdi>#${esc(tag)}</bdi></span>`).join('')}${t.remindBefore && !t.completedAt ? `<span title="${tr('تنبيه مسبق', 'Early notice')}">${icon('bell')}${esc($('task-before').querySelector(`option[value="${t.remindBefore}"]`)?.textContent || '')}</span>` : ''}${t.snoozedAt && !t.completedAt ? `<span>${tr('مؤجّلة','Snoozed')}</span>` : ''}</div></div>${stepsMarkup(t)}${t.attachments?.length ? `<div class="file-chips">${attachmentChips(t.attachments)}</div>` : ''}</div>
     ${t.priority !== 'normal' ? `<span class="priority ${t.priority}">${t.priority === 'high' ? tr('أولوية عالية','High priority') : tr('متوسطة','Medium')}</span>` : ''}<div class="task-actions">${!t.completedAt ? `<button class="icon-button" data-action="edit" title="${tr('تعديل المهمة','Edit task')}" aria-label="${tr('تعديل المهمة','Edit task')}">${icon('edit')}</button>` : ''}<button class="icon-button" data-action="delete" title="${tr('حذف المهمة','Delete task')}" aria-label="${tr('حذف المهمة','Delete task')}">${icon('trash')}</button></div></article>`;
 }
 function renderNotes() {
@@ -148,6 +148,7 @@ function openTaskEditor(task) {
   $('task-every').value = task?.repeatEvery || 2;
   $('task-before').value = String(task?.remindBefore || 0);
   $('task-tags').value = (task?.tags || []).join(tr('، ', ', '));
+  steps = (task?.checklist || []).map(s => ({ ...s })); renderSteps();
   toggleRepeat();
   taskAttachments = [...(task?.attachments || [])]; renderEditorFiles('task');
   $('task-dialog-title').textContent = task?.id ? tr('تفاصيل المهمة','Task details') : tr('مساحة لمهمة جديدة','Space for a new task');
@@ -159,6 +160,16 @@ window.openTaskEditor = openTaskEditor;
 function weekOrder() { const chosen = state?.settings?.weekStart; const start = [0, 1, 6].includes(chosen) ? chosen : uiLanguage === 'en' ? 0 : 6; return Array.from({ length: 7 }, (_, i) => (start + i) % 7); }
 function weekdayName(day, style = 'short') { return new Date(2026, 9, 25 + day).toLocaleDateString(locale(), { weekday: style }); }
 let repeatDays = [];
+let steps = [];
+// Steps keep their ids while editing so ticks survive renaming or reordering.
+function renderSteps() {
+  $('task-steps').innerHTML = steps.map((step, i) => `<li><input type="checkbox" data-step-done="${i}" ${step.done ? 'checked' : ''} aria-label="${tr('تم', 'Done')}"><input type="text" dir="auto" maxlength="200" data-step-text="${i}" value="${esc(step.text)}" placeholder="${tr('خطوة', 'Step')} ${i + 1}"><button type="button" class="icon-button" data-step-remove="${i}" aria-label="${tr('حذف الخطوة', 'Remove step')}">${icon('x')}</button></li>`).join('');
+}
+function stepsMarkup(t) {
+  if (!t.checklist?.length) return '';
+  const done = t.checklist.filter(s => s.done).length;
+  return `<ul class="step-list" aria-label="${tr('خطوات المهمة', 'Steps')} ${num(done)}/${num(t.checklist.length)}">${t.checklist.map(s => `<li><label><input type="checkbox" data-toggle-step="${esc(s.id)}" ${s.done ? 'checked' : ''} ${t.completedAt ? 'disabled' : ''}><span dir="auto" class="${s.done ? 'step-done' : ''}">${esc(s.text)}</span></label></li>`).join('')}</ul>`;
+}
 function renderRepeatDays() {
   $('repeat-days').innerHTML = weekOrder().map(d => `<button type="button" data-day="${d}" aria-pressed="${repeatDays.includes(d)}" title="${esc(weekdayName(d, 'long'))}">${esc(weekdayName(d))}</button>`).join('');
 }
@@ -272,7 +283,7 @@ $('task-form').addEventListener('submit', async e => {
   e.preventDefault(); const submit = e.submitter; submit.disabled = true;
   try {
     await api('saveTask', { id: $('task-id').value || undefined, title: $('task-title').value, body: $('task-body').value, attachments: taskAttachments, category: state.tasks.find(t => t.id === $('task-id').value)?.category || 'personal', priority: $('task-priority').value,
-      dueAt: $('task-reminder').checked ? (originalTaskDue && $('task-due').value === originalTaskDueValue ? originalTaskDue : new Date($('task-due').value).toISOString()) : null, repeat: $('task-reminder').checked ? $('task-repeat').value : 'none', repeatDays, repeatEvery: Number($('task-every').value), remindBefore: $('task-reminder').checked ? Number($('task-before').value) : 0, tags: parseTags($('task-tags').value) });
+      dueAt: $('task-reminder').checked ? (originalTaskDue && $('task-due').value === originalTaskDueValue ? originalTaskDue : new Date($('task-due').value).toISOString()) : null, repeat: $('task-reminder').checked ? $('task-repeat').value : 'none', repeatDays, repeatEvery: Number($('task-every').value), remindBefore: $('task-reminder').checked ? Number($('task-before').value) : 0, tags: parseTags($('task-tags').value), checklist: steps.filter(s => s.text.trim()) });
     $('task-dialog').close(); await refresh(); toast(tr('حُفظت المهمة. خطوة جديدة في مكانها.','Task saved. Your next step is in place.'));
   } catch (err) { $('task-error').textContent = err.message; } finally { submit.disabled = false; }
 });
@@ -280,7 +291,17 @@ $('quick-form').addEventListener('submit', async e => {
   e.preventDefault(); const input = $('quick-title');
   try { await api('saveTask', { title: input.value }); input.value = ''; if (view === 'upcoming') view = 'all'; await refresh(); toast(tr('أُضيفت المهمة. يمكنك فتحها لإضافة موعد.','Task added. Open it to add a due time.')); } catch (err) { toast(err.message); }
 });
+$('add-step').addEventListener('click', () => { steps.push({ text: '', done: false }); renderSteps(); $('task-steps').querySelector('li:last-child input[type=text]').focus(); });
+$('task-steps').addEventListener('input', e => { if (e.target.dataset.stepText) steps[e.target.dataset.stepText].text = e.target.value; });
+$('task-steps').addEventListener('change', e => { if (e.target.dataset.stepDone) steps[e.target.dataset.stepDone].done = e.target.checked; });
+$('task-steps').addEventListener('click', e => { const b = e.target.closest('[data-step-remove]'); if (b) { steps.splice(Number(b.dataset.stepRemove), 1); renderSteps(); } });
+$('task-steps').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset.stepText) { e.preventDefault(); $('add-step').click(); } });
+$('task-list').addEventListener('change', async e => {
+  const box = e.target.closest('[data-toggle-step]'), row = e.target.closest('[data-id]'); if (!box || !row) return;
+  try { await api('toggleStep', { id: row.dataset.id, stepId: box.dataset.toggleStep }); await refresh(); } catch (err) { toast(err.message); }
+});
 $('task-list').addEventListener('click', async e => {
+  if (e.target.closest('.step-list')) return;
   const file = e.target.closest('[data-file-id]'); if (file) return openFile(file.dataset.fileId);
   const button = e.target.closest('[data-action]'), row = e.target.closest('[data-id]'); if (!button || !row) return;
   const id = row.dataset.id, action = button.dataset.action;

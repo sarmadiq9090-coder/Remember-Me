@@ -196,3 +196,22 @@ test('tags are trimmed, de-duplicated, limited and kept through edits, repeats a
   assert.ok(!('tags' in saveTask(s, { title: 'بلا وسوم' })));
   assert.deepEqual(validateState({ ...initialState(), tasks: [{ ...t, tags: ['a', 'A', 3] }] }).tasks[0].tags, ['a']);
 });
+test('checklist steps are validated, ticked one by one and reset on the next occurrence', () => {
+  const { normalizeChecklist, toggleStep, validateState } = require('../src/core');
+  const steps = normalizeChecklist([{ text: ' شراء الخبز ' }, { text: '' }, { id: 'a', text: 'غسل', done: true }, { id: 'a', text: 'مكرر' }, null, { text: 'x'.repeat(300) }]);
+  assert.deepEqual(steps.map(s => s.text), ['شراء الخبز', 'غسل', 'مكرر', 'x'.repeat(200)]);
+  assert.equal(new Set(steps.map(s => s.id)).size, 4, 'Duplicate ids are replaced');
+  assert.equal(normalizeChecklist(Array.from({ length: 60 }, (_, i) => ({ text: 's' + i }))).length, 50);
+  const s = initialState();
+  const t = saveTask(s, { title: 'روتين', dueAt: '2026-10-24T09:00:00.000Z', repeat: 'daily', checklist: [{ text: 'أ' }, { text: 'ب' }] });
+  toggleStep(s, t.id, t.checklist[0].id);
+  assert.deepEqual(t.checklist.map(x => x.done), [true, false]);
+  saveTask(s, { id: t.id, title: 'روتين', dueAt: t.dueAt, repeat: 'daily' });
+  assert.equal(t.checklist.length, 2, 'Saving without steps keeps them');
+  completeTask(s, t.id, new Date('2026-10-24T10:00:00Z'));
+  assert.deepEqual(s.tasks.find(x => x.completedAt).checklist.map(x => x.done), [true, false], 'History keeps the ticks');
+  assert.deepEqual(t.checklist.map(x => x.done), [false, false], 'The next occurrence starts unticked');
+  assert.throws(() => toggleStep(s, t.id, 'missing'), /الخطوة/);
+  assert.ok(!('checklist' in saveTask(s, { title: 'بلا خطوات', checklist: [{ text: '  ' }] })));
+  assert.equal(validateState({ ...initialState(), tasks: [{ ...t, checklist: [{ text: 'ok', done: 'yes' }] }] }).tasks[0].checklist[0].done, false);
+});
