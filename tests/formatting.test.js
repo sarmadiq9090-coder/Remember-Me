@@ -31,3 +31,16 @@ test('dates, times and counts use Western digits in every interface language', (
   assert.match(arabic(`dateLabel(new Date(2027, 1, 14, 21, 5).toISOString())`), /14/);
   assert.equal(arabic('locale()'), 'ar-IQ-u-nu-latn');
 });
+
+test('tags survive the editor round trip in every interface language', () => {
+  for (const { code } of require('../ui/lib/translate').LOCALES) {
+    const run = loadUi(code);
+    run(`uiMessages = ${fs.readFileSync(path.join(__dirname, '../ui/locales', code + '.json'), 'utf8')}; uiFallback = uiMessages;`);
+    // The editor fills the tag field with tr(", ") between tags; saving parses the field again.
+    const tags = ['work', 'home', '家族', 'عمل'];
+    assert.deepEqual(JSON.parse(run(`JSON.stringify(parseTags(${JSON.stringify(tags)}.join(tr(", "))))`)), tags, code);
+  }
+  const run = loadUi('en');
+  assert.deepEqual(JSON.parse(run('JSON.stringify(parseTags("仕事、家，週末；買い物､メモ"))')), ['仕事', '家', '週末', '買い物', 'メモ'], 'CJK commas and semicolons typed by hand');
+  assert.deepEqual(JSON.parse(run('JSON.stringify(parseTags("عمل، بيت؛ a; b,c"))')), ['عمل', 'بيت', 'a', 'b', 'c']);
+});

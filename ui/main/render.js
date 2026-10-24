@@ -76,4 +76,3 @@ function renderTagFilters() {
   $('filters').insertAdjacentHTML('beforeend', tags.map(tag => `<button class="filter" data-filter="tag:${esc(tag)}"><bdi>#${esc(tag)}</bdi></button>`).join(''));
   $('tag-options').innerHTML = tags.map(tag => `<option value="${esc(tag)}">`).join('');
 }
-function parseTags(text) { return text.split(/[,،;؛]/).map(t => t.trim()).filter(Boolean); }

@@ -80,6 +80,10 @@ function brandMark(small = false) {
 }
 function hydrateBrandMarks(root = document) { root.querySelectorAll('[data-brand-mark]').forEach(el => { el.innerHTML = brandMark(el.dataset.brandMark === 'small'); }); }
 async function api(action, payload) { const result = await window.waqt.call(action, payload); if (!result.ok) throw new Error(result.error); return result.value; }
+// Tags are separated by commas or semicolons in any script: Latin, Arabic (، ؛) and CJK (、 ， ､ ；).
+// The tag field is filled with tr(", "), which every locale translates to one of these.
+const TAG_SEPARATORS = /[,;،؛、，､；]/;
+function parseTags(text) { return text.split(TAG_SEPARATORS).map(t => t.trim()).filter(Boolean); }
 function fileSize(bytes) { return bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1048576).toFixed(1)} MB`; }
 function fileBadge(name) { const ext = name.includes('.') ? name.split('.').pop().toUpperCase() : 'FILE'; return ext.slice(0, 5); }
 function isImageFile(record) { return /\.(png|jpe?g|webp|gif|bmp|ico|avif)$/i.test(record.name); }
