@@ -1,7 +1,7 @@
 'use strict';
 const path = require('node:path');
 const { fileURLToPath } = require('node:url');
-const { LINKS } = require('./about');
+const { LINKS } = require('./platform/about');
 const ACTIONS = new Set(['state', 'alerts', 'language', 'saveTask', 'complete', 'skip', 'snooze', 'reopen', 'deleteTask', 'saveNote', 'deleteNote',
   'attachFiles', 'openAttachment', 'imagePreview', 'chooseDriveFolder', 'driveBackupNow', 'driveAutomatic', 'driveKeep', 'driveHelp', 'openDriveFolder',
   'undoComplete', 'undoable', 'toggleStep', 'restoreTask', 'restoreNote', 'purgeTask', 'purgeNote', 'emptyTrash',

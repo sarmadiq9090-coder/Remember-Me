@@ -3,7 +3,7 @@ const path = require('node:path');
 const { build, Platform, Arch } = require('electron-builder');
 const root = path.resolve(__dirname, '..');
 const version = require('../package.json').version;
-const { FEED } = require('../src/updates.js');
+const { FEED } = require('../src/platform/updates.js');
 // The license page shows the privacy notice (installer/privacy-<lang>.txt) above the MIT license,
 // in the language chosen for the installer. electron-builder finds license_<lang>.txt in the build
 // resources folder; NSIS needs CRLF line endings and a UTF-8 byte order mark for Arabic.

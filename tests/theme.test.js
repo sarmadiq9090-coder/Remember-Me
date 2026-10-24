@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const { FILE, parseTheme, windowColors } = require('../src/themes');
+const { FILE, parseTheme, windowColors } = require('../src/platform/themes');
 const { PALETTES, NOTE_COLORS, NOTE_STYLES, noteLook, initialState, validateState } = require('../src/core/tasks');
 
 const css = fs.readFileSync(FILE, 'utf8');
