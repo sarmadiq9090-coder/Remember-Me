@@ -11,7 +11,7 @@ const { migrateDataFolder } = require('../platform/data-folder');
 const { setLoginItem, refreshLoginItem } = require('../platform/login-item');
 const { createPause } = require('../core/pause');
 const { registerHandlers } = require('./handlers');
-const { createI18n } = require('./i18n');
+const { createI18n, startupControlsLocale } = require('./i18n');
 const { createWindows } = require('./windows');
 const { createTray } = require('./tray');
 const { createScheduler } = require('./scheduler');
@@ -23,6 +23,10 @@ app.setName('Remember Me');
 const dataFolder = testMode && process.env.WAQT_DATA_DIR ? { folder: process.env.WAQT_DATA_DIR, migrated: 'none' } : migrateDataFolder(app.getPath('appData'));
 if (dataFolder.error) console.error('Could not move the data folder; using the old one:', dataFolder.error);
 app.setPath('userData', dataFolder.folder);
+// Native date, time and number fields follow the app's language rather than Windows'. Chromium reads
+// this only before ready, so a new language reaches them after a restart (see the settings action).
+const controlsLocale = startupControlsLocale(dataFolder.folder);
+app.commandLine.appendSwitch('lang', controlsLocale);
 // The ID predates the Remember Me name. Keep it: it names the start-with-Windows entry and taskbar
 // group of v1.4.0, and the installer's appId must stay the same for upgrades and updates.
 app.setAppUserModelId('com.waqt.reminder');
@@ -35,7 +39,7 @@ let interval, backupInterval;
 // Shared by the main-process modules and the IPC handlers. store, pause, driveBackup and updates are
 // set in start(); quitting lets windows close for real.
 const ctx = { app, log, testMode, electron: { dialog, shell, clipboard }, UNDO_MS: 6000, imagePreview: createPreviewService(nativeImage),
-  quitting: false, store: null, pause: null, driveBackup: null, updates: null, setLogin };
+  quitting: false, store: null, pause: null, driveBackup: null, updates: null, setLogin, controlsLocale };
 Object.assign(ctx, createI18n(() => ctx.store?.state?.settings?.language));
 ctx.windows = createWindows(ctx);
 ctx.tray = createTray(ctx);

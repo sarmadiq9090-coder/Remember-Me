@@ -3,13 +3,19 @@ const fs = require('node:fs');
 const path = require('node:path');
 const MAX_BYTES = 1024 * 1024, FILES = 3;
 // Text in «», "" or '' may be a task title, a file name or a path containing one; it is never logged.
-function redact(text) { return String(text ?? '').replace(/«[^»]*»/g, '«…»').replace(/"[^"]*"/g, '"…"').replace(/'[^']*'/g, "'…'").slice(0, 500); }
+// As a backstop, an unquoted Windows or network path is dropped up to the end of the text.
+function redact(text) {
+  return String(text ?? '').replace(/«[^»]*»/g, '«…»').replace(/"[^"]*"/g, '"…"').replace(/'[^']*'/g, "'…'")
+    .replace(/(?:(?<![A-Za-z])[A-Za-z]:[\\/]|\\\\)[^\n]*/g, '…').slice(0, 500);
+}
 function describe(error) {
   if (!error) return {};
   const frames = String(error.stack || '').split('\n').filter(line => /^\s+at /.test(line)).slice(0, 3)
-    // Code locations only, as file:line:column; folders can contain the Windows user name.
-    .map(line => line.trim().replace(/(?:[A-Za-z]:)?[\\/][^()\s]*[\\/]/g, ''));
-  return { error: redact(error.message ?? error), ...(error.code ? { code: String(error.code) } : {}), ...(frames.length ? { at: frames } : {}) };
+    // Code locations only, as file:line:column. Everything from the first folder to the last separator
+    // goes, so folder names with spaces or brackets (a Windows user name, "Remember Me") never stay.
+    .map(line => line.trim().replace(/(?:file:\/+)?(?:[A-Za-z]:)?[\\/].*[\\/]/, ''));
+  // A UserError's untranslated template keeps its {placeholders}, so no path or name is filled in.
+  return { error: redact(error.key ?? error.message ?? error), ...(error.code ? { code: String(error.code) } : {}), ...(frames.length ? { at: frames } : {}) };
 }
 // One JSON line per event in <data folder>/logs/remember-me.log, rotated at 1 MB with three files kept,
 // so users can attach it to a bug report. Callers pass ids, counts and outcomes only: never titles,

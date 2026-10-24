@@ -5,7 +5,7 @@
 // Every launch uses WAQT_TEST=1 and a new temporary data folder, and dialogs and shell calls are
 // stubbed in the main process, so nothing touches real data, folders or the browser.
 const { results } = require('./harness.cjs');
-const scenarios = ['start-and-repeats', 'alert', 'alert-live', 'notes-themes-about', 'attachments-backups', 'translations'];
+const scenarios = ['start-and-repeats', 'alert', 'alert-live', 'notes-themes-about', 'attachments-backups', 'translations', 'native-fields'];
 (async () => {
   for (const name of scenarios) { console.log(`\n# ${name}`); await require(`./${name}.cjs`)(); }
   const failed = results.filter(r => !r.ok);

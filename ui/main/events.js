@@ -102,7 +102,9 @@ $('trash-list').addEventListener('click', async e => {
   const button = e.target.closest('[data-trash]'), row = e.target.closest('[data-id]'); if (!button || !row) return;
   const { kind, id } = row.dataset;
   if (button.dataset.trash === 'purge') return askPurge('purge' + kind, id);
-  try { await api('restore' + kind, { id }); await refresh(); toast(kind === 'Task' ? tr("Task restored.") : tr("Note restored.")); } catch (err) { toast(err.message); }
+  try { await api('restore' + kind, { id }); await refresh(); toast(kind === 'Task' ? tr("Task restored.") : tr("Note restored.")); }
+  // The item may have been purged meanwhile: say so and drop the stale row.
+  catch (err) { toast(err.message); refresh().catch(() => {}); }
 });
 $('empty-trash').addEventListener('click', () => askPurge('emptyTrash'));
 for (const id of ['preview-alert', 'settings-preview']) $(id).addEventListener('click', async () => { try { await api('preview'); toast(tr("The alert appeared above the taskbar.")); } catch (err) { toast(err.message); } });
