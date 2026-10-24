@@ -30,6 +30,7 @@ function createMain() {
   mainWindow.setMenu(null);
   secure(mainWindow);
   mainWindow.loadFile(path.join(__dirname, '../ui/index.html'));
+  mainWindow.on('session-end', () => { quitting = true; });
   mainWindow.on('close', e => { if (!quitting) { e.preventDefault(); mainWindow.hide(); } });
   mainWindow.once('ready-to-show', () => { if (!process.argv.includes('--background')) mainWindow.show(); });
 }
@@ -63,7 +64,9 @@ function rebuildTrayMenu() {
   ]));
 }
 function activeAlerts() { const tasks = dueTasks(store.state); return tasks.length ? tasks : (preview ? [preview] : []); }
-function scan() {
+// The scheduler must survive any single failure; an exception here would otherwise repeat every second.
+function scan() { try { scanNow(); } catch (error) { console.error('Reminder scan failed:', error); } }
+function scanNow() {
   const tasks = activeAlerts();
   const current = new Set(tasks.map(t => t.id));
   const newlyDue = tasks.some(t => !previousDue.has(t.id));
@@ -77,6 +80,7 @@ function scan() {
       placeAlert();
       alertWindow.loadFile(path.join(__dirname, '../ui/alert.html'));
       alertWindow.once('ready-to-show', () => { if (alertWindow && activeAlerts().length) alertWindow.showInactive(); });
+      alertWindow.on('session-end', () => { quitting = true; });
       alertWindow.on('close', event => { if (!quitting && activeAlerts().length) event.preventDefault(); });
       alertWindow.on('closed', () => { alertWindow = null; });
     } else if (!alertWindow.isVisible()) alertWindow.showInactive();
