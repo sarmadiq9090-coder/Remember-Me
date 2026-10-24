@@ -161,6 +161,30 @@ Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable
 
 Bump `version` in `package.json` and push a matching tag, such as `v1.4.1`. `.github/workflows/release.yml` runs the tests, builds the installer and publishes it to Releases with `SHA256SUMS.txt`, build provenance, and the `latest.yml` and `.blockmap` files the app's updater reads. Running the workflow by hand only builds the files and publishes nothing. Code signing needs a SignPath (free for open source), Azure Trusted Signing or certificate account, which can then be added to the installer step.
 
+## Code signing policy
+
+Windows releases are being prepared for code signing through the SignPath Foundation open-source program (application pending). Once approved:
+
+Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+Every signed file is built automatically by GitHub Actions from this repository, and every release needs manual approval before it's signed. Release installers are also published with `SHA256SUMS.txt` and GitHub build provenance (see [Verify the download](#verify-the-download)).
+
+Team roles:
+
+- **Committers and reviewers:** [@sarmadiq9090-coder](https://github.com/sarmadiq9090-coder). Changes from anyone else arrive as pull requests and are reviewed before merging.
+- **Approvers:** [@sarmadiq9090-coder](https://github.com/sarmadiq9090-coder), the repository owner.
+
+## Privacy
+
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
+
+In detail:
+
+- Tasks, notes, attachments and settings are stored only on your device. Remember Me has no account, analytics or telemetry.
+- Backups are copied only to folders you choose. For a Google Drive folder, Google's own Drive app does the syncing, under Google's privacy policy.
+- Links you click, such as the Google Drive download page, open in your default browser.
+- If you allow automatic updates, or choose **Check now**, Remember Me contacts GitHub Releases for this repository to check for and download new versions. That's a standard HTTPS request, covered by [GitHub's privacy statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement), and none of your data is included.
+
 ## Acknowledgements
 
 The task and note layout was inspired by [TickTick for Windows](https://www.ticktick.com/windows), and the Done and Snooze buttons by [its reminders](https://help.ticktick.com/articles/7055782395743567872). Remember Me's design and code are independent, with a particular focus on sticky alerts and snoozing to a custom time.
