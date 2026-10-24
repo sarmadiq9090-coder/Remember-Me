@@ -1,0 +1,11 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'"><title>ذكرني • حان الموعد</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="alert.css"></head><body class="alert-body">
+<div class="alert-shell"><div class="alert-header"><div class="alert-brand"><img class="alert-brand-mark" src="../assets/icon.png" alt="شعار ذكرني"><strong>ذكرني</strong><span>تذكير لك</span></div><span class="alert-pulse">حان الموعد</span></div>
+<div class="alert-content"><div class="bell-orbit"><span data-icon="bell"></span><i></i></div><p class="alert-eyebrow" id="alert-queue">مساحة صغيرة لشيء مهم</p><h1 id="alert-title"></h1><p id="alert-note"></p><div class="alert-time"><span data-icon="clock"></span><span id="alert-time"></span></div>
+<div id="alert-files" class="alert-files" hidden></div><button class="primary alert-done" id="alert-complete"><span data-icon="check"></span> تم، أنجزتها</button>
+<div class="snooze-heading"><span></span><p>أو ذكّرني لاحقًا</p><span></span></div>
+<div class="snooze-options"><button data-minutes="5">5 دقائق</button><button data-minutes="15">15 دقيقة</button><button data-minutes="60">ساعة</button><button data-minutes="1440">24 ساعة</button></div>
+<form id="snooze-form"><label for="snooze-until">اختر موعدًا آخر</label><div class="custom-snooze"><input type="datetime-local" id="snooze-until" required aria-label="موعد التذكير الجديد"><button type="submit" title="تأجيل للموعد المحدد" aria-label="تأجيل للموعد المحدد"><span data-icon="arrowLeft"></span></button></div></form>
+<p id="alert-error" role="alert"></p><p class="alert-persistence"><span data-icon="shield"></span> سأبقى هنا حتى تنجزها أو تختار وقتًا آخر.</p></div>
+<button class="alert-open" id="alert-open">فتح ذكرني <span data-icon="arrowLeft"></span></button></div><script src="i18n.js"></script><script src="shared.js"></script><script src="alert.js"></script></body></html>
+
+

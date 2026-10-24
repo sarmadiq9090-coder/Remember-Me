@@ -1,0 +1,15 @@
+node_modules/
+release/
+.tools/
+screenshots/
+*.log
+*.lnk
+.env
+.env.*
+!.env.example
+data.json
+data.json.*
+attachments/
+backups/
+.DS_Store
+Thumbs.db

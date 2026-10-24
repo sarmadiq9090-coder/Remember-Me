@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'">
+  <title>ذكرني • مساحة ليومك</title><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="#today"><img class="brand-mark" src="../assets/icon.png" alt="شعار ذكرني"><span>ذكرني<small>مساحة ليومك</small></span></a>
+    <button class="primary sidebar-add" id="new-task"><span data-icon="plus"></span> مهمة جديدة <kbd>Ctrl N</kbd></button>
+    <div class="nav-label">مساحتك</div>
+    <nav id="navigation" aria-label="التنقل الرئيسي">
+      <button class="nav-item active" data-view="today"><span data-icon="sun"></span> يومي <span class="count" id="count-today">0</span></button>
+      <button class="nav-item" data-view="upcoming"><span data-icon="calendar"></span> القادمة <span class="count" id="count-upcoming">0</span></button>
+      <button class="nav-item" data-view="all"><span data-icon="layers"></span> كل المهام <span class="count" id="count-all">0</span></button>
+      <button class="nav-item" data-view="notes"><span data-icon="note"></span> ملاحظاتي <span class="count" id="count-notes">0</span></button>
+      <button class="nav-item" data-view="completed"><span data-icon="circleCheck"></span> المكتملة <span class="count" id="count-completed">0</span></button>
+    </nav>
+<div class="sidebar-bottom"><div class="background-status"><span class="live-dot"></span><div>تذكيراتك معك<small>إغلاق النافذة يُبقي ذكرني بجانب الساعة</small></div></div>
+      <button class="nav-item" data-view="settings"><span data-icon="settings"></span> الإعدادات</button>
+    </div>
+  </aside>
+  <main>
+    <header class="topbar"><span class="breadcrumb">مساحتي <span>/</span> <strong id="breadcrumb">يومي</strong></span>
+      <label class="search"><span data-icon="search"></span><input id="search" placeholder="ابحث عن مهمة أو ملاحظة…" aria-label="بحث"><kbd>Ctrl K</kbd></label>
+      <button class="icon-button" id="preview-alert" title="تجربة التنبيه" aria-label="تجربة التنبيه"><span data-icon="bell"></span></button>
+    </header>
+    <div class="page">
+      <div class="page-heading"><div><div id="date-label" class="eyebrow"></div><h1 id="page-title">يومك، على مهل<span class="title-dot">.</span></h1><p id="page-description">خطوة صغيرة كل مرة. رتّب أولوياتك واترك التذكير علينا.</p></div><button class="primary" id="page-add"><span data-icon="plus"></span><span id="page-add-label">إضافة مهمة</span></button></div>
+      <section id="dashboard">
+        <div class="hero"><div><span class="hero-kicker"><span class="live-dot"></span> مساحة أهدأ، يوم أوضح</span><h2 id="hero-title">كل شيء يبدأ بخطوة.</h2><p id="hero-description">أضف ما يشغلك، وحدّد وقته. نحن هنا لنذكّرك.</p><button class="hero-link" id="hero-add">ما أول شيء تريد إنجازه؟ <span data-icon="arrowLeft"></span></button></div><div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="art-clock"><span class="clock-tick tick-one"></span><span class="clock-tick tick-two"></span><div class="clock-hand hand-one"></div><div class="clock-hand hand-two"></div><i></i></div><div class="art-check" data-icon="check"></div><span class="spark spark-one">✦</span><span class="spark spark-two">✦</span></div></div>
+        <div class="stats"><div class="stat"><span class="stat-icon purple-bg" data-icon="list"></span><div><span>بانتظار خطوتك</span><strong id="stat-active">0</strong></div><small>مهام اليوم</small></div><div class="stat"><span class="stat-icon orange-bg" data-icon="bell"></span><div><span>تذكيرك القادم</span><strong class="next-time" id="stat-next">لا يوجد</strong></div><small id="next-title">مساحة لخطط جديدة</small></div><div class="stat"><span class="stat-icon green-bg" data-icon="circleCheck"></span><div><span>أنجزت اليوم</span><strong id="stat-done">0</strong></div><small>كل خطوة تُحسب</small></div></div>
+      </section>
+      <section id="tasks-section">
+        <div class="section-heading"><h2 id="list-title">مهام اليوم <span id="list-count">0</span></h2><label class="sort-label"><span data-icon="sort"></span><select id="sort" aria-label="ترتيب المهام"><option value="time">حسب الموعد</option><option value="priority">حسب الأولوية</option><option value="newest">الأحدث أولًا</option></select></label></div>
+        <div class="filters" id="filters"><button class="filter active" data-filter="all">الكل</button><button class="filter" data-filter="high"><span data-icon="flag"></span> أولوية عالية</button></div>
+        <form id="quick-form" class="quick-add"><span data-icon="plus"></span><input id="quick-title" placeholder="أضف مهمة سريعة…" aria-label="عنوان المهمة السريعة" maxlength="200" required><button type="submit">إضافة <kbd>↵</kbd></button></form>
+        <div id="task-list" class="task-list"></div>
+        <div id="task-empty" class="empty-state"><div class="empty-icon" data-icon="leaf"></div><h3>مساحة جديدة لبداية لطيفة</h3><p>اكتب مهمة صغيرة، فكرة مهمة، أو شيئًا لا تريد نسيانه.</p><button class="soft-button" id="empty-add">أضف مهمتك الأولى <span data-icon="plus"></span></button></div>
+        <div class="page-footnote"><span data-icon="bell"></span> عندما يحين الموعد، يبقى التنبيه ظاهرًا حتى تنجز المهمة أو تؤجّلها.</div>
+      </section>
+      <section id="notes-section" hidden><div id="notes-list" class="notes-grid"></div><div id="notes-empty" class="empty-state"><div class="empty-icon" data-icon="note"></div><h3>أفكارك تستحق مكانًا</h3><p>ملاحظات بسيطة لكل ما يدور في بالك، محفوظة على جهازك.</p><button class="soft-button" id="empty-note">اكتب ملاحظتك الأولى <span data-icon="plus"></span></button></div></section>
+      <section id="settings-section" hidden>
+        <div class="settings-card"><h2>التذكيرات والخلفية</h2><label class="setting-row"><div><strong>صوت عند وصول التذكير</strong><p>صوت واحد عند ظهور تنبيه جديد.</p></div><input class="switch" id="setting-sound" type="checkbox"></label>
+          <label class="setting-row"><div><strong>التشغيل مع ويندوز</strong><p>يفتح ذكرني في الخلفية عند تسجيل الدخول.</p></div><input class="switch" id="setting-startup" type="checkbox"></label>
+          <label class="setting-row"><div><strong>مكان التنبيه</strong><p>أسفل الشاشة الرئيسية، فوق شريط المهام.</p></div><select id="setting-side"><option value="right">الجهة اليمنى</option><option value="left">الجهة اليسرى</option></select></label>
+          <label class="setting-row"><div><strong>اللغة</strong><p>اختر لغة واجهة البرنامج.</p></div><select id="setting-language"><option value="ar">العربية</option><option value="en">English</option></select></label>
+          <div class="setting-row"><div><strong>شاهد التنبيه بنفسك</strong><p>جرّب شكله وأزرار الإنجاز والتأجيل.</p></div><button class="soft-button" id="settings-preview">تجربة التنبيه <span data-icon="bell"></span></button></div></div>
+        <div class="settings-card"><h2>بياناتك، على جهازك</h2><p>يعمل ذكرني دون حساب أو اتصال بالإنترنت. تُحفظ المهام والملاحظات تلقائيًا مع نسخة احتياطية من آخر حفظ.</p><div class="settings-actions"><button class="soft-button" id="export-data"><span data-icon="download"></span> تصدير نسخة احتياطية</button><button class="text-button" id="open-data">فتح مجلد البيانات</button></div><code id="data-path"></code></div>
+        <div class="settings-card drive-card"><h2><span data-icon="shield"></span> النسخ الاحتياطي إلى Google Drive</h2><p>نسخة كاملة من المهام والملاحظات والصور والمرفقات. اختر مجلدًا داخل Google Drive المتزامن؛ يرفع تطبيق Google Drive الملفات إلى حسابك، ويحتفظ ذكرني بنسخة محلية أيضًا.</p><div class="settings-actions"><button class="soft-button" id="choose-drive-folder"><span data-icon="file"></span> اختيار مجلد Google Drive</button><button class="text-button" id="drive-install">تثبيت Google Drive وتسجيل الدخول</button></div><code id="drive-folder"></code><label class="setting-row"><div><strong>نسخة تلقائية كل يوم</strong><p>أثناء تشغيل ذكرني. تُعاد محاولة النسخ عند عودة مجلد Drive.</p></div><input type="checkbox" id="drive-automatic" class="switch"></label><div class="settings-actions"><button class="primary" id="drive-now"><span data-icon="download"></span><span id="drive-now-label">نسخ احتياطي الآن</span></button><button class="text-button" id="drive-open" hidden>فتح مجلد النسخ</button></div><p id="drive-status" role="status"></p><small id="drive-local"></small></div>
+        <div class="info-card"><span data-icon="info"></span><div><strong>كيف تبقى التذكيرات فعّالة؟</strong><p>أغلق النافذة بشكل طبيعي؛ يبقى ذكرني بجانب الساعة. للخروج الكامل استخدم قائمته هناك. أثناء إيقاف الجهاز أو سكونه لا يمكن إظهار تنبيه، وستظهر التذكيرات الفائتة عند العودة وتشغيل البرنامج. الوقت المعتمد هو توقيت جهازك.</p></div></div>
+      </section>
+    </div>
+  </main>
+  <dialog id="task-dialog"><form id="task-form"><div class="dialog-heading"><div><span class="eyebrow">خطوة جديدة</span><h2 id="task-dialog-title">مساحة لمهمة جديدة</h2></div><button type="button" class="icon-button close-dialog" aria-label="إغلاق"><span data-icon="x"></span></button></div>
+    <input id="task-id" type="hidden"><label class="field">ما الذي تريد إنجازه؟<input id="task-title" placeholder="مثلًا: مراجعة خطة الأسبوع" maxlength="200" required autofocus></label><label class="field">تفاصيل وملاحظات <small>اختياري</small><textarea id="task-body" rows="3" placeholder="كل التفاصيل التي تساعدك على البدء…" maxlength="20000"></textarea></label>
+    <section class="attachment-section"><div class="attachment-heading"><span>المرفقات <small id="task-file-count">0 / 20</small></span><button type="button" class="soft-button" id="task-attach"><span data-icon="paperclip"></span> إضافة ملفات</button></div><p class="attachment-hint">PDF وExcel وأي ملف تحتاجه • حتى 50 ميغابايت للملف. نحفظ نسخة مع المهمة.</p><div id="task-files" class="attachment-list"></div></section>
+    <div class="field-grid priority-only"><label class="field">الأولوية<select id="task-priority"><option value="normal">عادية</option><option value="medium">متوسطة</option><option value="high">عالية</option></select></label></div>
+    <div class="reminder-field"><label class="reminder-toggle"><span data-icon="bell"></span><strong>ذكّرني بهذه المهمة</strong><input id="task-reminder" class="switch" type="checkbox"></label><div id="reminder-fields" hidden><div class="quick-times"><button type="button" data-delay="10">بعد 10 دقائق</button><button type="button" data-delay="60">بعد ساعة</button><button type="button" data-delay="1440">غدًا</button></div><label class="field">موعد التذكير<input id="task-due" type="datetime-local"></label><label class="field">التكرار<select id="task-repeat"><option value="none">مرة واحدة</option><option value="daily">كل يوم</option><option value="weekly">كل أسبوع</option></select></label><small class="hint">يبقى التنبيه حتى تختار «تم» أو «ذكّرني لاحقًا».</small></div></div>
+    <p class="form-error" id="task-error" role="alert"></p><div class="dialog-footer"><button type="button" class="text-button close-dialog">إلغاء</button><button class="primary" type="submit"><span data-icon="check"></span> حفظ المهمة</button></div></form></dialog>
+  <dialog id="note-dialog"><form id="note-form"><div class="dialog-heading"><div><span class="eyebrow">لا تدع الفكرة تفوتك</span><h2 id="note-dialog-title">ملاحظة جديدة</h2></div><button type="button" class="icon-button close-dialog" aria-label="إغلاق"><span data-icon="x"></span></button></div><input type="hidden" id="note-id"><label class="field">عنوان الملاحظة<input id="note-title" maxlength="200" required placeholder="فكرة تستحق الاحتفاظ بها…"></label><label class="field">الملاحظة<textarea id="note-body" rows="9" maxlength="50000" placeholder="اكتب بحرية…"></textarea></label><section class="attachment-section"><div class="attachment-heading"><span>المرفقات <small id="note-file-count">0 / 20</small></span><button type="button" class="soft-button" id="note-attach"><span data-icon="paperclip"></span> إضافة ملفات</button></div><p class="attachment-hint">أرفق PDF أو Excel أو أي ملف بجانب ملاحظتك. نحفظ نسخة مستقلة حتى 50 ميغابايت للملف.</p><div id="note-files" class="attachment-list"></div></section><label class="field">لون الملاحظة<select id="note-color"><option value="cream">كريمي</option><option value="green">أخضر هادئ</option><option value="blue">أزرق</option><option value="pink">وردي</option></select></label><p class="form-error" id="note-error" role="alert"></p><div class="dialog-footer"><button type="button" class="text-button close-dialog">إلغاء</button><button type="submit" class="primary">حفظ الملاحظة <span data-icon="check"></span></button></div></form></dialog>
+  <dialog id="confirm-dialog" class="small-dialog"><h2>حذف هذا العنصر؟</h2><p>سيُحذف من قائمتك. لا يمكن التراجع عن الحذف.</p><div class="dialog-footer"><button class="text-button" id="cancel-delete">إلغاء</button><button class="danger-button" id="confirm-delete">حذف</button></div></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script src="i18n.js"></script><script src="shared.js"></script><script src="app.js"></script>
+</body></html>
+
+
