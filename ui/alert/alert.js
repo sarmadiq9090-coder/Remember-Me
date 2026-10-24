@@ -143,7 +143,7 @@ async function snoozeAll(until) {
 }
 let undoTimer;
 function showUndo(info) {
-  $('alert-undo-text').textContent = tr('Completed "{title}"', { title: info.title });
+  $('alert-undo-text').textContent = tr('Completed "{title}"', { title: isolate(info.title) });
   Object.assign($('alert-undo').dataset, { id: info.id, copyId: info.copyId });
   $('alert-undo').hidden = false;
   clearTimeout(undoTimer); undoTimer = setTimeout(() => { $('alert-undo').hidden = true; }, Math.max(0, info.until - Date.now()));

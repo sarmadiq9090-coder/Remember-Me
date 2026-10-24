@@ -36,7 +36,11 @@
     for (const [name, value] of Object.entries(params)) shown[name] = typeof value === 'number' ? display(value) : value;
     return format(entry, shown);
   }
-  const api = { LOCALES, DEFAULT, findLocale, format, translate };
+  // Wraps user text (a title, a file name) placed in a sentence in first-strong isolate marks, so its
+  // own direction never reorders the punctuation around it, e.g. "Call Bob!" in an Arabic sentence.
+  const FSI = String.fromCharCode(0x2068), PDI = String.fromCharCode(0x2069);
+  function isolate(text) { return FSI + String(text ?? '') + PDI; }
+  const api = { LOCALES, DEFAULT, findLocale, format, translate, isolate };
   if (typeof module === 'object' && module.exports) module.exports = api;
-  else Object.assign(root, { LOCALES, findLocale, translate });
+  else Object.assign(root, { LOCALES, findLocale, translate, isolate });
 })(this);

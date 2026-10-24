@@ -69,7 +69,7 @@ $('appearance-card').addEventListener('change', async e => {
 // Names the attachments a backup had to leave out because their files are missing, with the task or note each belongs to.
 function skippedText(skipped = []) {
   if (!skipped.length) return '';
-  const list = skipped.map(s => s.itemTitle ? `${s.name} (${s.itemTitle})` : s.name).join(tr(", "));
+  const list = skipped.map(s => s.itemTitle ? `${isolate(s.name)} (${isolate(s.itemTitle)})` : isolate(s.name)).join(tr(", "));
   return tr("{count} attachments were left out because their files are missing: {list}", { count: skipped.length, list });
 }
 $('export-data').addEventListener('click', async () => {

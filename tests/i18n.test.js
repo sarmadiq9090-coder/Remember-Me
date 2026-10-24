@@ -76,3 +76,11 @@ test('new installs start in English, saved languages are kept and unknown ones f
   assert.equal(validateState({ ...structuredClone(v140), settings: older }).settings.language, 'ar', 'Settings from before the language option were Arabic');
   assert.equal(validateState({ ...structuredClone(v140), settings: 'broken' }).settings.language, 'en');
 });
+
+test('user text in a sentence is isolated, so its direction cannot reorder the punctuation around it', () => {
+  const { translate, isolate } = require('../ui/lib/translate');
+  const ar = { 'Completed "{title}"': 'أُنجزت «{title}»' };
+  const text = translate(ar, {}, 'ar', 'Completed "{title}"', { title: isolate('Call Bob!') });
+  assert.equal(text, 'أُنجزت «' + String.fromCharCode(0x2068) + 'Call Bob!' + String.fromCharCode(0x2069) + '»');
+  assert.equal(isolate(undefined), String.fromCharCode(0x2068, 0x2069));
+});
