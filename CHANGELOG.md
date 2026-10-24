@@ -4,7 +4,7 @@
 
 Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0 load unchanged, and the data folder moves from `%APPDATA%\Waqt` to `%APPDATA%\Remember Me` by itself the first time v1.5.0 starts.
 
-> **Before release:** replace each **TODO** line below with the merged work and its PR, or delete it. PRs up to #23 are included. Then check this entry against `git log v1.4.0..main --oneline` (see RELEASING.md).
+> **Before release:** replace each **TODO** line below with the merged work and its PR, or delete it. PRs up to #35 are included. Then check this entry against `git log v1.4.0..main --oneline` (see RELEASING.md).
 
 ### Highlights
 
@@ -13,11 +13,10 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 - **More ways to repeat:** chosen weekdays, every few days, monthly and yearly, plus **Skip this time** and **Only this time**. [#7] [#8]
 - **Trash and Undo** for deleted items and for Done. [#7]
 - **Pause reminders** from the notification area. [#16]
-- **Dark mode.** [#7]
+- **Dark mode and six color palettes,** plus notes as sticky notes, lined paper or cards in ten paper colors. [#7] [#35]
 - **Verified backups** with restore from Settings. [#5]
 - **12 interface languages,** with English as the new default and a full right-to-left layout in Arabic. [#36]
 - **A redesigned alert:** one reminder at a time with its status at a glance, smart snooze choices on the 1–6 keys, **Snooze all** and **Open task**. [#36]
-- **Color themes:** six palettes in light and dark, plus note paper colors and styles. [#35]
 
 ### Added
 
