@@ -1,6 +1,6 @@
 let state, view = 'today', filter = 'all', query = '', pendingDelete, toastTimer;
 let taskAttachments = [], noteAttachments = [];
-let originalTaskDue = null, originalTaskDueValue = '';
+let originalTaskDue = null, originalTaskDueValue = '', originalTaskUpdatedAt, originalTaskRepeat = 'none';
 const $ = id => document.getElementById(id);
 const views = {
   today: [['يومي','Today'], ['يومك، على مهل','Your day, at your pace'], ['خطوة صغيرة كل مرة. رتّب أولوياتك واترك التذكير علينا.','One small step at a time. Set your priorities and leave the reminders to us.'], ['مهام اليوم',"Today's tasks"]],
@@ -107,7 +107,8 @@ function openTaskEditor(task) {
   $('task-reminder').checked = !!task?.dueAt;
   $('task-due').value = localDateValue(task?.dueAt || Date.now() + 3600000);
   originalTaskDue = task?.dueAt || null; originalTaskDueValue = $('task-due').value;
-  $('task-repeat').value = task?.repeat || 'none';
+  $('task-repeat').value = originalTaskRepeat = task?.repeat || 'none';
+  originalTaskUpdatedAt = task?.updatedAt;
   taskAttachments = [...(task?.attachments || [])]; renderEditorFiles('task');
   $('task-dialog-title').textContent = task?.id ? tr('تفاصيل المهمة','Task details') : tr('مساحة لمهمة جديدة','Space for a new task');
   toggleReminder();
@@ -142,9 +143,12 @@ function renderDriveBackup() {
   $('drive-now-label').textContent = backup.busy ? tr('جارٍ تجهيز ونسخ الملفات…','Preparing and copying files…') : backup.pending ? tr('إعادة محاولة النسخ','Retry backup') : tr('نسخ احتياطي الآن','Back up now');
   $('drive-open').hidden = !backup.folder;
   const last = backup.lastCopiedAt ? dateLabel(backup.lastCopiedAt) : tr('لم تُنسخ بعد', 'never');
+  // When a retried copy reused an earlier snapshot, say when its data is from.
+  const snapshot = backup.snapshotAt && backup.lastCopiedAt && Date.parse(backup.lastCopiedAt) - Date.parse(backup.snapshotAt) > 60000 ? dateLabel(backup.snapshotAt) : '';
   const stale = backup.stale ? tr(`مجلد Google Drive غير متاح منذ أكثر من يوم، ولم تصل نسخ جديدة إلى حسابك منذ ${last}. افتح Google Drive وسجّل الدخول.`, `The Google Drive folder has been unavailable for over a day; no new backups have reached your account since ${last}. Open Google Drive and sign in.`) : '';
-  $('drive-status').textContent = stale || backup.error || (backup.busy ? tr('جارٍ حفظ نسخة محلية ثم نسخها إلى مجلد Drive…', 'Saving a local copy, then copying it to the Drive folder…') : backup.lastCopiedAt ? tr(`آخر نسخة إلى مجلد المزامنة: ${last}. تحقّق من أيقونة Google Drive لتأكيد اكتمال الرفع.`, `Last copy to the sync folder: ${last}. Check the Google Drive icon to confirm the upload finished.`) : tr('ثبّت Google Drive وسجّل الدخول، ثم اختر مجلدًا داخله. يتولى Google Drive رفع النسخ عند توفر الاتصال.', 'Install Google Drive and sign in, then choose a folder inside it. Google Drive uploads the copies when you are online.'));
-  $('drive-status').classList.toggle('backup-error', !!(stale || backup.error));
+  $('drive-status').textContent = stale || backup.error || (backup.busy ? tr('جارٍ حفظ نسخة محلية ثم نسخها إلى مجلد Drive…', 'Saving a local copy, then copying it to the Drive folder…') : backup.lastCopiedAt ? tr(`آخر نسخة إلى مجلد المزامنة: ${last}${snapshot ? ` (بيانات ${snapshot})` : ''}. تحقّق من أيقونة Google Drive لتأكيد اكتمال الرفع.`, `Last copy to the sync folder: ${last}${snapshot ? ` (data from ${snapshot})` : ''}. Check the Google Drive icon to confirm the upload finished.`) : tr('ثبّت Google Drive وسجّل الدخول، ثم اختر مجلدًا داخله. يتولى Google Drive رفع النسخ عند توفر الاتصال.', 'Install Google Drive and sign in, then choose a folder inside it. Google Drive uploads the copies when you are online.'));
+  if (!stale && !backup.error && backup.skipped?.length) $('drive-status').textContent += ' ' + skippedText(backup.skipped);
+  $('drive-status').classList.toggle('backup-error', !!(stale || backup.error || backup.skipped?.length));
   $('drive-local').textContent = backup.lastLocalPath ? tr('النسخة المحلية محفوظة أيضًا على جهازك.', 'A local copy is also kept on your PC.') : '';
 }
 async function openFile(id) { try { await api('openAttachment', { id }); } catch (error) { toast(error.message); } }
@@ -185,22 +189,40 @@ document.querySelectorAll('.close-dialog').forEach(b => b.addEventListener('clic
 $('task-form').addEventListener('submit', async e => {
   e.preventDefault(); const submit = e.submitter; submit.disabled = true;
   try {
-    await api('saveTask', { id: $('task-id').value || undefined, title: $('task-title').value, body: $('task-body').value, attachments: taskAttachments, category: state.tasks.find(t => t.id === $('task-id').value)?.category || 'personal', priority: $('task-priority').value,
-      dueAt: $('task-reminder').checked ? (originalTaskDue && $('task-due').value === originalTaskDueValue ? originalTaskDue : new Date($('task-due').value).toISOString()) : null, repeat: $('task-reminder').checked ? $('task-repeat').value : 'none' });
-    $('task-dialog').close(); await refresh(); toast(tr('حُفظت المهمة. خطوة جديدة في مكانها.','Task saved. Your next step is in place.'));
+    const id = $('task-id').value || undefined, reminder = $('task-reminder').checked;
+    // Tells the main process whether to keep a snooze or Done made in the alert while this editor was open.
+    const timeEdited = reminder !== !!originalTaskDue || (reminder && ($('task-due').value !== originalTaskDueValue || $('task-repeat').value !== originalTaskRepeat));
+    await api('saveTask', { id, title: $('task-title').value, body: $('task-body').value, attachments: taskAttachments, category: state.tasks.find(t => t.id === $('task-id').value)?.category || 'personal', priority: $('task-priority').value,
+      dueAt: reminder ? (originalTaskDue && $('task-due').value === originalTaskDueValue ? originalTaskDue : new Date($('task-due').value).toISOString()) : null, repeat: reminder ? $('task-repeat').value : 'none',
+      ...(id ? { updatedAt: originalTaskUpdatedAt, timeEdited } : {}) });
+    $('task-dialog').close(); await refresh();
+    const saved = id && state.tasks.find(t => t.id === id);
+    toast(saved?.completedAt ? tr('حُفظ النص. كانت المهمة قد اكتملت من نافذة التنبيه.', 'Your text was saved. The task had already been completed from the alert.')
+      : saved && !timeEdited && saved.dueAt !== originalTaskDue ? tr('حُفظ النص، وبقي الموعد الذي اخترته من نافذة التنبيه.', 'Your text was saved, and the time chosen from the alert was kept.')
+      : tr('حُفظت المهمة. خطوة جديدة في مكانها.','Task saved. Your next step is in place.'));
   } catch (err) { $('task-error').textContent = err.message; } finally { submit.disabled = false; }
 });
+let quickBusy = false;
 $('quick-form').addEventListener('submit', async e => {
   e.preventDefault(); const input = $('quick-title');
+  // A second Enter while the first add is still saving would create the task twice.
+  if (quickBusy) return; quickBusy = true; if (e.submitter) e.submitter.disabled = true;
   try { await api('saveTask', { title: input.value }); input.value = ''; if (view === 'upcoming') view = 'all'; await refresh(); toast(tr('أُضيفت المهمة. يمكنك فتحها لإضافة موعد.','Task added. Open it to add a due time.')); } catch (err) { toast(err.message); }
+  finally { quickBusy = false; if (e.submitter) e.submitter.disabled = false; }
 });
+const busyRows = new Set();
 $('task-list').addEventListener('click', async e => {
   const file = e.target.closest('[data-file-id]'); if (file) return openFile(file.dataset.fileId);
   const button = e.target.closest('[data-action]'), row = e.target.closest('[data-id]'); if (!button || !row) return;
   const id = row.dataset.id, action = button.dataset.action;
   if (action === 'edit') return openTaskEditor(state.tasks.find(t => t.id === id));
   if (action === 'delete') return askDelete('Task', id);
-  try { await api(action, { id }); await refresh(); toast(action === 'complete' ? tr('تمت المهمة. أحسنت، كل خطوة تُحسب!','Task completed. Well done—every step counts!') : tr('أُعيدت المهمة دون موعد. افتحها لتعيين تذكير جديد.','Task reopened without a due date. Open it to set a reminder.')); } catch (err) { toast(err.message); }
+  // One request per row at a time; the due time lets the main process ignore a repeat for the same occurrence.
+  if (busyRows.has(id)) return; busyRows.add(id); button.disabled = true;
+  try {
+    const applied = await api(action, action === 'complete' ? { id, expectedDueAt: state.tasks.find(t => t.id === id)?.dueAt ?? null } : { id }); await refresh();
+    if (applied !== false) toast(action === 'complete' ? tr('تمت المهمة. أحسنت، كل خطوة تُحسب!','Task completed. Well done—every step counts!') : tr('أُعيدت المهمة دون موعد. افتحها لتعيين تذكير جديد.','Task reopened without a due date. Open it to set a reminder.'));
+  } catch (err) { toast(err.message); } finally { busyRows.delete(id); button.disabled = false; }
 });
 $('task-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('task-edit-target')) { e.preventDefault(); e.target.click(); } });
 $('note-form').addEventListener('submit', async e => {
@@ -217,7 +239,17 @@ for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-l
   try { await api('settings', { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value }); await refresh(); toast(tr('حُفظت الإعدادات.','Settings saved.')); }
   catch (err) { toast(err.message); } await refresh();
 });
-$('export-data').addEventListener('click', async () => { $('export-data').disabled = true; try { if (await api('export')) toast(tr('حُفظ مجلد النسخة الاحتياطية مع جميع المرفقات.', 'The backup folder was saved with all attachments.')); } catch (err) { toast(err.message); } finally { $('export-data').disabled = false; } });
+// Names the attachments a backup had to leave out because their files are missing, with the task or note each belongs to.
+function skippedText(skipped = []) {
+  if (!skipped.length) return '';
+  const list = skipped.map(s => s.itemTitle ? `${s.name} (${s.itemTitle})` : s.name).join(tr('، ', ', '));
+  return tr(`لم تُنسخ ${skipped.length} من المرفقات لأن ملفاتها مفقودة: ${list}`, `${skipped.length} attachments were left out because their files are missing: ${list}`);
+}
+$('export-data').addEventListener('click', async () => {
+  $('export-data').disabled = true;
+  try { const result = await api('export'); if (result) toast(result.skipped?.length ? `${tr('حُفظ مجلد النسخة الاحتياطية.', 'The backup folder was saved.')} ${skippedText(result.skipped)}` : tr('حُفظ مجلد النسخة الاحتياطية مع جميع المرفقات.', 'The backup folder was saved with all attachments.')); }
+  catch (err) { toast(err.message); } finally { $('export-data').disabled = false; }
+});
 $('restore-data').addEventListener('click', async () => {
   $('restore-data').disabled = true;
   try { if (await api('restore')) { await refresh(); toast(tr('استُعيدت النسخة الاحتياطية. حُفظت بياناتك السابقة في مجلد النسخ.', 'Backup restored. Your previous data was saved in the backups folder.')); } }
@@ -231,7 +263,7 @@ $('clean-orphans').addEventListener('click', async () => {
 $('open-data').addEventListener('click', async () => { try { await api('dataFolder'); } catch (err) { toast(err.message); } });
 async function driveAction(action, payload) { try { const value = await api(action, payload); await refresh(); return value; } catch (error) { toast(error.message); await refresh(); } }
 $('choose-drive-folder').addEventListener('click', () => driveAction('chooseDriveFolder'));
-$('drive-now').addEventListener('click', async () => { $('drive-now').disabled = true; if (await driveAction('driveBackupNow')) toast(tr('حُفظت النسخة محليًا وفي مجلد Drive. يتولى Google Drive إكمال الرفع.', 'Saved locally and to the Drive folder. Google Drive finishes the upload.')); });
+$('drive-now').addEventListener('click', async () => { $('drive-now').disabled = true; const status = await driveAction('driveBackupNow'); if (status) toast(`${tr('حُفظت النسخة محليًا وفي مجلد Drive. يتولى Google Drive إكمال الرفع.', 'Saved locally and to the Drive folder. Google Drive finishes the upload.')} ${skippedText(status.skipped)}`.trim()); });
 $('drive-automatic').addEventListener('change', () => driveAction('driveAutomatic', { enabled: $('drive-automatic').checked }));
 $('drive-keep').addEventListener('change', () => driveAction('driveKeep', { keep: Number($('drive-keep').value) }));
 $('drive-install').addEventListener('click', () => driveAction('driveHelp'));

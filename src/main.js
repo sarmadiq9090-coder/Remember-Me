@@ -2,7 +2,7 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session } = require('electron');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
-const { Store, saveTask, completeTask, snoozeTask, dueTasks } = require('./core');
+const { Store, saveTask, completeTask, snoozeTask, dueTasks, alertQueue } = require('./core');
 const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
@@ -67,7 +67,7 @@ function rebuildTrayMenu() {
     } }
   ]));
 }
-function activeAlerts() { const tasks = dueTasks(store.state); return tasks.length ? tasks : (preview ? [preview] : []); }
+function activeAlerts() { const queue = alertQueue(store.state, preview); preview = queue.preview; return queue.alerts; }
 // The scheduler must survive any single failure; an exception here would otherwise repeat every second.
 function scan() { try { scanNow(); } catch (error) { console.error('Reminder scan failed:', error); } }
 function scanNow() {
@@ -123,11 +123,12 @@ async function start() {
         case 'saveTask': store.change(s => saveTask(s, payload)); break;
         case 'complete':
           if (payload.id === '__preview') preview = null;
-          else store.change(s => completeTask(s, payload.id));
+          // value is false when the reminder was already handled (a double click or another window).
+          else value = store.change(s => completeTask(s, payload.id, new Date(), { expectedDueAt: payload.expectedDueAt }));
           break;
         case 'snooze':
           if (payload.id === '__preview') { if (!payload.until || Date.parse(payload.until) <= Date.now()) throw new Error('اختر وقتًا لاحقًا.'); preview = null; }
-          else store.change(s => snoozeTask(s, payload.id, payload.until));
+          else value = store.change(s => snoozeTask(s, payload.id, payload.until, new Date(), { expectedDueAt: payload.expectedDueAt }));
           break;
         case 'reopen': store.change(s => { const t = s.tasks.find(t => t.id === payload.id); if (t) { t.completedAt = null; t.dueAt = null; t.scheduleAt = null; t.repeat = 'none'; t.snoozedAt = null; } }); break;
         case 'deleteTask': store.change(s => { s.tasks = s.tasks.filter(t => t.id !== payload.id); }); break;
@@ -202,10 +203,14 @@ async function start() {
           catch (err) { if (old.startAtLogin !== settings.startAtLogin) setLogin(old.startAtLogin); throw err; }
           rebuildTrayMenu(); placeAlert(); break;
         }
-        case 'preview': preview = { id: '__preview', title: nativeText('حان وقت استراحة صغيرة ☕', 'Time for a short break ☕'), body: nativeText('هذا تنبيه تجريبي. يبقى ظاهرًا حتى تختار «تم» أو «ذكّرني لاحقًا». التأجيل هنا يغلق المعاينة فقط.', 'This is a preview alert. It stays visible until you choose Done or Snooze. Snoozing here only closes the preview.'), dueAt: new Date().toISOString(), priority: 'normal', category: 'personal' }; break;
+        case 'preview':
+          if (dueTasks(store.state).length) throw new Error(nativeText('يظهر الآن تذكير حقيقي. جرّب المعاينة بعد إنهائه.', 'A real reminder is showing now. Try the preview after you finish it.'));
+          preview = { id: '__preview', title: nativeText('حان وقت استراحة صغيرة ☕', 'Time for a short break ☕'), body: nativeText('هذا تنبيه تجريبي. يبقى ظاهرًا حتى تختار «تم» أو «ذكّرني لاحقًا». التأجيل هنا يغلق المعاينة فقط.', 'This is a preview alert. It stays visible until you choose Done or Snooze. Snoozing here only closes the preview.'), dueAt: new Date().toISOString(), priority: 'normal', category: 'personal' }; break;
         case 'export': {
           const result = await dialog.showOpenDialog(mainWindow, { title: nativeText('اختر مكان حفظ النسخة الاحتياطية مع المرفقات', 'Choose where to save the backup with attachments'), properties: ['openDirectory', 'createDirectory'] });
-          if (!result.canceled) value = await exportBackup(store.state, app.getPath('userData'), result.filePaths[0]);
+          if (result.canceled) break;
+          const skipped = [];
+          value = { folder: await exportBackup(store.state, app.getPath('userData'), result.filePaths[0], { skipped }), skipped };
           break;
         }
         case 'restore': {

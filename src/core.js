@@ -30,10 +30,21 @@ function saveTask(state, input, now = new Date()) {
   fields.attachments = attachmentIds(input.attachments ?? task?.attachments ?? []);
   if (input.id && !task) throw new Error('المهمة لم تعد موجودة.');
   if (task) {
+    // The editor sends the updatedAt it opened with and whether its reminder fields (on/off, time,
+    // repeat) were edited. If the alert snoozed or completed the task meanwhile, only the text is
+    // applied so the editor's old time cannot undo that; older callers send neither field.
+    const outdated = typeof input.timeEdited === 'boolean' && input.updatedAt !== task.updatedAt;
+    if (outdated && (!input.timeEdited || task.completedAt)) {
+      const { title, body, priority, category, attachments } = fields;
+      Object.assign(task, { title, body, priority, category, attachments, updatedAt: now.toISOString() });
+      return task;
+    }
     if (task.completedAt) throw new Error('أعد فتح المهمة قبل تعديلها.');
-    const changed = fields.dueAt !== task.dueAt;
+    // A new time, or a repeat switched on or changed, anchors the series at the time the editor shows,
+    // which for a snoozed task is the snoozed time rather than the original one.
+    const anchor = fields.dueAt !== task.dueAt || (fields.repeat !== 'none' && fields.repeat !== task.repeat);
     Object.assign(task, fields, { updatedAt: now.toISOString() });
-    if (changed) { task.scheduleAt = fields.dueAt; task.snoozedAt = null; }
+    if (anchor) { task.scheduleAt = fields.dueAt; task.snoozedAt = null; }
   } else {
     task = { ...fields, id: randomUUID(), scheduleAt: fields.dueAt, createdAt: now.toISOString(), updatedAt: now.toISOString(), completedAt: null, snoozedAt: null };
     state.tasks.push(task);
@@ -49,29 +60,46 @@ function nextOccurrence(value, repeat, now) {
   while (next <= now) next.setDate(next.getDate() + step);
   return next.toISOString();
 }
-function completeTask(state, id, now = new Date()) {
+// expectedDueAt is the due time the user saw when acting. A call made for an occurrence that has
+// already moved on (a double click, two windows) changes nothing. Leaving it out skips the check.
+function stale(task, expectedDueAt) {
+  if (expectedDueAt === undefined) return false;
+  return (expectedDueAt === null ? null : date(expectedDueAt)) !== task.dueAt;
+}
+// Returns false when the call was ignored.
+function completeTask(state, id, now = new Date(), { expectedDueAt } = {}) {
   const task = state.tasks.find(t => t.id === id);
-  if (!task || task.completedAt) return;
+  if (!task || task.completedAt || stale(task, expectedDueAt)) return false;
   if (task.repeat !== 'none' && task.scheduleAt) {
     state.tasks.push({ ...task, id: randomUUID(), repeat: 'none', sourceId: task.id, completedAt: now.toISOString() });
     task.dueAt = nextOccurrence(task.scheduleAt, task.repeat, now);
     task.scheduleAt = task.dueAt;
     task.snoozedAt = null;
     task.updatedAt = now.toISOString();
-  } else task.completedAt = now.toISOString();
+  } else { task.completedAt = now.toISOString(); task.updatedAt = now.toISOString(); }
+  return true;
 }
-function snoozeTask(state, id, until, now = new Date()) {
+// Returns false when expectedDueAt shows the reminder was already handled.
+function snoozeTask(state, id, until, now = new Date(), { expectedDueAt } = {}) {
   const task = state.tasks.find(t => t.id === id && !t.completedAt);
-  if (!task) throw new Error('هذا التذكير لم يعد نشطًا.');
+  if (!task) { if (expectedDueAt !== undefined) return false; throw new Error('هذا التذكير لم يعد نشطًا.'); }
+  if (stale(task, expectedDueAt)) return false;
   const next = date(until);
   if (!next || Date.parse(next) <= now.getTime()) throw new Error('اختر وقتًا لاحقًا للتذكير.');
   task.dueAt = next;
   task.snoozedAt = now.toISOString();
   task.updatedAt = now.toISOString();
+  return true;
 }
 function dueTasks(state, now = new Date()) {
   return state.tasks.filter(t => !t.completedAt && t.dueAt && Date.parse(t.dueAt) <= now.getTime())
     .sort((a, b) => Date.parse(a.dueAt) - Date.parse(b.dueAt));
+}
+// The preview alert only shows while no real reminder is due. A real reminder drops it for good,
+// so it never appears later, out of context, after the real one is done.
+function alertQueue(state, preview, now = new Date()) {
+  const due = dueTasks(state, now);
+  return due.length ? { alerts: due, preview: null } : { alerts: preview ? [preview] : [], preview };
 }
 function validateState(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.tasks) || !Array.isArray(data.notes)) throw new Error('ملف البيانات غير صالح.');
@@ -165,4 +193,4 @@ class Store {
     this.state = draft;
   }
 }
-module.exports = { initialState, saveTask, completeTask, snoozeTask, dueTasks, nextOccurrence, validateState, Store };
+module.exports = { initialState, saveTask, completeTask, snoozeTask, dueTasks, alertQueue, nextOccurrence, validateState, Store, writeDurable, renameWithRetry };
