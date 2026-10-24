@@ -22,7 +22,7 @@ async function refreshAlert() {
 }
 function whenText(iso, now) { return tr('{day}, {time}', dueWhen(iso, now, locale())); }
 // Renders the shown reminder. Labels are rebuilt each time so they follow the language and the clock.
-function render() {
+function render(navigated = false) {
   const task = current(); if (!task) return;
   const now = new Date(), intl = locale(), changed = task.id !== shownId;
   shownId = task.id;
@@ -55,9 +55,14 @@ function render() {
   $('alert-skip').hidden = !repeating(task);
   $('alert-snooze-all').hidden = tasks.length < 2;
   $('alert-snooze-all').textContent = tr('Snooze all {count} · {duration}', { count: tasks.length, duration: tr('1 hour') });
+  // While an action runs, and for a moment after the next reminder appears, these wait visibly.
+  for (const id of ['alert-complete', 'alert-skip', 'alert-snooze-all']) $(id).disabled = busy;
   $('alert-prev').disabled = busy || index === 0;
   $('alert-next').disabled = busy || index === tasks.length - 1;
   if (changed) {
+    // A reminder that moved in by itself (the next in the queue, a new one) needs a fresh interaction
+    // before the keyboard acts on it; one the user moved to with previous or next does not.
+    if (!navigated) guard.reset();
     $('alert-error').textContent = '';
     closePicker();
     // Screen readers announce each newly shown reminder without the window taking focus first.
@@ -99,7 +104,7 @@ function renderFiles(task) {
 function move(step) {
   if (busy || !tasks.length) return;
   index = Math.max(0, Math.min(tasks.length - 1, index + step));
-  render();
+  render(true);
 }
 function openPicker() {
   $('snooze-form').hidden = false;
@@ -112,6 +117,8 @@ function closePicker() {
   $('snooze-until').value = '';
   document.querySelector('[data-preset="pick"]').setAttribute('aria-expanded', 'false');
 }
+// Disabling the focused button during an action drops the focus; give it back to Done.
+function restoreFocus() { if (current() && (document.activeElement === document.body || !document.activeElement)) $('alert-complete').focus({ preventScroll: true }); }
 async function act(action, until) {
   const task = current();
   if (!task || busy) return;
@@ -125,14 +132,14 @@ async function act(action, until) {
     // Another reminder took this place: pause briefly so a repeated click cannot act on it unseen.
     if (current() && current().id !== shown) await new Promise(resolve => setTimeout(resolve, 600));
   } catch (e) { $('alert-error').textContent = e.message; }
-  finally { busy = false; render(); }
+  finally { busy = false; render(); restoreFocus(); }
 }
 async function snoozeAll(until) {
   if (busy || tasks.length < 2) return;
   busy = true; render();
   try { for (const task of [...tasks]) await api('snooze', { id: task.id, until, expectedDueAt: task.dueAt ?? null }); await refreshAlert(); }
   catch (e) { $('alert-error').textContent = e.message; }
-  finally { busy = false; render(); }
+  finally { busy = false; render(); restoreFocus(); }
 }
 let undoTimer;
 function showUndo(info) {

@@ -15,8 +15,8 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 - **Pause reminders** from the notification area. [#16]
 - **Dark mode.** [#7]
 - **Verified backups** with restore from Settings. [#5]
-- **12 interface languages,** with English as the new default and a full right-to-left layout in Arabic. [#NN]
-- **A redesigned alert:** one reminder at a time with its status at a glance, smart snooze choices on the 1–6 keys, **Snooze all** and **Open task**. [#NN]
+- **12 interface languages,** with English as the new default and a full right-to-left layout in Arabic. [#36]
+- **A redesigned alert:** one reminder at a time with its status at a glance, smart snooze choices on the 1–6 keys, **Snooze all** and **Open task**. [#36]
 - **Color themes:** six palettes in light and dark, plus note paper colors and styles. [#35]
 
 ### Added
@@ -44,8 +44,8 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 - A local log in the data folder's `logs` folder, to attach to a problem report. It never records task or note titles, text or file names. [#15]
 - The installer shows the privacy notice and the license, in English or Arabic, and the uninstaller says your data folder is kept. [#14]
 - Release installers come with `SHA256SUMS.txt` and GitHub build provenance, so you can check a download. [#3]
-- The interface in 12 languages: English, العربية, Español, Français, Deutsch, Português (Brasil), Русский, 中文 (简体), 日本語, Türkçe, हिन्दी and Bahasa Indonesia, each listed in its own name. New installs start in English and existing installs keep Arabic. The tray menu, dialogs and error messages follow the chosen language, text missing in a language falls back to English, and the layout mirrors for right-to-left. The translations beyond English and Arabic are machine-assisted and were reviewed by native-level reviewers. [#NN]
-- The redesigned alert window [#NN]:
+- The interface in 12 languages: English, العربية, Español, Français, Deutsch, Português (Brasil), Русский, 中文 (简体), 日本語, Türkçe, हिन्दी and Bahasa Indonesia, each listed in its own name. New installs start in English and existing installs keep Arabic. The tray menu, dialogs and error messages follow the chosen language, text missing in a language falls back to English, and the layout mirrors for right-to-left. The translations beyond English and Arabic are machine-assisted and were reviewed by native-level reviewers. [#36]
+- The redesigned alert window [#36]:
   - chips for how long a reminder is overdue, its priority, its repeat and how many times it was snoozed, with the next occurrence under **Done** for repeating tasks;
   - **Remind me again** with 10 min, 1 hour, This evening (until 17:00), Tomorrow 9 AM, Next week and **Pick a time…**, on the 1–6 keys; **S** skips a repeat;
   - a *1 of N* counter with previous and next when several reminders wait, and **Snooze all** for an hour;
@@ -132,3 +132,4 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 [#23]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/23
 [#25]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/25
 [#35]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/35
+[#36]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/36
