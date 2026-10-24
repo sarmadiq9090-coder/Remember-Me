@@ -17,13 +17,13 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 
 <p align="center">
   <img src="docs/screenshots/main-en.png" width="68%" alt="Remember Me main window: today's tasks and the next reminder">
-  <img src="docs/screenshots/alert-en.png" width="23%" alt="Sticky reminder above the taskbar with Done and Snooze">
+  <img src="docs/screenshots/alert-en.png" width="23%" alt="Sticky reminder above the taskbar: an overdue task with Done, snooze choices and a queue of two">
 </p>
 
 ## Features
 
-- **Sticky reminders:** a persistent alert above the taskbar, shown on top of other windows until you choose **Done** or snooze it.
-- **Flexible snooze:** 5 minutes, 15 minutes, 1 hour, 24 hours, or any date and time you pick. Snoozes survive restarts.
+- **Sticky reminders:** a persistent alert above the taskbar, shown on top of other windows until you choose **Done** or snooze it. It shows how overdue a reminder is, its priority and repeat, and the next occurrence; when several are waiting it shows them one at a time with a *1 of N* counter, and **Open task** opens the task itself.
+- **Smart snooze:** 10 minutes, 1 hour, this evening, tomorrow at 9 AM, next week, or any date and time you pick, on the 1–6 keys, plus **Snooze all** when several reminders are waiting. Snoozes survive restarts.
 - **Recurring tasks:** daily, weekly, monthly, yearly, on chosen weekdays (for example workdays), or every few days. Completing one logs it under *Completed* and schedules the next occurrence at the same wall-clock time, including across daylight-saving changes. Monthly repeats on the 31st and yearly repeats on February 29 fall back to the last day of the month without drifting.
 - **Skip this time and Only this time:** skip one occurrence of a repeating task without marking it done, or move just one occurrence and keep the rest of the series.
 - **Early notice:** an optional Windows notification from 5 minutes to 1 day before a reminder is due.
