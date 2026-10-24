@@ -1,10 +1,11 @@
 // Draws the app and tray icons into assets/ and the preview sheet docs/icon-preview.png.
-// Run with Electron, which rasterises the SVG in a hidden window (no image libraries needed):
+// Run with Electron, which rasterises the SVG in a hidden window through
+// tools/build-assets-preload.cjs (no image libraries needed):
 //   electron tools/build-assets.cjs
 // tests/icons.test.js checks the output.
 const fs = require('node:fs');
 const path = require('node:path');
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const assets = path.join(__dirname, '../assets');
 const preview = path.join(__dirname, '../docs/icon-preview.png');
 const ICO_SIZES = [16, 20, 24, 32, 40, 48, 64, 96, 128, 256];
@@ -41,66 +42,26 @@ function ico(images) {
   return Buffer.concat([header, ...images.map(image => image.png)]);
 }
 
-// Runs in the hidden page: rasterises an SVG at an exact pixel size, or lays out the preview sheet.
-function page() {
-  const load = src => new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = src; });
-  window.rasterise = async (svg, size) => {
-    const img = await load('data:image/svg+xml;base64,' + btoa(svg));
-    const canvas = Object.assign(document.createElement('canvas'), { width: size, height: size });
-    canvas.getContext('2d').drawImage(img, 0, 0, size, size);
-    return canvas.toDataURL('image/png');
-  };
-  // Every ICO size at 1:1, then the small sizes magnified 4x and the tray icons at 1:1 and 4x,
-  // on a light and a dark taskbar color.
-  window.sheet = async (icons, trays) => {
-    const themes = [['Light taskbar', '#f3f3f3', '#1b1b1b'], ['Dark taskbar', '#202020', '#f3f3f3']];
-    const width = 1000, block = 540, canvas = Object.assign(document.createElement('canvas'), { width, height: block * themes.length });
-    const ctx = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled = false;
-    const draw = async (src, x, bottom, size) => ctx.drawImage(await load(src), x, bottom - size, size, size);
-    for (const [index, [title, background, ink]] of themes.entries()) {
-      const top = index * block;
-      ctx.fillStyle = background; ctx.fillRect(0, top, width, block);
-      ctx.fillStyle = ink; ctx.font = '600 18px Segoe UI'; ctx.fillText(title, 24, top + 36);
-      ctx.font = '12px Segoe UI';
-      let x = 24;
-      for (const { size, src } of icons) { await draw(src, x, top + 316, size); ctx.fillText(String(size), x, top + 336); x += size + 22; }
-      x = 24;
-      for (const { size, src } of icons.filter(i => i.size <= 32)) { await draw(src, x, top + 500, size * 4); ctx.fillText(`${size} ×4`, x, top + 520); x += size * 4 + 22; }
-      x += 18;
-      for (const { name, size, src } of trays) { await draw(src, x, top + 500, size); x += size + 12; }
-      ctx.fillText('tray 1x, 1.5x, 2x', x - 200, top + 520);
-      x += 18;
-      for (const { name, size, src } of trays.filter(t => t.size === 16)) { await draw(src, x, top + 500, 64); ctx.fillText(name.replace('.png', '') + ' ×4', x, top + 520); x += 64 + 40; }
-    }
-    return canvas.toDataURL('image/png');
-  };
-}
-
+const png = dataUrl => Buffer.from(dataUrl.split(',')[1], 'base64');
 app.disableHardwareAcceleration();
 app.whenReady().then(async () => {
-  const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true, contextIsolation: true } });
-  await win.loadURL('data:text/html,<!doctype html><title>assets</title>');
-  await win.webContents.executeJavaScript(`(${page})()`);
-  const raster = async (svg, size) => {
-    const url = await win.webContents.executeJavaScript(`rasterise(${JSON.stringify(svg)}, ${size})`);
-    return { size, src: url, png: Buffer.from(url.split(',')[1], 'base64') };
+  const jobs = {
+    icons: ICO_SIZES.map(size => ({ size, svg: size <= SMALL ? small(size) : sized(full, size) })),
+    trays: Object.entries(TRAY).flatMap(([name, size]) => [{ name, size, svg: small(size) }, { name: name.replace('tray', 'tray-waiting'), size, svg: small(size, { waiting: true }) }]),
   };
-  const icons = [];
-  for (const size of ICO_SIZES) icons.push(await raster(size <= SMALL ? small(size) : sized(full, size), size));
-  const trays = [];
-  for (const [name, size] of Object.entries(TRAY)) {
-    trays.push({ name, ...await raster(small(size), size) });
-    trays.push({ name: name.replace('tray', 'tray-waiting'), ...await raster(small(size, { waiting: true }), size) });
-  }
+  ipcMain.handle('build-assets:jobs', () => jobs);
+  const done = new Promise(resolve => ipcMain.once('build-assets:done', (event, result) => resolve(result)));
+  const win = new BrowserWindow({ show: false, webPreferences: { sandbox: true, contextIsolation: true, preload: path.join(__dirname, 'build-assets-preload.cjs') } });
+  await win.loadURL('data:text/html,<!doctype html><title>assets</title>');
+  const { icons, trays, sheet, error } = await done;
+  if (error) throw new Error(error);
   fs.writeFileSync(path.join(assets, 'icon.svg'), full);
   fs.writeFileSync(path.join(assets, 'icon-small.svg'), small(16));
-  fs.writeFileSync(path.join(assets, 'icon.png'), icons.at(-1).png);
-  fs.writeFileSync(path.join(assets, 'icon.ico'), ico(icons));
-  for (const { name, png } of trays) fs.writeFileSync(path.join(assets, name), png);
-  const sheet = await win.webContents.executeJavaScript(`sheet(${JSON.stringify(icons.map(({ size, src }) => ({ size, src })))}, ${JSON.stringify(trays.map(({ name, size, src }) => ({ name, size, src })))})`);
+  fs.writeFileSync(path.join(assets, 'icon.png'), png(icons.at(-1).src));
+  fs.writeFileSync(path.join(assets, 'icon.ico'), ico(icons.map(({ size, src }) => ({ size, png: png(src) }))));
+  for (const { name, src } of trays) fs.writeFileSync(path.join(assets, name), png(src));
   fs.mkdirSync(path.dirname(preview), { recursive: true });
-  fs.writeFileSync(preview, Buffer.from(sheet.split(',')[1], 'base64'));
+  fs.writeFileSync(preview, png(sheet));
   console.log('Wrote icon.ico (' + ICO_SIZES.join(', ') + '), icon.png, icon.svg, icon-small.svg,', trays.map(t => t.name).join(', '), 'and docs/icon-preview.png');
   app.quit();
 }).catch(error => { console.error(error); app.exit(1); });

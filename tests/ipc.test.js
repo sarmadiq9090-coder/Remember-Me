@@ -54,7 +54,7 @@ test('skip is allowed from the alert, needs an ID and validates the expected tim
 
 test('openLink takes a link ID from the fixed list, never a URL, and not from the alert', () => {
   for (const link of ['github', 'repo', 'releases', 'issues', 'privacy', 'license']) assert.deepEqual(checkRequest('openLink', { link }), { link });
-  for (const link of [undefined, null, '', 'https://github.com/sarmadiq9090-coder', 'file:///C:/Windows/System32/calc.exe', 'javascript:alert(1)', '__proto__', 'constructor', 'toString', 'GITHUB', ['github'], { toString: () => 'github' }, 7]) {
+  for (const link of [undefined, null, '', 'https://github.com/sarmadiq9090-coder', 'file:///C:/Windows/System32/calc.exe', 'data:text/html,x', '__proto__', 'constructor', 'toString', 'GITHUB', ['github'], { toString: () => 'github' }, 7]) {
     assert.throws(() => checkRequest('openLink', { link }), /رابط غير معروف/, String(link));
   }
   assert.throws(() => checkRequest('openLink', { link: 'mailto:x' }, { text: (ar, en) => en }), /Unknown link/);
