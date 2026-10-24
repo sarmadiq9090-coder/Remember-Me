@@ -97,3 +97,5 @@
 [dir=ltr] .search{margin-right:0;margin-left:auto}
 [dir=ltr] input[type=datetime-local]{text-align:left}
 @media(max-width:1050px){[dir=ltr] main{margin-left:210px}}
+[dir=ltr] .brand{font-size:21px;letter-spacing:-.3px;padding:0 8px}
+[dir=ltr] .stat small{left:auto;right:15px}
