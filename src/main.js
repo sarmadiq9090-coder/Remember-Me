@@ -1,15 +1,18 @@
 'use strict';
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, Notification, nativeTheme } = require('electron');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
-const { REMIND_AGAIN, Store, saveTask, completeTask, skipOccurrence, snoozeTask, dueTasks, alertQueue } = require('./core');
+const { REMIND_AGAIN, Store, saveTask, completeTask, skipOccurrence, undoComplete, snoozeTask, dueTasks, alertQueue, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
 const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
 const { checkRequest, fromPage } = require('./ipc');
+const { alertBounds } = require('./placement');
 const { readBackup, restoreBackup } = require('./backups');
 const { createRepeatBeep } = require('./repeat-beep');
 const testMode = process.env.WAQT_TEST === '1';
+// Lets the desktop tests read early notifications without showing them.
+if (testMode) globalThis.waqtTest = { get early() { return earlyLog; } };
 app.setName('ذكرني');
 app.setPath('userData', testMode && process.env.WAQT_DATA_DIR ? process.env.WAQT_DATA_DIR : path.join(app.getPath('appData'), 'Waqt'));
 app.setAppUserModelId('com.waqt.reminder');
@@ -17,6 +20,26 @@ let mainWindow, alertWindow, tray, store, quitting = false, interval, preview = 
 const imagePreview = createPreviewService(nativeImage);
 let previousDue = new Set();
 const repeatBeep = createRepeatBeep(() => shell.beep());
+// The task just completed from the alert, which can be undone for a few seconds.
+let undoable = null;
+const UNDO_MS = 6000;
+// Early notifications already shown, by task and due time, so each occurrence is announced once.
+const announced = new Set();
+const earlyLog = [];
+function announceUpcoming() {
+  for (const task of upcomingTasks(store.state)) {
+    const key = task.id + ':' + task.dueAt;
+    if (announced.has(key)) continue;
+    announced.add(key);
+    const time = new Date(task.dueAt).toLocaleTimeString(localeTag(), { hour: 'numeric', minute: '2-digit' });
+    const message = { title: nativeText(`قريبًا: ${task.title}`, `Coming up: ${task.title}`), body: nativeText(`الموعد عند ${time}`, `Due at ${time}`) };
+    if (testMode) { earlyLog.push(message); continue; }
+    if (!Notification.isSupported()) continue;
+    const notification = new Notification({ ...message, icon, silent: !store.state.settings.sound });
+    notification.on('click', showMain);
+    notification.show();
+  }
+}
 const icon = path.join(__dirname, '../assets/icon.png');
 // The tray shows a dotted variant while real reminders are waiting; trayWaiting avoids calling setImage every second.
 let trayWaiting = false;
@@ -25,6 +48,12 @@ else {
   app.on('second-instance', () => showMain());
   app.whenReady().then(start).catch(error => { dialog.showErrorBox('تعذّر تشغيل ذكرني', error.message); app.quit(); });
 }
+// Window backgrounds match ui/dark.css so opening a window never flashes the other theme.
+function background(light, dark) { return nativeTheme.shouldUseDarkColors ? dark : light; }
+function applyTheme() {
+  nativeTheme.themeSource = store.state.settings.theme;
+  for (const [win, light, dark] of [[mainWindow, '#f7f8fa', '#181d27'], [alertWindow, '#ffffff', '#15171e']]) if (win && !win.isDestroyed()) win.setBackgroundColor(background(light, dark));
+}
 function options() { return { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }; }
 function secure(win) {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -32,7 +61,7 @@ function secure(win) {
 }
 function createMain(visible = !process.argv.includes('--background')) {
   const win = mainWindow = new BrowserWindow({ width: 1250, height: 850, minWidth: 900, minHeight: 650,
-    title: 'ذكرني • مساحة ليومك', icon, show: false, backgroundColor: '#f7f8fa', autoHideMenuBar: true, webPreferences: options() });
+    title: 'ذكرني • مساحة ليومك', icon, show: false, backgroundColor: background('#f7f8fa', '#181d27'), autoHideMenuBar: true, webPreferences: options() });
   win.setMenu(null);
   secure(win);
   win.loadFile(path.join(__dirname, '../ui/index.html'));
@@ -49,15 +78,14 @@ function showMain() {
 }
 function placeAlert() {
   if (!alertWindow || alertWindow.isDestroyed()) return;
-  const area = screen.getPrimaryDisplay().workArea;
-  const width = Math.min(410, area.width - 24), height = Math.min(570, area.height - 24);
-  alertWindow.setBounds({ x: store.state.settings.alertSide === 'left' ? area.x + 16 : area.x + area.width - width - 16,
-    y: area.y + area.height - height - 12, width, height });
+  alertWindow.setBounds(alertBounds(screen.getPrimaryDisplay(), store.state.settings.alertSide));
 }
 function notifyViews() {
   for (const win of [mainWindow, alertWindow]) if (win && !win.isDestroyed()) win.webContents.send('waqt:update');
 }
 function language() { return store?.state?.settings?.language === 'en' ? 'en' : 'ar'; }
+// The same locale the windows use, including a chosen digit style.
+function localeTag() { const digits = store?.state?.settings?.digits; return (language() === 'en' ? 'en-US' : 'ar-IQ') + (digits === 'arab' || digits === 'latn' ? '-u-nu-' + digits : ''); }
 function nativeText(ar, en) { return language() === 'en' ? en : ar; }
 function rebuildTrayMenu() {
   if (!tray) return;
@@ -75,6 +103,7 @@ function activeAlerts() { const queue = alertQueue(store.state, preview); previe
 // The scheduler must survive any single failure; an exception here would otherwise repeat every second.
 function scan() { try { scanNow(); } catch (error) { console.error('Reminder scan failed:', error); } }
 function scanNow() {
+  announceUpcoming();
   const tasks = activeAlerts();
   const current = new Set(tasks.map(t => t.id));
   const newlyDue = tasks.some(t => !previousDue.has(t.id));
@@ -82,7 +111,7 @@ function scanNow() {
   if (tasks.length) {
     if (!alertWindow || alertWindow.isDestroyed()) {
       alertWindow = new BrowserWindow({ width: 410, height: 570, frame: false, resizable: false, minimizable: false,
-        maximizable: false, skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: '#ffffff', icon, webPreferences: options() });
+        maximizable: false, skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: background('#ffffff', '#15171e'), icon, webPreferences: options() });
       secure(alertWindow);
       alertWindow.setAlwaysOnTop(true, 'pop-up-menu');
       placeAlert();
@@ -94,11 +123,15 @@ function scanNow() {
     } else if (!alertWindow.isVisible()) alertWindow.showInactive();
     if (newlyDue && store.state.settings.sound && !testMode) shell.beep();
     repeatBeep(store.state.settings.sound && !testMode && tasks[0].id !== '__preview' ? tasks[0].id : null, store.state.settings.remindAgain || 0);
-  } else { repeatBeep(null, 0); if (alertWindow) { alertWindow.destroy(); alertWindow = null; } }
+  } else { repeatBeep(null, 0); if (alertWindow && !(undoable && undoable.until > Date.now())) { alertWindow.destroy(); alertWindow = null; } }
   if (newlyDue) notifyViews();
   const waiting = tasks.length > 0 && tasks[0].id !== '__preview';
   if (tray && waiting !== trayWaiting) { trayWaiting = waiting; tray.setImage(nativeImage.createFromPath(waiting ? path.join(__dirname, '../assets/tray-waiting.png') : icon)); }
   if (tray) tray.setToolTip(tasks.length ? (language() === 'en' ? `Remember Me • ${tasks.length} reminders waiting` : `ذكرني • ${tasks.length} تذكير بانتظارك`) : nativeText('ذكرني • مهامك في وقتها', 'Remember Me • Your tasks on time'));
+}
+function purgeExpiredTrash() {
+  const limit = Date.now() - TRASH_DAYS * 86400000;
+  if ([...store.state.tasks, ...store.state.notes].some(i => i.deletedAt && Date.parse(i.deletedAt) <= limit)) store.change(s => purgeTrash(s));
 }
 function setLogin(enabled) {
   if (testMode) return;
@@ -110,6 +143,8 @@ async function start() {
   session.defaultSession.setPermissionRequestHandler((contents, permission, callback) => callback(false));
   session.defaultSession.setPermissionCheckHandler(() => false);
   store = new Store(app.getPath('userData'));
+  nativeTheme.themeSource = store.state.settings.theme;
+  nativeTheme.on('updated', applyTheme);
   driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, notifyViews, { text: nativeText });
   createMain();
   tray = new Tray(nativeImage.createFromPath(icon));
@@ -126,23 +161,35 @@ async function start() {
       switch (action) {
         case 'state': value = { ...store.state, dataPath: app.getPath('userData'), packaged: app.isPackaged, recovered: store.recovered, driveBackup: driveBackup.status() }; break;
         case 'alerts': value = activeAlerts().map(t => ({ ...t, files: (t.attachments || []).map(id => store.state.attachments.find(a => a.id === id)).filter(Boolean) })); break;
-        case 'language': value = language(); break;
+        case 'language': value = { language: language(), digits: store.state.settings.digits }; break;
         case 'saveTask': store.change(s => saveTask(s, payload)); break;
         case 'complete':
           if (payload.id === '__preview') preview = null;
-          // value is false when the reminder was already handled (a double click or another window).
-          else value = store.change(s => completeTask(s, payload.id, new Date(), { expectedDueAt: payload.expectedDueAt }));
+          else {
+            // done is null when the reminder was already handled (a double click or another window).
+            const done = store.change(s => completeTask(s, payload.id, new Date(), { expectedDueAt: payload.expectedDueAt }));
+            value = done;
+            if (done && fromAlert) undoable = { ...done, title: store.state.tasks.find(t => t.id === done.id)?.title || '', until: Date.now() + UNDO_MS };
+          }
           break;
         case 'skip':
           if (payload.id === '__preview') throw new Error(nativeText('المعاينة لا تتكرر.', 'The preview does not repeat.'));
           value = store.change(s => skipOccurrence(s, payload.id, payload.expectedDueAt, new Date()));
           break;
+        case 'undoComplete':
+          if (fromAlert && (!undoable || undoable.id !== payload.id || undoable.copyId !== payload.copyId)) throw new Error(nativeText('انتهت مهلة التراجع.', 'It is too late to undo.'));
+          store.change(s => undoComplete(s, payload.id, String(payload.copyId || '')));
+          undoable = null;
+          break;
+        case 'undoable': value = undoable && undoable.until > Date.now() ? undoable : null; break;
         case 'snooze':
           if (payload.id === '__preview') { if (!payload.until || Date.parse(payload.until) <= Date.now()) throw new Error('اختر وقتًا لاحقًا.'); preview = null; }
           else value = store.change(s => snoozeTask(s, payload.id, payload.until, new Date(), { expectedDueAt: payload.expectedDueAt }));
           break;
         case 'reopen': store.change(s => { const t = s.tasks.find(t => t.id === payload.id); if (t) { t.completedAt = null; t.dueAt = null; t.scheduleAt = null; t.repeat = 'none'; t.snoozedAt = null; } }); break;
-        case 'deleteTask': store.change(s => { s.tasks = s.tasks.filter(t => t.id !== payload.id); }); break;
+        case 'deleteTask': store.change(s => trashItem(s, 'tasks', payload.id)); break;
+        case 'restoreTask': store.change(s => restoreItem(s, 'tasks', payload.id)); break;
+        case 'purgeTask': store.change(s => purgeItem(s, 'tasks', payload.id)); break;
         case 'saveNote': store.change(s => {
           const title = String(payload.title || '').trim();
           if (!title || title.length > 200) throw new Error('أضف عنوانًا للملاحظة، حتى 200 حرف.');
@@ -150,7 +197,10 @@ async function start() {
           if (!note) { note = { id: randomUUID(), createdAt: new Date().toISOString() }; s.notes.push(note); }
           Object.assign(note, { title, body: String(payload.body || '').slice(0, 50000), attachments: attachmentIds(payload.attachments ?? note.attachments ?? []), color: ['cream', 'green', 'blue', 'pink'].includes(payload.color) ? payload.color : 'cream', updatedAt: new Date().toISOString() });
         }); break;
-        case 'deleteNote': store.change(s => { s.notes = s.notes.filter(n => n.id !== payload.id); }); break;
+        case 'deleteNote': store.change(s => trashItem(s, 'notes', payload.id)); break;
+        case 'restoreNote': store.change(s => restoreItem(s, 'notes', payload.id)); break;
+        case 'purgeNote': store.change(s => purgeItem(s, 'notes', payload.id)); break;
+        case 'emptyTrash': store.change(s => purgeTrash(s, new Date(), true)); break;
         case 'attachFiles': {
           const remaining = Math.min(MAX_ATTACHMENTS, Math.max(0, Number(payload?.remaining) || 0));
           if (!remaining) throw new Error('وصلت إلى الحد الأقصى: 20 مرفقًا.');
@@ -208,11 +258,13 @@ async function start() {
         }
         case 'settings': {
           const old = store.state.settings;
-          const settings = { sound: !!payload.sound, startAtLogin: !!payload.startAtLogin, alertSide: payload.alertSide === 'left' ? 'left' : 'right', language: payload.language === 'en' ? 'en' : 'ar', remindAgain: REMIND_AGAIN.includes(payload.remindAgain) ? payload.remindAgain : 0 };
+          const settings = { sound: !!payload.sound, startAtLogin: !!payload.startAtLogin, alertSide: payload.alertSide === 'left' ? 'left' : 'right', language: payload.language === 'en' ? 'en' : 'ar',
+            digits: ['arab', 'latn'].includes(payload.digits) ? payload.digits : 'auto', weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 'auto', hijri: !!payload.hijri, theme: ['light', 'dark'].includes(payload.theme) ? payload.theme : 'system',
+            remindAgain: REMIND_AGAIN.includes(payload.remindAgain) ? payload.remindAgain : 0 };
           if (old.startAtLogin !== settings.startAtLogin) setLogin(settings.startAtLogin);
           try { store.change(s => { s.settings = settings; }); }
           catch (err) { if (old.startAtLogin !== settings.startAtLogin) setLogin(old.startAtLogin); throw err; }
-          rebuildTrayMenu(); placeAlert(); break;
+          rebuildTrayMenu(); placeAlert(); applyTheme(); break;
         }
         case 'preview':
           if (dueTasks(store.state).length) throw new Error(nativeText('يظهر الآن تذكير حقيقي. جرّب المعاينة بعد إنهائه.', 'A real reminder is showing now. Try the preview after you finish it.'));
@@ -229,7 +281,7 @@ async function start() {
           if (result.canceled) break;
           const backup = await readBackup(result.filePaths[0], { text: nativeText });
           const { tasks, notes, attachments } = backup.state;
-          const when = backup.createdAt ? new Date(backup.createdAt).toLocaleString(language() === 'en' ? 'en-US' : 'ar-IQ') : nativeText('غير معروف', 'unknown');
+          const when = backup.createdAt ? new Date(backup.createdAt).toLocaleString(localeTag()) : nativeText('غير معروف', 'unknown');
           const { response } = await dialog.showMessageBox(mainWindow, { type: 'warning', title: nativeText('استعادة نسخة احتياطية', 'Restore a backup'),
             message: nativeText('ستحل هذه النسخة محل كل مهامك وملاحظاتك الحالية.', 'This backup will replace all your current tasks and notes.'),
             detail: nativeText(`${tasks.length} مهمة، ${notes.length} ملاحظة، ${attachments.length} مرفق • تاريخ النسخة: ${when}
@@ -262,17 +314,19 @@ A safety copy of your current data is saved in the backups folder first.`),
         case 'open': showMain(); break;
         default: throw new Error('إجراء غير معروف.');
       }
-      if (!['state', 'alerts', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder'].includes(action)) { scan(); notifyViews(); }
+      if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder'].includes(action)) { scan(); notifyViews(); }
       return { ok: true, value };
     } catch (error) { return { ok: false, error: error.message }; }
   });
   interval = setInterval(scan, 1000);
-  backupInterval = setInterval(() => driveBackup.tick(), 60000);
+  purgeExpiredTrash();
+  backupInterval = setInterval(() => { driveBackup.tick(); try { purgeExpiredTrash(); } catch (error) { console.error('Trash purge failed:', error); } }, 60000);
   if (!testMode) driveBackup.tick();
   powerMonitor.on('resume', scan);
   powerMonitor.on('unlock-screen', scan);
   screen.on('display-metrics-changed', placeAlert);
   screen.on('display-removed', placeAlert);
+  screen.on('display-added', placeAlert);
   scan();
 }
 app.on('web-contents-created', (event, contents) => contents.on('will-attach-webview', e => e.preventDefault()));
