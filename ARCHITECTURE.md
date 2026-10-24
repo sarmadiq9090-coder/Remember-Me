@@ -4,31 +4,36 @@ Remember Me (ذكرني, internally "Waqt") is an offline-first Electron app for
 JavaScript with no framework and no build step: `src/` runs in the main process, `ui/` is loaded
 as-is into sandboxed windows, and `node --test` runs the unit tests directly against the sources.
 
-```
-src/main.js        main process: windows, tray, scheduler, IPC handler
-src/preload.js     the only bridge into the pages: window.waqt.call() and onUpdate()
-src/ipc.js         action allowlists and payload checks for every IPC request
-src/core.js        pure task logic, data.json validation and the durable Store
-src/repeat-beep.js in-memory "remind me again" sound timer
-src/placement.js   where the alert window sits next to the taskbar
-src/attachments.js attachment import, lookup, orphan cleanup and backup export
-src/backups.js     reading, verifying, restoring and rotating backup folders
-src/drive-backup.js daily copies into a user-chosen Google Drive sync folder
-src/image-preview.js small cached thumbnails for image attachments
-src/logger.js      the rotating local log
-ui/                index.html (main window), alert.html (sticky alert), shared scripts and CSS
-tools/             packaging, installer, icon and dark-theme generators
-tests/             unit tests (node --test) and Playwright desktop suites (*.cjs)
-```
+The sections below describe responsibilities. This table is the one place that says which file
+holds each one, so after files move or split, update the right-hand column and the sections stay
+true (see "Keeping this document current").
+
+| Responsibility | Where |
+|---|---|
+| App lifecycle, windows, tray, scheduler loop, IPC handler | `src/main.js` |
+| Bridge into the pages (`window.waqt`) | `src/preload.js` |
+| IPC allowlists and payload checks | `src/ipc.js` |
+| Task logic, data validation, durable `Store` | `src/core.js` |
+| "Remind me again" sound timer | `src/repeat-beep.js` |
+| Alert window placement next to the taskbar | `src/placement.js` |
+| Attachments: import, lookup, orphan cleanup, backup export | `src/attachments.js` |
+| Backup reading, verification, restore, rotation | `src/backups.js` |
+| Google Drive folder backups | `src/drive-backup.js` |
+| Image thumbnails | `src/image-preview.js` |
+| Local log | `src/logger.js` |
+| Main window and sticky alert pages, shared scripts and CSS | `ui/` |
+| Packaging, installer, icon and dark-theme generators | `tools/` |
+| Unit tests (`node --test`) and Playwright desktop suites (`*-desktop.cjs`, `desktop-smoke.cjs`) | `tests/` |
+| Lint rules (folder-agnostic) and editor settings | `eslint.config.cjs`, `.editorconfig` |
 
 ## Processes and windows
 
-`src/main.js` holds a single-instance lock, creates the main window (hidden to the tray when closed),
+The main process holds a single-instance lock, creates the main window (hidden to the tray when closed),
 the tray icon and, when reminders are due, a frameless always-on-top alert window. Both windows use
 `contextIsolation`, `sandbox`, `nodeIntegration: false`, a strict CSP in their HTML, and deny new
 windows, navigation, webviews and every browser permission request.
 
-`src/preload.js` exposes two functions to the pages:
+The preload script exposes two functions to the pages:
 
 - `window.waqt.call(action, payload)` invokes the single `waqt:action` IPC channel and resolves to
   `{ ok: true, value }` or `{ ok: false, error }` (the error text is already in the UI language);
@@ -39,7 +44,7 @@ windows, navigation, webviews and every browser permission request.
 Every request goes through one `ipcMain.handle('waqt:action')` handler, which:
 
 1. accepts it only from the main window or the alert window, and only when the sending frame is the
-   window's own bundled page (`fromPage` in `src/ipc.js`);
+   window's own bundled page (`fromPage`);
 2. runs `checkRequest(action, payload, { fromAlert })`, which rejects unknown actions (`ACTIONS`),
    limits the alert window to `ALERT_ACTIONS`, requires a plain-object payload, requires a short
    string `id` for `ID_ACTIONS`, and checks `expectedDueAt` for `DUE_ACTIONS`;
@@ -78,7 +83,7 @@ drive-backup.json               Google Drive backup settings and status
 logs/remember-me.log[.1|.2]     the local log (see Logging)
 ```
 
-`Store` (in `src/core.js`) validates every change before writing it: it copies `data.json` to
+`Store` validates every change before writing it: it copies `data.json` to
 `data.json.bak` with an fsync, writes `data.json.tmp`, fsyncs it, and renames it into place, retrying
 briefly when antivirus or the search indexer has the file locked (`writeDurable`,
 `renameWithRetry`). A failed change leaves both the file and the in-memory state unchanged. On
@@ -158,7 +163,7 @@ past. A second timer, every minute, runs the Drive backup tick and removes trash
 
 ## Logging
 
-`src/logger.js` appends one JSON line per event to `logs/remember-me.log` in the data folder,
+The logger appends one JSON line per event to `logs/remember-me.log` in the data folder,
 rotating at 1 MB and keeping three files (at most 3 MB), so a user can attach it to a bug report.
 Settings' "Open data folder" shows it. It records:
 
@@ -198,3 +203,12 @@ which Chromium keeps bounded. Backups never include them.
 - `tools/build-assets.cjs` regenerates the icons, including the tray's "waiting" variant, and
   `tools/dark-theme.cjs` regenerates `ui/dark.css` from the light stylesheets (a test checks it is
   up to date).
+
+## Keeping this document current
+
+- A module moved, split or added: update the table at the top.
+- An IPC action added or removed: update the actions table (a unit test fails while any action in
+  the allowlist is missing from it).
+- A field added to `data.json`: update the shape above and say what an absent value means, so
+  older files keep loading (a unit test fails while a default setting is missing from the shape).
+- A new log event: add it to the list in Logging, with the ids or counts it records.
