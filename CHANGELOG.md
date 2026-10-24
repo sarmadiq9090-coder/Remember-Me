@@ -4,7 +4,7 @@
 
 Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0 load unchanged, and the data folder moves from `%APPDATA%\Waqt` to `%APPDATA%\Remember Me` by itself the first time v1.5.0 starts.
 
-> **Before release:** replace each **TODO** line below with the merged work and its PR, or delete it. PRs up to #23 are included. Then check this entry against `git log v1.4.0..main --oneline` (see RELEASING.md).
+> **Before release:** date this heading, check this entry against `git log v1.4.0..main --oneline` (see RELEASING.md), then delete this note. PRs up to #39 are included.
 
 ### Highlights
 
@@ -13,11 +13,11 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 - **More ways to repeat:** chosen weekdays, every few days, monthly and yearly, plus **Skip this time** and **Only this time**. [#7] [#8]
 - **Trash and Undo** for deleted items and for Done. [#7]
 - **Pause reminders** from the notification area. [#16]
-- **Dark mode.** [#7]
+- **Dark mode and six color palettes,** plus notes as sticky notes, lined paper or cards in ten paper colors. [#7] [#35]
 - **Verified backups** with restore from Settings. [#5]
 - **12 interface languages,** with English as the new default and a full right-to-left layout in Arabic. [#36]
 - **A redesigned alert:** one reminder at a time with its status at a glance, smart snooze choices on the 1–6 keys, **Snooze all** and **Open task**. [#36]
-- **Color themes:** six palettes in light and dark, plus note paper colors and styles. [#35]
+- **Tags and checklists:** tag tasks and filter the list by tag, sort it by title, and break a task into steps you tick off. [#36]
 
 ### Added
 
@@ -52,6 +52,9 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
   - **Open task** opens that task's editor in the main window;
   - a gentle nudge after three snoozes of the same occurrence;
   - screen-reader support (an alert dialog that announces each reminder) and keyboard use: Enter is Done, the arrows move through the queue, and Escape never dismisses it. Shortcuts act only after you interact with the alert, so typing in another window can't complete or snooze a reminder that just appeared.
+- Tags on tasks: up to ten per task, typed with commas and suggested from the tags you already use. They show on task cards, every tag in use becomes a filter above the list, and search finds them. [#36]
+- Sort tasks by title, besides due time, priority and newest first. [#36]
+- Checklists: up to 50 steps in a task, added in the editor (Enter adds the next one) and ticked straight from the task card. A repeating task starts each occurrence with its steps unticked, and the copy under *Completed* keeps its ticks. [#36]
 - **Settings → Appearance:** six color palettes (Lavender, Ocean, Forest, Sunset, Graphite and High contrast), each in light and dark, picked from preview cards and applied at once to the main window and the alert. [#35]
 - Notes come in ten paper colors, picked from swatches, and three styles: plain card, sticky note or lined paper. The editor shows a live preview. [#35]
 - The logo inside the app follows the chosen palette and light or dark mode (issue #18). [#35]
@@ -63,6 +66,7 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 - Start with Windows is pointed at the renamed executable on startup. [#10]
 - New backup folders are named `RememberMe-backup-…` and `RememberMe-before-restore-…`. Backups named `Waqt-…` still restore and rotate. [#10]
 - Dates, times and numbers always use Western digits (0-9), in the Arabic interface too. [#9]
+- New installs start in English. Installs updated from v1.4.0 keep Arabic, and **Settings** switches between all 12 languages. [#36]
 - The alert sits next to the taskbar wherever it is (bottom, top, left or right), on scaled and secondary displays, and moves when displays change. [#7]
 - Sharper icons at every size, with a simpler bell at small sizes and dedicated notification-area images. [#22]
 - A smaller installer: it bundles only the app's own files and the Chromium language files of its interface languages. [#3]
@@ -108,6 +112,9 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 - [ARCHITECTURE.md](ARCHITECTURE.md), ESLint (`pnpm lint`) and a smoke test of the packaged app in CI. [#15]
 - A code signing policy, a release checklist ([RELEASING.md](RELEASING.md)) and winget manifests. [#11] [#12] [#13]
 - The release workflow builds with a read-only token and publishes, attests and verifies in a separate job, only for version tags; all GitHub Actions are pinned to commit SHAs. [#25]
+- The source is split by area: `src/main` (with one IPC handler file per area), `src/core`, `src/data` and `src/platform`, and `ui/main`, `ui/alert`, `ui/lib` and `ui/styles` for the pages. A structure test catches broken paths, and [ARCHITECTURE.md](ARCHITECTURE.md) maps every file. [#37] [#38]
+- A release QA suite, `pnpm test:release-qa`, drives a packaged test build through first start, every repeat type, the alert, notes, tags, checklists, all palettes, About, updates, attachments, backups and the translations. [#39]
+- `pnpm run screenshots` retakes the README pictures from made-up sample data in test mode.
 
 ### Upgrading
 
@@ -133,3 +140,6 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 [#25]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/25
 [#35]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/35
 [#36]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/36
+[#37]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/37
+[#38]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/38
+[#39]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/39
