@@ -239,3 +239,19 @@ test('skipping an occurrence moves a repeating task on without recording a compl
   completeTask(s, once.id, now);
   assert.throws(() => skipOccurrence(s, once.id, undefined, now), /المتكررة/);
 });
+test('moving one occurrence with onlyThisTime keeps the series at its usual time', () => {
+  const s = initialState();
+  const monday = new Date(2026, 9, 26, 9); // Monday 09:00
+  const t = saveTask(s, { title: 'weekly meeting', dueAt: monday.toISOString(), repeat: 'weekly' });
+  saveTask(s, { ...t, dueAt: new Date(2026, 9, 26, 11).toISOString(), onlyThisTime: true });
+  assert.deepEqual([t.dueAt, t.scheduleAt], [new Date(2026, 9, 26, 11).toISOString(), monday.toISOString()]);
+  completeTask(s, t.id, new Date(2026, 9, 26, 11, 5));
+  assert.equal(t.dueAt, new Date(2026, 10, 2, 9).toISOString(), 'The following Monday at 09:00');
+  saveTask(s, { ...t, dueAt: new Date(2026, 10, 2, 11).toISOString() });
+  assert.equal(t.scheduleAt, new Date(2026, 10, 2, 11).toISOString(), 'Without the flag the series moves');
+  saveTask(s, { ...t, dueAt: new Date(2026, 10, 2, 12).toISOString(), repeat: 'daily', onlyThisTime: true });
+  assert.equal(t.scheduleAt, new Date(2026, 10, 2, 12).toISOString(), 'A changed repeat re-anchors whatever the flag says');
+  const once = saveTask(s, { title: 'once', dueAt: monday.toISOString() });
+  saveTask(s, { ...once, dueAt: new Date(2026, 9, 26, 11).toISOString(), onlyThisTime: true });
+  assert.equal(once.scheduleAt, once.dueAt, 'The flag means nothing for a one-time task');
+});

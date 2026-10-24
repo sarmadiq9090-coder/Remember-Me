@@ -42,7 +42,11 @@ function saveTask(state, input, now = new Date()) {
     if (task.completedAt) throw new Error('أعد فتح المهمة قبل تعديلها.');
     // A new time, or a repeat switched on or changed, anchors the series at the time the editor shows,
     // which for a snoozed task is the snoozed time rather than the original one.
-    const anchor = fields.dueAt !== task.dueAt || (fields.repeat !== 'none' && fields.repeat !== task.repeat);
+    const repeatChanged = fields.repeat !== 'none' && fields.repeat !== task.repeat;
+    // onlyThisTime moves one occurrence of an unchanged series and keeps its anchor, as a snooze does.
+    const onlyThisTime = input.onlyThisTime === true && fields.repeat !== 'none' && !repeatChanged && !!task.scheduleAt;
+    const anchor = !onlyThisTime && (fields.dueAt !== task.dueAt || repeatChanged);
+    if (onlyThisTime && fields.dueAt !== task.dueAt) task.snoozedAt = null;
     Object.assign(task, fields, { updatedAt: now.toISOString() });
     if (anchor) { task.scheduleAt = fields.dueAt; task.snoozedAt = null; }
   } else {

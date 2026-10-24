@@ -110,12 +110,22 @@ function openTaskEditor(task) {
   $('task-repeat').value = originalTaskRepeat = task?.repeat || 'none';
   originalTaskUpdatedAt = task?.updatedAt;
   taskAttachments = [...(task?.attachments || [])]; renderEditorFiles('task');
+  editingSeries = task?.repeat && task.repeat !== 'none' && task.scheduleAt ? task.scheduleAt : null;
+  if (editingSeries) $('task-only-once-label').textContent = tr(`هذه المرة فقط (تبقى السلسلة على ${timeLabel(editingSeries)})`, `Only this time (keep the series at ${timeLabel(editingSeries)})`);
   $('task-dialog-title').textContent = task?.id ? tr('تفاصيل المهمة','Task details') : tr('مساحة لمهمة جديدة','Space for a new task');
   toggleReminder();
   $('task-dialog').showModal(); $('task-title').focus();
 }
 window.openTaskEditor = openTaskEditor;
-function toggleReminder() { $('reminder-fields').hidden = !$('task-reminder').checked; $('task-due').required = $('task-reminder').checked; }
+// 'Only this time' moves one occurrence of a repeating task and keeps the series at its usual time.
+let editingSeries = null;
+const onlyOnce = document.createElement('label');
+onlyOnce.className = 'hint only-once'; onlyOnce.hidden = true;
+onlyOnce.innerHTML = '<input type="checkbox" id="task-only-once"> <span id="task-only-once-label"></span>';
+$('task-due').closest('label').after(onlyOnce);
+function toggleOnlyOnce() { onlyOnce.hidden = !(editingSeries && $('task-reminder').checked && $('task-repeat').value === originalTaskRepeat); }
+$('task-repeat').addEventListener('change', toggleOnlyOnce);
+function toggleReminder() { $('reminder-fields').hidden = !$('task-reminder').checked; $('task-due').required = $('task-reminder').checked; toggleOnlyOnce(); }
 function openNoteEditor(note) {
   $('note-form').reset(); $('note-error').textContent = '';
   $('note-id').value = note?.id || ''; $('note-title').value = note?.title || ''; $('note-body').value = note?.body || '';
@@ -194,7 +204,7 @@ $('task-form').addEventListener('submit', async e => {
     const timeEdited = reminder !== !!originalTaskDue || (reminder && ($('task-due').value !== originalTaskDueValue || $('task-repeat').value !== originalTaskRepeat));
     await api('saveTask', { id, title: $('task-title').value, body: $('task-body').value, attachments: taskAttachments, category: state.tasks.find(t => t.id === $('task-id').value)?.category || 'personal', priority: $('task-priority').value,
       dueAt: reminder ? (originalTaskDue && $('task-due').value === originalTaskDueValue ? originalTaskDue : new Date($('task-due').value).toISOString()) : null, repeat: reminder ? $('task-repeat').value : 'none',
-      ...(id ? { updatedAt: originalTaskUpdatedAt, timeEdited } : {}) });
+      ...(id ? { updatedAt: originalTaskUpdatedAt, timeEdited, onlyThisTime: !onlyOnce.hidden && $('task-only-once').checked } : {}) });
     $('task-dialog').close(); await refresh();
     const saved = id && state.tasks.find(t => t.id === id);
     toast(saved?.completedAt ? tr('حُفظ النص. كانت المهمة قد اكتملت من نافذة التنبيه.', 'Your text was saved. The task had already been completed from the alert.')
