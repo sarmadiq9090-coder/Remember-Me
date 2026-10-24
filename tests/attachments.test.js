@@ -94,3 +94,30 @@ test('storage usage counts orphaned attachments, and cleanup removes only files 
   assert.ok(fs.existsSync(unrelated), 'Folders the app did not create are left alone');
   assert.equal((await storageUsage(new Store(data).state, data)).orphans, 0);
 });
+test('a missing attachment file is skipped and reported, while invalid paths still stop the backup', async () => {
+  const { readBackup } = require('../src/backups');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-missing-'));
+  const data = path.join(root, 'data'); const store = new Store(data);
+  const files = ['kept.pdf', 'gone.pdf'].map(name => { const f = path.join(root, name); fs.writeFileSync(f, name); return f; });
+  const [kept, gone] = await importFiles(data, files);
+  store.change(s => { s.attachments.push(kept, gone); saveTask(s, { title: 'مهمة الملفين', attachments: [kept.id, gone.id] }); });
+  fs.unlinkSync(attachmentPath(data, gone));
+  const skipped = [];
+  const folder = await exportBackup(store.state, data, root, { skipped });
+  assert.deepEqual(skipped.map(({ name, itemTitle }) => ({ name, itemTitle })), [{ name: 'gone.pdf', itemTitle: 'مهمة الملفين' }]);
+  assert.deepEqual(fs.readFileSync(attachmentPath(folder, kept)), Buffer.from('kept.pdf'));
+  const backup = await readBackup(folder);
+  assert.deepEqual(backup.state.tasks[0].attachments, [kept.id], 'The copied data.json drops the missing file so the backup can be restored');
+  assert.equal(backup.verified, true);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(folder, 'backup.json'))).skipped[0].name, 'gone.pdf');
+  assert.equal(store.state.tasks[0].attachments.length, 2, 'The live data is not changed');
+
+  const linked = path.join(root, 'linked'); const linkedStore = new Store(linked);
+  const [target] = await importFiles(linked, [files[0]]);
+  linkedStore.change(s => { s.attachments.push(target); saveTask(s, { title: 'link', attachments: [target.id] }); });
+  fs.rmSync(path.dirname(attachmentPath(linked, target)), { recursive: true });
+  fs.mkdirSync(attachmentPath(linked, target), { recursive: true }); // a folder where the file should be
+  await assert.rejects(exportBackup(linkedStore.state, linked, root), /غير صالح/);
+  const bad = { ...linkedStore.state, attachments: [{ ...target, name: '../escape.pdf' }] };
+  await assert.rejects(exportBackup(bad, linked, root), /غير صالحة/);
+});

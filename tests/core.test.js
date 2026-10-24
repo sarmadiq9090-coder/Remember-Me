@@ -180,3 +180,95 @@ test('digit style, first weekday and Hijri settings default to the previous beha
   const bad = validateState({ ...base, settings: { ...base.settings, digits: 'roman', weekStart: 3, hijri: 'yes' } }).settings;
   assert.deepEqual([bad.digits, bad.weekStart, bad.hijri], ['auto', 'auto', false]);
 });
+test('a repeated Done or snooze for an occurrence that already moved on changes nothing', () => {
+  const s = initialState();
+  const t = saveTask(s, { title: 'daily', dueAt: new Date(2026, 9, 23, 9).toISOString(), repeat: 'daily' });
+  const seen = t.dueAt, now = new Date(2026, 9, 23, 9, 5);
+  assert.ok(completeTask(s, t.id, now, { expectedDueAt: seen }));
+  assert.equal(completeTask(s, t.id, now, { expectedDueAt: seen }), null, 'A double click is a no-op');
+  assert.equal(s.tasks.filter(x => x.completedAt).length, 1, 'Exactly one completed copy');
+  assert.deepEqual([new Date(t.dueAt).getDate(), new Date(t.dueAt).getHours()], [24, 9], 'The due time advanced by exactly one day');
+  const next = t.dueAt;
+  assert.equal(snoozeTask(s, t.id, new Date(2026, 9, 23, 12).toISOString(), now, { expectedDueAt: seen }), false);
+  assert.equal(t.dueAt, next);
+  assert.equal(snoozeTask(s, t.id, new Date(2026, 9, 24, 12).toISOString(), now, { expectedDueAt: next }), true);
+  assert.equal(completeTask(s, t.id, now, { expectedDueAt: next }), null, 'Done for the snoozed-away time is stale');
+  // Older callers send no expected time and keep working.
+  assert.ok(completeTask(s, t.id, now));
+  assert.equal(s.tasks.filter(x => x.completedAt).length, 2);
+  const once = saveTask(s, { title: 'once', dueAt: '2026-10-23T08:00:00Z' });
+  assert.ok(completeTask(s, once.id, now, { expectedDueAt: '2026-10-23T08:00:00.000Z' }));
+  assert.equal(snoozeTask(s, once.id, '2026-10-30T08:00:00Z', now, { expectedDueAt: '2026-10-23T08:00:00.000Z' }), false, 'A snooze queued behind Done is ignored');
+  assert.throws(() => snoozeTask(s, once.id, '2026-10-30T08:00:00Z', now), /نشطًا/);
+  const undated = saveTask(s, { title: 'undated' });
+  assert.ok(completeTask(s, undated.id, now, { expectedDueAt: null }));
+});
+test('turning on or changing a repeat anchors it to the snoozed time the editor shows', () => {
+  const s = initialState();
+  const once = saveTask(s, { title: 'once', dueAt: new Date(2026, 9, 23, 9).toISOString() });
+  snoozeTask(s, once.id, new Date(2026, 9, 23, 14).toISOString(), new Date(2026, 9, 23, 9));
+  saveTask(s, { ...once, repeat: 'daily' });
+  assert.equal(once.scheduleAt, new Date(2026, 9, 23, 14).toISOString());
+  assert.equal(once.snoozedAt, null);
+  completeTask(s, once.id, new Date(2026, 9, 23, 14, 1));
+  assert.deepEqual([new Date(once.dueAt).getDate(), new Date(once.dueAt).getHours()], [24, 14]);
+
+  const daily = saveTask(s, { title: 'daily', dueAt: new Date(2026, 9, 23, 9).toISOString(), repeat: 'daily' });
+  snoozeTask(s, daily.id, new Date(2026, 9, 23, 11).toISOString(), new Date(2026, 9, 23, 9));
+  saveTask(s, { ...daily, body: 'only the text' });
+  assert.equal(daily.scheduleAt, new Date(2026, 9, 23, 9).toISOString(), 'A body edit keeps the anchor');
+  assert.ok(daily.snoozedAt);
+  saveTask(s, { ...daily, repeat: 'weekly' });
+  assert.equal(daily.scheduleAt, new Date(2026, 9, 23, 11).toISOString(), 'A new repeat type re-anchors');
+  completeTask(s, daily.id, new Date(2026, 9, 23, 11, 1));
+  assert.deepEqual([new Date(daily.dueAt).getDate(), new Date(daily.dueAt).getHours()], [30, 11]);
+});
+test('saving an editor opened before a snooze or Done in the alert keeps the new time and applies the text', () => {
+  const s = initialState(), at = (d, h, m = 0) => new Date(2026, 9, d, h, m);
+  const t = saveTask(s, { title: 'once', dueAt: at(23, 9).toISOString() }, at(22, 8));
+  const editor = { ...t }; // what the editor opened with
+  snoozeTask(s, t.id, at(23, 9, 15).toISOString(), at(23, 9));
+  saveTask(s, { ...editor, body: 'edited in the editor', timeEdited: false }, at(23, 9, 1));
+  assert.deepEqual([t.dueAt, t.body], [at(23, 9, 15).toISOString(), 'edited in the editor']);
+  assert.ok(t.snoozedAt, 'The snooze is kept');
+  assert.equal(t.scheduleAt, at(23, 9).toISOString());
+
+  const daily = saveTask(s, { title: 'daily', dueAt: at(23, 9).toISOString(), repeat: 'daily' }, at(22, 8));
+  const opened = { ...daily };
+  completeTask(s, daily.id, at(23, 9, 5));
+  saveTask(s, { ...opened, title: 'daily, renamed', timeEdited: false }, at(23, 9, 6));
+  assert.equal(new Date(daily.dueAt).getDate(), 24, 'Stays on tomorrow’s occurrence');
+  assert.equal(daily.title, 'daily, renamed');
+  assert.equal(s.tasks.filter(x => x.sourceId === daily.id).length, 1, 'No second completion');
+
+  const done = saveTask(s, { title: 'one-time', dueAt: at(23, 10).toISOString() }, at(22, 8));
+  const before = { ...done };
+  completeTask(s, done.id, at(23, 10, 1));
+  saveTask(s, { ...before, body: 'not lost', timeEdited: true, dueAt: at(23, 12).toISOString() }, at(23, 10, 2));
+  assert.equal(done.body, 'not lost', 'Text edits land on the completed record');
+  assert.ok(done.completedAt);
+  assert.equal(done.dueAt, at(23, 10).toISOString());
+  assert.throws(() => saveTask(s, { ...done, body: 'x' }), /أعد فتح/, 'Older callers still cannot edit a completed task');
+
+  // An edit that does change the time still moves the task and its anchor, even after a snooze.
+  const moved = saveTask(s, { title: 'moved', dueAt: at(23, 9).toISOString(), repeat: 'daily' }, at(22, 8));
+  const seen = { ...moved };
+  snoozeTask(s, moved.id, at(23, 9, 30).toISOString(), at(23, 9));
+  saveTask(s, { ...seen, dueAt: at(23, 11).toISOString(), timeEdited: true }, at(23, 9, 1));
+  assert.deepEqual([moved.dueAt, moved.scheduleAt, moved.snoozedAt], [at(23, 11).toISOString(), at(23, 11).toISOString(), null]);
+  // Saved without anything happening in between, the time is applied as before.
+  saveTask(s, { ...moved, dueAt: at(23, 12).toISOString(), timeEdited: true }, at(23, 9, 2));
+  assert.equal(moved.scheduleAt, at(23, 12).toISOString());
+});
+test('the preview alert shows only on its own and never comes back after a real reminder', () => {
+  const { alertQueue } = require('../src/core');
+  const s = initialState(), now = new Date('2026-10-23T10:00:00Z');
+  const preview = { id: '__preview', title: 'preview', dueAt: now.toISOString() };
+  assert.deepEqual(alertQueue(s, preview, now), { alerts: [preview], preview }, 'With no real reminder the preview shows as before');
+  assert.deepEqual(alertQueue(s, null, now), { alerts: [], preview: null });
+  const real = saveTask(s, { title: 'real', dueAt: '2026-10-23T09:00:00Z' });
+  const queue = alertQueue(s, preview, now);
+  assert.deepEqual([queue.alerts.map(t => t.id), queue.preview], [[real.id], null], 'A real reminder replaces the preview and clears it');
+  completeTask(s, real.id, now);
+  assert.deepEqual(alertQueue(s, queue.preview, now).alerts, [], 'After Done the alert closes; the preview does not appear late');
+});

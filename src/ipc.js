@@ -8,8 +8,10 @@ const ACTIONS = new Set(['state', 'alerts', 'language', 'saveTask', 'complete', 
 // The always-on-top alert only needs to read its queue and act on the reminder it shows.
 const ALERT_ACTIONS = new Set(['alerts', 'language', 'complete', 'undoComplete', 'undoable', 'snooze', 'open', 'openAttachment', 'imagePreview']);
 const ID_ACTIONS = new Set(['complete', 'undoComplete', 'snooze', 'reopen', 'deleteTask', 'deleteNote', 'restoreTask', 'restoreNote', 'purgeTask', 'purgeNote', 'openAttachment', 'imagePreview']);
+const DUE_ACTIONS = new Set(['complete', 'snooze']);
 const arabic = ar => ar;
 function isId(value) { return typeof value === 'string' && value.length > 0 && value.length <= 100; }
+function isDate(value) { return typeof value === 'string' && value.length <= 40 && Number.isFinite(Date.parse(value)); }
 // Returns the payload as a plain object, or throws before any action runs.
 function checkRequest(action, payload, { fromAlert = false, text = arabic } = {}) {
   if (typeof action !== 'string' || !ACTIONS.has(action)) throw new Error(text('إجراء غير معروف.', 'Unknown action.'));
@@ -17,6 +19,8 @@ function checkRequest(action, payload, { fromAlert = false, text = arabic } = {}
   if (payload === undefined || payload === null) payload = {};
   if (typeof payload !== 'object' || Array.isArray(payload)) throw new Error(text('بيانات الطلب غير صالحة.', 'Invalid request data.'));
   if (ID_ACTIONS.has(action) ? !isId(payload.id) : payload.id !== undefined && !isId(payload.id)) throw new Error(text('معرّف العنصر غير صالح.', 'Invalid item ID.'));
+  // The due time the user saw: null for an undated task, left out by older callers.
+  if (DUE_ACTIONS.has(action) && payload.expectedDueAt !== undefined && payload.expectedDueAt !== null && !isDate(payload.expectedDueAt)) throw new Error(text('موعد غير صالح.', 'Invalid time.'));
   return payload;
 }
 // True only when the request comes from the top-level page the window was created with.
