@@ -179,7 +179,9 @@ occurrence that falls in a spring-forward gap fires an hour later, and the next 
   the copied `data.json`), reported as `skipped`, and never blocks the backup.
 - **Restore** (`readBackup`, `restoreBackup`) verifies every file against its checksum (older
   backups without checksums are checked for presence and size), exports a safety copy of the current
-  data, copies the attachments in, and replaces the state in one `Store` commit.
+  data, copies the attachments in, and replaces the state in one `Store` commit. Settings about this
+  PC (`autoUpdate`, `startAtLogin`, `pausedUntil`) keep their current values; the rest come from the
+  backup and apply at once.
 - **Google Drive** (`DriveBackup`) needs no Google account access: the user picks a folder synced
   by Google Drive for desktop, and the app copies a fresh local snapshot there once a day (or on
   demand). If the folder is unavailable, the snapshot stays pending and is retried; a pending

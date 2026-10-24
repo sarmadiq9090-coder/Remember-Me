@@ -375,6 +375,8 @@ A safety copy of your current data is saved in the backups folder first.`),
           preview = null;
           value = await restoreBackup(app.getPath('userData'), store, backup);
           log.info('restore', { tasks: tasks.length, notes: notes.length, attachments: attachments.length, verified: backup.verified });
+          // The restored language, theme and alert side apply at once; update consent stays as it was.
+          rebuildTrayMenu(); placeAlert(); applyTheme(); updates.consentChanged();
           break;
         }
         case 'storage': value = await storageUsage(store.state, app.getPath('userData')); break;

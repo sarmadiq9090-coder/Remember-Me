@@ -114,3 +114,16 @@ test('backups made under the old Waqt name are still restored and rotated, safet
   assert.deepEqual(await rotateBackups(parent, 1), [old], 'The older automatic copy goes first, whatever its name');
   assert.ok(fs.existsSync(newer) && fs.existsSync(oldSafety));
 });
+
+test('restoring keeps this PC’s update consent, start with Windows and pause', async () => {
+  const before = await setup('الحالية', Buffer.from('current'));
+  const other = await setup('من النسخة', Buffer.from('backup'));
+  before.store.change(s => Object.assign(s.settings, { autoUpdate: false, startAtLogin: false, pausedUntil: null, theme: 'light', language: 'ar' }));
+  other.store.change(s => Object.assign(s.settings, { autoUpdate: true, startAtLogin: true, pausedUntil: 'manual', theme: 'dark', language: 'en' }));
+  const folder = await exportBackup(other.store.state, other.data, other.root);
+  await restoreBackup(before.data, before.store, await readBackup(folder));
+  const { settings } = new Store(before.data).state;
+  assert.deepEqual([settings.autoUpdate, settings.startAtLogin, settings.pausedUntil], [false, false, null], 'Machine-local choices are kept');
+  assert.deepEqual([settings.theme, settings.language], ['dark', 'en'], 'Preferences come from the backup');
+  assert.deepEqual(before.store.state.tasks.map(t => t.title), ['من النسخة']);
+});
