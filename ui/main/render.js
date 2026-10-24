@@ -5,11 +5,11 @@ function render() {
   const complete = state.tasks.filter(t => t.completedAt);
   const upcoming = active.filter(t => t.dueAt && Date.parse(t.dueAt) > todayEnd());
   for (const [key, value] of Object.entries({ today: today.length, all: active.length, upcoming: upcoming.length, notes: state.notes.length, completed: complete.length, trash: trash.length })) $('count-' + key).textContent = num(value);
-  document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  document.querySelectorAll('[data-view]').forEach(b => { b.classList.toggle('active', b.dataset.view === view); if (b.dataset.view === view) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   document.querySelector('.nav-item[data-view="settings"]').classList.toggle('needs-attention', !!state.driveBackup?.stale);
   renderTagFilters();
   renderUpdateNotice();
-  document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
+  document.querySelectorAll('[data-filter]').forEach(b => { b.classList.toggle('active', b.dataset.filter === filter); b.setAttribute('aria-pressed', b.dataset.filter === filter); });
   const names = views[view].map(key => (key ? tr(key) : ''));
   $('breadcrumb').textContent = names[0];
   $('page-title').innerHTML = `${names[1]}<span class="title-dot">.</span>`;

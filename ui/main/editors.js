@@ -36,9 +36,9 @@ $('task-repeat').addEventListener('change', toggleOnlyOnce);
 let repeatDays = [];
 let steps = [];
 // Steps keep their ids while editing so ticks survive renaming or reordering. Removing a step moves focus to
-// the next step's remove button, or to Add step.
+// the next step's remove button, or to Add step. Each checkbox is named "Done" plus its step's text.
 function renderSteps() {
-  replaceMarkup($('task-steps'), steps.map((step, i) => `<li><input type="checkbox" data-step-done="${i}" ${step.done ? 'checked' : ''} aria-label="${tr("Done")}"><input type="text" dir="auto" maxlength="200" data-step-text="${i}" value="${esc(step.text)}" placeholder="${tr("Step")} ${i + 1}"><button type="button" class="icon-button" data-step-remove="${i}" aria-label="${tr("Remove step")}">${icon('x')}</button></li>`).join(''), $('add-step'));
+  replaceMarkup($('task-steps'), steps.map((step, i) => `<li><input type="checkbox" id="step-done-${i}" data-step-done="${i}" ${step.done ? 'checked' : ''} aria-label="${tr("Done")}" aria-labelledby="step-done-${i} step-text-${i}"><input type="text" id="step-text-${i}" dir="auto" maxlength="200" data-step-text="${i}" value="${esc(step.text)}" placeholder="${tr("Step")} ${i + 1}"><button type="button" class="icon-button" data-step-remove="${i}" aria-label="${tr("Remove step")}">${icon('x')}</button></li>`).join(''), $('add-step'));
 }
 function stepsMarkup(t) {
   if (!t.checklist?.length) return '';
