@@ -145,7 +145,8 @@ function renderDriveBackup() {
   const last = backup.lastCopiedAt ? dateLabel(backup.lastCopiedAt) : tr('لم تُنسخ بعد', 'never');
   const stale = backup.stale ? tr(`مجلد Google Drive غير متاح منذ أكثر من يوم، ولم تصل نسخ جديدة إلى حسابك منذ ${last}. افتح Google Drive وسجّل الدخول.`, `The Google Drive folder has been unavailable for over a day; no new backups have reached your account since ${last}. Open Google Drive and sign in.`) : '';
   $('drive-status').textContent = stale || backup.error || (backup.busy ? tr('جارٍ حفظ نسخة محلية ثم نسخها إلى مجلد Drive…', 'Saving a local copy, then copying it to the Drive folder…') : backup.lastCopiedAt ? tr(`آخر نسخة إلى مجلد المزامنة: ${last}. تحقّق من أيقونة Google Drive لتأكيد اكتمال الرفع.`, `Last copy to the sync folder: ${last}. Check the Google Drive icon to confirm the upload finished.`) : tr('ثبّت Google Drive وسجّل الدخول، ثم اختر مجلدًا داخله. يتولى Google Drive رفع النسخ عند توفر الاتصال.', 'Install Google Drive and sign in, then choose a folder inside it. Google Drive uploads the copies when you are online.'));
-  $('drive-status').classList.toggle('backup-error', !!(stale || backup.error));
+  if (!stale && !backup.error && backup.skipped?.length) $('drive-status').textContent += ' ' + skippedText(backup.skipped);
+  $('drive-status').classList.toggle('backup-error', !!(stale || backup.error || backup.skipped?.length));
   $('drive-local').textContent = backup.lastLocalPath ? tr('النسخة المحلية محفوظة أيضًا على جهازك.', 'A local copy is also kept on your PC.') : '';
 }
 async function openFile(id) { try { await api('openAttachment', { id }); } catch (error) { toast(error.message); } }
@@ -236,7 +237,17 @@ for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-l
   try { await api('settings', { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value }); await refresh(); toast(tr('حُفظت الإعدادات.','Settings saved.')); }
   catch (err) { toast(err.message); } await refresh();
 });
-$('export-data').addEventListener('click', async () => { $('export-data').disabled = true; try { if (await api('export')) toast(tr('حُفظ مجلد النسخة الاحتياطية مع جميع المرفقات.', 'The backup folder was saved with all attachments.')); } catch (err) { toast(err.message); } finally { $('export-data').disabled = false; } });
+// Names the attachments a backup had to leave out because their files are missing, with the task or note each belongs to.
+function skippedText(skipped = []) {
+  if (!skipped.length) return '';
+  const list = skipped.map(s => s.itemTitle ? `${s.name} (${s.itemTitle})` : s.name).join(tr('، ', ', '));
+  return tr(`لم تُنسخ ${skipped.length} من المرفقات لأن ملفاتها مفقودة: ${list}`, `${skipped.length} attachments were left out because their files are missing: ${list}`);
+}
+$('export-data').addEventListener('click', async () => {
+  $('export-data').disabled = true;
+  try { const result = await api('export'); if (result) toast(result.skipped?.length ? `${tr('حُفظ مجلد النسخة الاحتياطية.', 'The backup folder was saved.')} ${skippedText(result.skipped)}` : tr('حُفظ مجلد النسخة الاحتياطية مع جميع المرفقات.', 'The backup folder was saved with all attachments.')); }
+  catch (err) { toast(err.message); } finally { $('export-data').disabled = false; }
+});
 $('restore-data').addEventListener('click', async () => {
   $('restore-data').disabled = true;
   try { if (await api('restore')) { await refresh(); toast(tr('استُعيدت النسخة الاحتياطية. حُفظت بياناتك السابقة في مجلد النسخ.', 'Backup restored. Your previous data was saved in the backups folder.')); } }
@@ -250,7 +261,7 @@ $('clean-orphans').addEventListener('click', async () => {
 $('open-data').addEventListener('click', async () => { try { await api('dataFolder'); } catch (err) { toast(err.message); } });
 async function driveAction(action, payload) { try { const value = await api(action, payload); await refresh(); return value; } catch (error) { toast(error.message); await refresh(); } }
 $('choose-drive-folder').addEventListener('click', () => driveAction('chooseDriveFolder'));
-$('drive-now').addEventListener('click', async () => { $('drive-now').disabled = true; if (await driveAction('driveBackupNow')) toast(tr('حُفظت النسخة محليًا وفي مجلد Drive. يتولى Google Drive إكمال الرفع.', 'Saved locally and to the Drive folder. Google Drive finishes the upload.')); });
+$('drive-now').addEventListener('click', async () => { $('drive-now').disabled = true; const status = await driveAction('driveBackupNow'); if (status) toast(`${tr('حُفظت النسخة محليًا وفي مجلد Drive. يتولى Google Drive إكمال الرفع.', 'Saved locally and to the Drive folder. Google Drive finishes the upload.')} ${skippedText(status.skipped)}`.trim()); });
 $('drive-automatic').addEventListener('change', () => driveAction('driveAutomatic', { enabled: $('drive-automatic').checked }));
 $('drive-keep').addEventListener('change', () => driveAction('driveKeep', { keep: Number($('drive-keep').value) }));
 $('drive-install').addEventListener('click', () => driveAction('driveHelp'));

@@ -17,13 +17,14 @@ class DriveBackup {
     this.exporter = options.exporter || exportBackup;
     this.text = options.text || (ar => ar);
     this.running = null;
-    this.config = { folder: '', automatic: true, lastCopiedAt: null, lastLocalPath: '', lastDrivePath: '', pending: false, error: '', lastAttempt: 0, keep: 0, unavailableSince: null };
+    this.config = { folder: '', automatic: true, lastCopiedAt: null, lastLocalPath: '', lastDrivePath: '', pending: false, error: '', lastAttempt: 0, keep: 0, unavailableSince: null, skipped: [] };
     if (fs.existsSync(this.file)) {
       try {
         const data = JSON.parse(fs.readFileSync(this.file, 'utf8'));
         if (typeof data.folder !== 'string' || (data.folder && !path.isAbsolute(data.folder))) throw new Error('invalid');
         Object.assign(this.config, data);
         if (!validKeep(this.config.keep)) this.config.keep = 0;
+        if (!Array.isArray(this.config.skipped)) this.config.skipped = [];
       } catch { this.config.error = this.text('تعذّرت قراءة إعدادات النسخ إلى Drive. اختر مجلد المزامنة مجددًا.', 'Could not read the Drive backup settings. Choose the sync folder again.'); }
     }
   }
@@ -92,7 +93,10 @@ class DriveBackup {
       if (!this.config.pending || !this.config.lastLocalPath || !fs.existsSync(path.join(this.config.lastLocalPath, 'data.json'))) {
         const parent = path.join(this.directory, 'backups');
         await fsp.mkdir(parent, { recursive: true });
-        this.config.lastLocalPath = await this.exporter(this.getState(), this.directory, parent, { kind: 'automatic' });
+        // Attachments whose files are missing are left out and reported, not allowed to block the backup.
+        const skipped = [];
+        this.config.lastLocalPath = await this.exporter(this.getState(), this.directory, parent, { kind: 'automatic', skipped });
+        this.config.skipped = skipped;
         this.config.pending = true;
         this.save();
       }

@@ -85,3 +85,18 @@ test('a Drive folder missing for over a day is reported as stale until it return
   await backup.tick();
   assert.deepEqual([backup.status().stale, backup.status().unavailableSince], [false, null]);
 });
+test('a missing attachment does not block the Drive backup, and the status names its item', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-drive-missing-'));
+  const data = path.join(root, 'data'), sync = path.join(root, 'Drive');
+  fs.mkdirSync(sync); const store = new Store(data);
+  const [image] = await importFiles(data, [path.join(__dirname, '../assets/icon.png')]);
+  store.change(s => { s.attachments.push(image); saveTask(s, { title: 'صورة الفاتورة', attachments: [image.id] }); saveTask(s, { title: 'نص فقط' }); });
+  fs.unlinkSync(path.join(data, 'attachments', image.id, image.name));
+  const backup = new DriveBackup(data, () => store.state);
+  await backup.configure(sync);
+  const status = await backup.run();
+  assert.ok(status.lastCopiedAt);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(status.lastDrivePath, 'data.json'))).tasks.length, 2);
+  assert.deepEqual(status.skipped.map(s => [s.name, s.itemTitle]), [[image.name, 'صورة الفاتورة']]);
+  assert.deepEqual(new DriveBackup(data, () => store.state).status().skipped, status.skipped, 'The warning survives a restart');
+});
