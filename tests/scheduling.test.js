@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { initialState, saveTask, completeTask, snoozeTask, dueTasks, Store } = require('../src/core');
+const { initialState, saveTask, completeTask, snoozeTask, dueTasks, Store } = require('../src/core/tasks');
 // node --test runs each file in its own process, so changing TZ here does not leak into other tests.
 const originalTZ = process.env.TZ;
 after(() => { if (originalTZ === undefined) delete process.env.TZ; else process.env.TZ = originalTZ; });
@@ -90,8 +90,8 @@ test('a day with the app closed brings back every missed reminder once, and the 
 });
 
 test('an unanswered alert beeps again on the chosen interval, at most 6 times, and stops once handled', () => {
-  const { createRepeatBeep, MAX_REPEATS } = require('../src/repeat-beep');
-  const { validateState } = require('../src/core');
+  const { createRepeatBeep, MAX_REPEATS } = require('../src/core/repeat-beep');
+  const { validateState } = require('../src/core/tasks');
   let now = 0, start = 0, beeps = [];
   const update = createRepeatBeep(() => beeps.push((now - start) / 60000), () => now);
   const phase = () => { start = now; beeps = []; };
@@ -151,7 +151,7 @@ test('chosen weekdays, workdays and every-N-days repeats skip the right days', (
 });
 
 test('repeat rules stay consistent when a task is edited, completed or loaded', () => {
-  const { validateState } = require('../src/core');
+  const { validateState } = require('../src/core/tasks');
   process.env.TZ = 'Europe/Berlin';
   const s = initialState();
   const t = saveTask(s, { title: 'r', dueAt: new Date(2026, 2, 15, 9).toISOString(), repeat: 'monthly' });
@@ -173,7 +173,7 @@ test('repeat rules stay consistent when a task is edited, completed or loaded', 
 });
 
 test('early notifications start at the chosen lead time and stop at the due time', () => {
-  const { upcomingTasks, validateState } = require('../src/core');
+  const { upcomingTasks, validateState } = require('../src/core/tasks');
   process.env.TZ = 'Asia/Baghdad';
   const s = initialState();
   const t = saveTask(s, { title: 'اجتماع', dueAt: '2026-10-24T10:00:00.000Z', remindBefore: 10 }, new Date('2026-10-24T08:00:00Z'));
@@ -192,7 +192,7 @@ test('early notifications start at the chosen lead time and stop at the due time
 });
 
 test('no early notice for a time just moved into the lead window by a snooze, a late Done or an edit', () => {
-  const { upcomingTasks, snoozeTask, skipOccurrence } = require('../src/core');
+  const { upcomingTasks, snoozeTask, skipOccurrence } = require('../src/core/tasks');
   const s = initialState();
   const at = iso => new Date(iso);
   const t = saveTask(s, { title: 'Call', dueAt: '2026-10-24T10:00:00.000Z', remindBefore: 15 }, at('2026-10-24T08:00:00Z'));
@@ -218,7 +218,7 @@ test('no early notice for a time just moved into the lead window by a snooze, a 
 });
 
 test('skip and only-this-time follow every repeat mode, and skip ignores trashed tasks', () => {
-  const { skipOccurrence, trashItem } = require('../src/core');
+  const { skipOccurrence, trashItem } = require('../src/core/tasks');
   process.env.TZ = 'Asia/Baghdad';
   const s = initialState();
   const rent = saveTask(s, { title: 'rent', dueAt: new Date(2027, 0, 31, 9).toISOString(), repeat: 'monthly' });
@@ -270,7 +270,7 @@ test('editing only the text of a monthly or yearly task keeps its anchor, even a
   assert.deepEqual(years, [28, 28, 28, 29], 'Feb 29 comes back in 2032');
 
   // A loaded monthly task without a valid repeatFrom counts from its series anchor, not a snoozed due time.
-  const { validateState } = require('../src/core');
+  const { validateState } = require('../src/core/tasks');
   const loaded = validateState(JSON.parse(JSON.stringify({ ...s, tasks: [{ ...bill, repeatFrom: 'broken', dueAt: new Date(2027, 3, 16, 10).toISOString() }] })));
   assert.equal(loaded.tasks[0].repeatFrom, bill.scheduleAt);
 });
@@ -294,7 +294,7 @@ test('repeats return to their usual time after a daylight-saving gap', () => {
 });
 
 test('repeating tasks saved before v1.5 have no anchor and still repeat at their time', () => {
-  const { validateState } = require('../src/core');
+  const { validateState } = require('../src/core/tasks');
   process.env.TZ = 'Europe/Berlin';
   const old = { ...initialState(), tasks: [{ id: 'old', title: 'old daily', body: '', priority: 'normal', category: 'personal', dueAt: new Date(2026, 9, 20, 7).toISOString(), scheduleAt: new Date(2026, 9, 20, 7).toISOString(), repeat: 'daily', attachments: [], createdAt: new Date(2026, 9, 1).toISOString(), updatedAt: new Date(2026, 9, 1).toISOString(), completedAt: null, snoozedAt: null }] };
   const s = validateState(JSON.parse(JSON.stringify(old)));

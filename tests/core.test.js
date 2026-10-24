@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { initialState, saveTask, completeTask, snoozeTask, dueTasks, Store } = require('../src/core');
+const { initialState, saveTask, completeTask, snoozeTask, dueTasks, Store } = require('../src/core/tasks');
 test('reminders remain due until completed or snoozed, including after a long sleep', () => {
   const s = initialState();
   const t = saveTask(s, { title: 'تذكير', dueAt: '2026-10-23T10:00:00Z' });
@@ -105,7 +105,7 @@ test('saving retries a rename blocked briefly by antivirus or indexing, and keep
   } finally { fs.renameSync = rename; fs.rmSync(dir, { recursive: true, force: true }); }
 });
 test('loading normalizes out-of-range fields instead of rejecting the file, and leaves valid v1.4.0 data unchanged', () => {
-  const { validateState } = require('../src/core');
+  const { validateState } = require('../src/core/tasks');
   const valid = initialState();
   const daily = saveTask(valid, { title: 'يومية', dueAt: '2026-10-23T06:00:00.000Z', repeat: 'daily' });
   completeTask(valid, daily.id, new Date('2026-10-23T07:00:00Z'));
@@ -131,7 +131,7 @@ test('loading normalizes out-of-range fields instead of rejecting the file, and 
   assert.throws(() => validateState({ ...before, version: 2 }), /invalid/);
 });
 test('undoing Done restores a one-time task, and a repeat to the occurrence that was completed', () => {
-  const { undoComplete } = require('../src/core');
+  const { undoComplete } = require('../src/core/tasks');
   const s = initialState();
   const once = saveTask(s, { title: 'مرة', dueAt: '2026-10-24T09:00:00.000Z' });
   const r1 = completeTask(s, once.id, new Date('2026-10-24T09:01:00Z'));
@@ -151,7 +151,7 @@ test('undoing Done restores a one-time task, and a repeat to the occurrence that
 });
 
 test('deleted items wait 30 days in the trash, out of every list and alert, and can be restored', () => {
-  const { trashItem, restoreItem, purgeItem, purgeTrash, validateState } = require('../src/core');
+  const { trashItem, restoreItem, purgeItem, purgeTrash, validateState } = require('../src/core/tasks');
   const s = initialState();
   const t = saveTask(s, { title: 'محذوفة', dueAt: '2026-10-01T09:00:00.000Z' });
   s.notes.push({ id: 'n1', title: 'ملاحظة', body: '', attachments: [], color: 'cream' });
@@ -172,7 +172,7 @@ test('deleted items wait 30 days in the trash, out of every list and alert, and 
   assert.throws(() => trashItem(s, 'settings', 'x'));
 });
 test('the week starts on Saturday unless Sunday or Monday was chosen', () => {
-  const { validateState } = require('../src/core');
+  const { validateState } = require('../src/core/tasks');
   const base = initialState();
   assert.equal(base.settings.weekStart, 6);
   assert.equal(validateState({ ...base, settings: { ...base.settings, weekStart: 1 } }).settings.weekStart, 1);
@@ -181,7 +181,7 @@ test('the week starts on Saturday unless Sunday or Monday was chosen', () => {
   assert.equal(validateState({ ...base, settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'en' } }).settings.weekStart, 6, 'v1.4.0 data has no weekStart and gets Saturday');
 });
 test('data saved with the removed Hijri date and digit style options still loads, without those fields', () => {
-  const { validateState } = require('../src/core');
+  const { validateState } = require('../src/core/tasks');
   const old = JSON.parse(JSON.stringify({ ...initialState(), settings: { ...initialState().settings, hijri: true, digits: 'arab' } }));
   saveTask(old, { title: 'kept' });
   const loaded = validateState(old);
@@ -191,7 +191,7 @@ test('data saved with the removed Hijri date and digit style options still loads
   assert.ok(!('hijri' in odd) && !('digits' in odd));
 });
 test('tags are trimmed, de-duplicated, limited and kept through edits, repeats and loading', () => {
-  const { normalizeTags, validateState } = require('../src/core');
+  const { normalizeTags, validateState } = require('../src/core/tasks');
   assert.deepEqual(normalizeTags(['#عمل', ' عمل ', 'Home', 'home', '  ', 7, 'x'.repeat(40)]), ['عمل', 'Home', 'x'.repeat(30)]);
   assert.equal(normalizeTags(Array.from({ length: 15 }, (_, i) => 't' + i)).length, 10);
   const s = initialState();
@@ -207,7 +207,7 @@ test('tags are trimmed, de-duplicated, limited and kept through edits, repeats a
   assert.deepEqual(validateState({ ...initialState(), tasks: [{ ...t, tags: ['a', 'A', 3] }] }).tasks[0].tags, ['a']);
 });
 test('checklist steps are validated, ticked one by one and reset on the next occurrence', () => {
-  const { normalizeChecklist, toggleStep, validateState } = require('../src/core');
+  const { normalizeChecklist, toggleStep, validateState } = require('../src/core/tasks');
   const steps = normalizeChecklist([{ text: ' شراء الخبز ' }, { text: '' }, { id: 'a', text: 'غسل', done: true }, { id: 'a', text: 'مكرر' }, null, { text: 'x'.repeat(300) }]);
   assert.deepEqual(steps.map(s => s.text), ['شراء الخبز', 'غسل', 'مكرر', 'x'.repeat(200)]);
   assert.equal(new Set(steps.map(s => s.id)).size, 4, 'Duplicate ids are replaced');
@@ -306,7 +306,7 @@ test('saving an editor opened before a snooze or Done in the alert keeps the new
   assert.equal(moved.scheduleAt, at(23, 12).toISOString());
 });
 test('the preview alert shows only on its own and never comes back after a real reminder', () => {
-  const { alertQueue } = require('../src/core');
+  const { alertQueue } = require('../src/core/tasks');
   const s = initialState(), now = new Date('2026-10-23T10:00:00Z');
   const preview = { id: '__preview', title: 'preview', dueAt: now.toISOString() };
   assert.deepEqual(alertQueue(s, preview, now), { alerts: [preview], preview }, 'With no real reminder the preview shows as before');
@@ -318,7 +318,7 @@ test('the preview alert shows only on its own and never comes back after a real 
   assert.deepEqual(alertQueue(s, queue.preview, now).alerts, [], 'After Done the alert closes; the preview does not appear late');
 });
 test('skipping an occurrence moves a repeating task on without recording a completion', () => {
-  const { skipOccurrence } = require('../src/core');
+  const { skipOccurrence } = require('../src/core/tasks');
   const s = initialState(), now = new Date(2026, 9, 23, 8);
   const t = saveTask(s, { title: 'daily', dueAt: new Date(2026, 9, 23, 9).toISOString(), repeat: 'daily' });
   const seen = t.dueAt;
@@ -353,7 +353,7 @@ test('moving one occurrence with onlyThisTime keeps the series at its usual time
   assert.equal(once.scheduleAt, once.dueAt, 'The flag means nothing for a one-time task');
 });
 test('snoozes are counted until the occurrence is done, skipped or moved, and Undo restores the count', () => {
-  const { undoComplete, skipOccurrence, validateState } = require('../src/core');
+  const { undoComplete, skipOccurrence, validateState } = require('../src/core/tasks');
   const s = initialState(), now = new Date('2026-10-24T09:00:00Z');
   const t = saveTask(s, { title: 'مؤجلة', dueAt: '2026-10-24T09:00:00.000Z', repeat: 'daily' });
   for (const hour of [10, 11, 12]) snoozeTask(s, t.id, `2026-10-24T${hour}:00:00.000Z`, now);

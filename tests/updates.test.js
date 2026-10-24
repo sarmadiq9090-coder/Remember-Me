@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
 const { Updates, configure, FIRST_CHECK, CHECK_EVERY } = require('../src/updates');
-const { initialState, validateState } = require('../src/core');
+const { initialState, validateState } = require('../src/core/tasks');
 
 // Timers that only move when the test says so.
 function fakeTimers() {

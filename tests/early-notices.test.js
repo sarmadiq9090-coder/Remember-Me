@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
-const { createEarlyNotices } = require('../src/early-notices');
+const { createEarlyNotices } = require('../src/core/early-notices');
 
 function setup(start = '2026-10-24T09:50:00Z', limit) {
   let now = Date.parse(start);

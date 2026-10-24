@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { createLogger, redact } = require('../src/logger');
-const { Store, saveTask } = require('../src/core');
+const { Store, saveTask } = require('../src/core/tasks');
 const { DriveBackup } = require('../src/drive-backup');
 const { importFiles, attachmentPath } = require('../src/attachments');
 

@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
-const { validateState } = require('./core');
+const { validateState } = require('./core/tasks');
 const FOLDER = 'Remember Me';
 // Versions up to 1.4 kept their data in %APPDATA%\Waqt, the app's original internal name.
 const LEGACY = 'Waqt';

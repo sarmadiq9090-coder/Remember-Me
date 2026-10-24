@@ -1,5 +1,5 @@
 'use strict';
-const { UserError } = require('./errors');
+const { UserError } = require('./core/errors');
 const fs = require('node:fs');
 const fsp = fs.promises;
 const path = require('node:path');
