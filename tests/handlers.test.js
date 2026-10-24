@@ -18,3 +18,8 @@ test('only actions that change nothing skip the rescan', () => {
   assert.deepEqual(readOnly, ['alerts', 'checkUpdates', 'copyDiagnostics', 'dataFolder', 'dismissUpdate', 'driveHelp', 'export', 'imagePreview', 'installUpdate',
     'language', 'locale', 'open', 'openAttachment', 'openDriveFolder', 'openLink', 'openLogs', 'state', 'storage', 'undoable']);
 });
+
+test('the alert learns the first day of the week, so its repeat labels match the main window', () => {
+  const ctx = { ...stub, language: () => 'en', store: { state: { settings: { palette: 'ocean', weekStart: 1 } } } };
+  assert.deepEqual(createHandlers(ctx).language.run({}), { language: 'en', palette: 'ocean', weekStart: 1 });
+});

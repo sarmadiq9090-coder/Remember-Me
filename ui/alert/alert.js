@@ -1,7 +1,7 @@
 // The sticky reminder window: one reminder at a time from the queue, with Done, snooze presets,
 // Skip for repeats, Snooze all and Open task. Every action carries the due time that was shown,
 // so the main process ignores it if that occurrence was already handled.
-let tasks = [], index = 0, shownId = null, busy = false;
+let tasks = [], index = 0, shownId = null, busy = false, weekStart;
 const $ = id => document.getElementById(id);
 const MARK = String.fromCharCode(1);
 const current = () => tasks[index];
@@ -9,7 +9,7 @@ const repeating = task => !!task && task.id !== '__preview' && task.repeat && ta
 async function refreshAlert() {
   try {
     const look = await api('language');
-    await setLanguage(look); applyPalette(look.palette);
+    await setLanguage(look); applyPalette(look.palette); weekStart = look.weekStart;
     tasks = await api('alerts');
     // After the last Done the window stays briefly so it can be undone; show that instead of an empty card.
     document.body.classList.toggle('all-done', !tasks.length);
@@ -35,7 +35,7 @@ function render(navigated = false) {
   else chips.push(overdue ? ['red', tr('Overdue · {age}', { age: overdueAge(task.dueAt, now, intl) })] : ['', tr('Due now')]);
   if (task.priority === 'high') chips.push(['amber', tr('High priority')]);
   else if (task.priority === 'medium') chips.push(['amber', tr('Medium')]);
-  if (repeating(task)) chips.push(['', '↻ ' + repeatLabel(task)]);
+  if (repeating(task)) chips.push(['', '↻ ' + repeatLabel(task, weekStart)]);
   if (task.snoozeCount) chips.push(['', tr('Snoozed {count}×', { count: task.snoozeCount })]);
   $('alert-chips').innerHTML = chips.map(([kind, text]) => `<span class="chip ${kind}">${esc(text)}</span>`).join('');
   $('alert-title').textContent = task.title;

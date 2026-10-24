@@ -44,3 +44,10 @@ test('tags survive the editor round trip in every interface language', () => {
   assert.deepEqual(JSON.parse(run('JSON.stringify(parseTags("仕事、家，週末；買い物､メモ"))')), ['仕事', '家', '週末', '買い物', 'メモ'], 'CJK commas and semicolons typed by hand');
   assert.deepEqual(JSON.parse(run('JSON.stringify(parseTags("عمل، بيت؛ a; b,c"))')), ['عمل', 'بيت', 'a', 'b', 'c']);
 });
+
+test('weekday repeat labels follow the chosen first day of the week', () => {
+  const run = loadUi('en');
+  const label = weekStart => run(`repeatLabel({ repeat: 'days', repeatDays: [5, 6, 0] }, ${weekStart})`);
+  assert.equal(label(1), 'Fri – Sun', 'Monday first: Fri, Sat, Sun are a range');
+  assert.equal(label(6), 'Sat, Sun, Fri', 'Saturday first: they are not');
+});
