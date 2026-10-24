@@ -113,7 +113,9 @@ test('loading normalizes out-of-range fields instead of rejecting the file, and 
   valid.notes.push({ id: 'n1', title: 'ملاحظة', body: 'نص', attachments: [], color: 'green', createdAt: '2026-10-23T06:00:00.000Z', updatedAt: '2026-10-23T06:00:00.000Z' });
   valid.settings = { sound: false, startAtLogin: true, alertSide: 'left', language: 'en' };
   const before = JSON.parse(JSON.stringify(valid));
-  assert.deepEqual(validateState(JSON.parse(JSON.stringify(valid))), before);
+  const loaded = validateState(JSON.parse(JSON.stringify(valid)));
+  assert.deepEqual({ ...loaded, settings: null }, { ...before, settings: null });
+  assert.deepEqual(loaded.settings, { ...initialState().settings, ...before.settings }, 'Old settings are kept; newer options get their defaults');
 
   const odd = JSON.parse(JSON.stringify(valid));
   Object.assign(odd.tasks[0], { priority: 'urgent', category: 42, repeat: 'fortnightly', snoozedAt: 'yesterday' });
@@ -168,4 +170,13 @@ test('deleted items wait 30 days in the trash, out of every list and alert, and 
   const loaded = validateState({ ...initialState(), tasks: [{ ...t, deletedAt: 'garbage' }] });
   assert.equal(loaded.tasks[0].deletedAt, null, 'A malformed deletion date restores the task rather than hiding it');
   assert.throws(() => trashItem(s, 'settings', 'x'));
+});
+test('digit style, first weekday and Hijri settings default to the previous behaviour and reject unknown values', () => {
+  const { validateState } = require('../src/core');
+  const base = initialState();
+  assert.deepEqual([base.settings.digits, base.settings.weekStart, base.settings.hijri], ['auto', 'auto', false]);
+  const ok = validateState({ ...base, settings: { ...base.settings, digits: 'latn', weekStart: 1, hijri: true } }).settings;
+  assert.deepEqual([ok.digits, ok.weekStart, ok.hijri], ['latn', 1, true]);
+  const bad = validateState({ ...base, settings: { ...base.settings, digits: 'roman', weekStart: 3, hijri: 'yes' } }).settings;
+  assert.deepEqual([bad.digits, bad.weekStart, bad.hijri], ['auto', 'auto', false]);
 });

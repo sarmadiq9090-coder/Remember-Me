@@ -23,11 +23,11 @@ function toast(message, undo) {
 }
 async function refresh() {
   try {
-    state = await api('state');
+    state = await api('state'); uiDigits = state.settings.digits;
     // Deleted items only appear in the trash view; every other view works on the rest.
     trash = [...state.tasks.filter(t => t.deletedAt).map(item => ({ kind: 'Task', item })), ...state.notes.filter(n => n.deletedAt).map(item => ({ kind: 'Note', item }))].sort((a, b) => Date.parse(b.item.deletedAt) - Date.parse(a.item.deletedAt));
     state.tasks = state.tasks.filter(t => !t.deletedAt); state.notes = state.notes.filter(n => !n.deletedAt);
-    setLanguage(state.settings.language); render();
+    setLanguage(state.settings.language, state.settings.digits); render();
   } catch (e) { toast(e.message); }
 }
 function todayEnd() { const d = new Date(); d.setHours(23, 59, 59, 999); return d.getTime(); }
@@ -48,7 +48,7 @@ function render() {
   const active = state.tasks.filter(t => !t.completedAt), today = todayTasks();
   const complete = state.tasks.filter(t => t.completedAt);
   const upcoming = active.filter(t => t.dueAt && Date.parse(t.dueAt) > todayEnd());
-  for (const [key, value] of Object.entries({ today: today.length, all: active.length, upcoming: upcoming.length, notes: state.notes.length, completed: complete.length, trash: trash.length })) $('count-' + key).textContent = value;
+  for (const [key, value] of Object.entries({ today: today.length, all: active.length, upcoming: upcoming.length, notes: state.notes.length, completed: complete.length, trash: trash.length })) $('count-' + key).textContent = num(value);
   document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   document.querySelector('.nav-item[data-view="settings"]').classList.toggle('needs-attention', !!state.driveBackup?.stale);
   document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
@@ -56,7 +56,7 @@ function render() {
   $('breadcrumb').textContent = names[0];
   $('page-title').innerHTML = `${names[1]}<span class="title-dot">.</span>`;
   $('page-description').textContent = names[2];
-  $('date-label').textContent = new Date().toLocaleDateString(uiLanguage === 'en' ? 'en-US' : 'ar-IQ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  $('date-label').textContent = new Date().toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + (state.settings.hijri ? ' • ' + new Date().toLocaleDateString(locale(true), { day: 'numeric', month: 'long', year: 'numeric' }) : '');
   $('dashboard').hidden = view !== 'today';
   $('tasks-section').hidden = ['notes', 'settings', 'trash'].includes(view);
   $('trash-section').hidden = view !== 'trash';
@@ -64,9 +64,9 @@ function render() {
   $('settings-section').hidden = view !== 'settings';
   $('page-add').hidden = ['settings', 'completed', 'trash'].includes(view);
   $('page-add-label').textContent = view === 'notes' ? tr('ملاحظة جديدة','New note') : tr('إضافة مهمة','Add task');
-  $('stat-active').textContent = today.length;
+  $('stat-active').textContent = num(today.length);
   const doneToday = complete.filter(t => isToday(t.completedAt)).length;
-  $('stat-done').textContent = doneToday;
+  $('stat-done').textContent = num(doneToday);
   const next = active.filter(t => t.dueAt).sort((a, b) => Date.parse(a.dueAt) - Date.parse(b.dueAt))[0];
   $('stat-next').textContent = next ? (Date.parse(next.dueAt) <= Date.now() ? tr('حان الآن','Due now') : timeLabel(next.dueAt)) : tr('لا يوجد','None');
   $('stat-next').title = next ? dateLabel(next.dueAt) : '';
@@ -80,6 +80,9 @@ function render() {
     $('setting-startup').checked = state.settings.startAtLogin;
     $('setting-side').value = state.settings.alertSide;
     $('setting-language').value = state.settings.language;
+    $('setting-digits').value = state.settings.digits;
+    $('setting-week').value = String(state.settings.weekStart);
+    $('setting-hijri').checked = state.settings.hijri;
     $('data-path').textContent = state.dataPath;
     renderStorage();
     renderDriveBackup();
@@ -89,7 +92,7 @@ function render() {
     if (query) tasks = tasks.filter(t => matchesSearch(t, query));
     const rank = { high: 0, medium: 1, normal: 2 };
     tasks = [...tasks].sort((a, b) => $('sort').value === 'priority' ? rank[a.priority] - rank[b.priority] : $('sort').value === 'newest' ? Date.parse(b.createdAt) - Date.parse(a.createdAt) : (Date.parse(a.dueAt) || Infinity) - (Date.parse(b.dueAt) || Infinity));
-    $('list-title').innerHTML = `${names[3]} <span id="list-count">${tasks.length}</span>`;
+    $('list-title').innerHTML = `${names[3]} <span id="list-count">${num(tasks.length)}</span>`;
     $('quick-form').hidden = view === 'completed';
     $('task-list').innerHTML = tasks.map(task => taskCard(task)).join('');
     $('task-empty').hidden = !!tasks.length;
@@ -114,7 +117,7 @@ function taskCard(t) {
 }
 function renderNotes() {
   const notes = state.notes.filter(n => matchesSearch(n, query)).sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
-  $('notes-list').innerHTML = notes.map(n => `<article class="note-card ${esc(n.color)}" data-id="${esc(n.id)}"><div class="note-edit-target" tabindex="0" role="button" aria-label="${tr('تعديل','Edit')} ${esc(n.title)}"><h3 dir="auto">${esc(n.title)}</h3><p dir="auto">${esc(n.body)}</p></div>${n.attachments?.length ? `<div class="file-chips">${attachmentChips(n.attachments)}</div>` : ''}<footer><span>${new Date(n.updatedAt).toLocaleDateString(uiLanguage === 'en' ? 'en-US' : 'ar-IQ', { day: 'numeric', month: 'long' })}</span><button class="icon-button" data-action="delete" aria-label="${tr('حذف الملاحظة','Delete note')}">${icon('trash')}</button></footer></article>`).join('');
+  $('notes-list').innerHTML = notes.map(n => `<article class="note-card ${esc(n.color)}" data-id="${esc(n.id)}"><div class="note-edit-target" tabindex="0" role="button" aria-label="${tr('تعديل','Edit')} ${esc(n.title)}"><h3 dir="auto">${esc(n.title)}</h3><p dir="auto">${esc(n.body)}</p></div>${n.attachments?.length ? `<div class="file-chips">${attachmentChips(n.attachments)}</div>` : ''}<footer><span>${new Date(n.updatedAt).toLocaleDateString(locale(), { day: 'numeric', month: 'long' })}</span><button class="icon-button" data-action="delete" aria-label="${tr('حذف الملاحظة','Delete note')}">${icon('trash')}</button></footer></article>`).join('');
   $('notes-empty').hidden = !!notes.length;
   $('notes-empty').querySelector('h3').textContent = query ? tr('لا توجد ملاحظات مطابقة','No matching notes') : tr('أفكارك تستحق مكانًا','Your ideas deserve a place');
 }
@@ -139,8 +142,8 @@ function openTaskEditor(task) {
 }
 window.openTaskEditor = openTaskEditor;
 // Week order follows the interface: Saturday first in Arabic, Sunday first in English.
-function weekOrder() { const start = uiLanguage === 'en' ? 0 : 6; return Array.from({ length: 7 }, (_, i) => (start + i) % 7); }
-function weekdayName(day, style = 'short') { return new Date(2026, 9, 25 + day).toLocaleDateString(uiLanguage === 'en' ? 'en-US' : 'ar-IQ', { weekday: style }); }
+function weekOrder() { const chosen = state?.settings?.weekStart; const start = [0, 1, 6].includes(chosen) ? chosen : uiLanguage === 'en' ? 0 : 6; return Array.from({ length: 7 }, (_, i) => (start + i) % 7); }
+function weekdayName(day, style = 'short') { return new Date(2026, 9, 25 + day).toLocaleDateString(locale(), { weekday: style }); }
 let repeatDays = [];
 function renderRepeatDays() {
   $('repeat-days').innerHTML = weekOrder().map(d => `<button type="button" data-day="${d}" aria-pressed="${repeatDays.includes(d)}" title="${esc(weekdayName(d, 'long'))}">${esc(weekdayName(d))}</button>`).join('');
@@ -180,7 +183,7 @@ async function moveToTrash(kind, id) {
 }
 function renderTrash() {
   const items = trash.filter(({ item }) => matchesSearch(item, query));
-  $('trash-count').textContent = items.length;
+  $('trash-count').textContent = num(items.length);
   $('empty-trash').hidden = !trash.length;
   $('trash-list').innerHTML = items.map(({ kind, item }) => {
     const left = Math.max(1, 30 - Math.floor((Date.now() - Date.parse(item.deletedAt)) / 86400000));
@@ -289,8 +292,8 @@ $('trash-list').addEventListener('click', async e => {
 });
 $('empty-trash').addEventListener('click', () => askPurge('emptyTrash'));
 for (const id of ['preview-alert', 'settings-preview']) $(id).addEventListener('click', async () => { try { await api('preview'); toast(tr('ظهر التنبيه فوق شريط المهام.','The alert appeared above the taskbar.')); } catch (err) { toast(err.message); } });
-for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language']) $(id).addEventListener('change', async () => {
-  try { await api('settings', { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value }); await refresh(); toast(tr('حُفظت الإعدادات.','Settings saved.')); }
+for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-digits', 'setting-week', 'setting-hijri']) $(id).addEventListener('change', async () => {
+  try { await api('settings', { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, digits: $('setting-digits').value, weekStart: $('setting-week').value === 'auto' ? 'auto' : Number($('setting-week').value), hijri: $('setting-hijri').checked }); await refresh(); toast(tr('حُفظت الإعدادات.','Settings saved.')); }
   catch (err) { toast(err.message); } await refresh();
 });
 $('export-data').addEventListener('click', async () => { $('export-data').disabled = true; try { if (await api('export')) toast(tr('حُفظ مجلد النسخة الاحتياطية مع جميع المرفقات.', 'The backup folder was saved with all attachments.')); } catch (err) { toast(err.message); } finally { $('export-data').disabled = false; } });

@@ -29,7 +29,7 @@ function announceUpcoming() {
     const key = task.id + ':' + task.dueAt;
     if (announced.has(key)) continue;
     announced.add(key);
-    const time = new Date(task.dueAt).toLocaleTimeString(language() === 'en' ? 'en-US' : 'ar-IQ', { hour: 'numeric', minute: '2-digit' });
+    const time = new Date(task.dueAt).toLocaleTimeString(localeTag(), { hour: 'numeric', minute: '2-digit' });
     const message = { title: nativeText(`قريبًا: ${task.title}`, `Coming up: ${task.title}`), body: nativeText(`الموعد عند ${time}`, `Due at ${time}`) };
     if (testMode) { earlyLog.push(message); continue; }
     if (!Notification.isSupported()) continue;
@@ -74,6 +74,8 @@ function notifyViews() {
   for (const win of [mainWindow, alertWindow]) if (win && !win.isDestroyed()) win.webContents.send('waqt:update');
 }
 function language() { return store?.state?.settings?.language === 'en' ? 'en' : 'ar'; }
+// The same locale the windows use, including a chosen digit style.
+function localeTag() { const digits = store?.state?.settings?.digits; return (language() === 'en' ? 'en-US' : 'ar-IQ') + (digits === 'arab' || digits === 'latn' ? '-u-nu-' + digits : ''); }
 function nativeText(ar, en) { return language() === 'en' ? en : ar; }
 function rebuildTrayMenu() {
   if (!tray) return;
@@ -144,7 +146,7 @@ async function start() {
       switch (action) {
         case 'state': value = { ...store.state, dataPath: app.getPath('userData'), packaged: app.isPackaged, recovered: store.recovered, driveBackup: driveBackup.status() }; break;
         case 'alerts': value = activeAlerts().map(t => ({ ...t, files: (t.attachments || []).map(id => store.state.attachments.find(a => a.id === id)).filter(Boolean) })); break;
-        case 'language': value = language(); break;
+        case 'language': value = { language: language(), digits: store.state.settings.digits }; break;
         case 'saveTask': store.change(s => saveTask(s, payload)); break;
         case 'complete':
           if (payload.id === '__preview') preview = null;
@@ -236,7 +238,8 @@ async function start() {
         }
         case 'settings': {
           const old = store.state.settings;
-          const settings = { sound: !!payload.sound, startAtLogin: !!payload.startAtLogin, alertSide: payload.alertSide === 'left' ? 'left' : 'right', language: payload.language === 'en' ? 'en' : 'ar' };
+          const settings = { sound: !!payload.sound, startAtLogin: !!payload.startAtLogin, alertSide: payload.alertSide === 'left' ? 'left' : 'right', language: payload.language === 'en' ? 'en' : 'ar',
+            digits: ['arab', 'latn'].includes(payload.digits) ? payload.digits : 'auto', weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 'auto', hijri: !!payload.hijri };
           if (old.startAtLogin !== settings.startAtLogin) setLogin(settings.startAtLogin);
           try { store.change(s => { s.settings = settings; }); }
           catch (err) { if (old.startAtLogin !== settings.startAtLogin) setLogin(old.startAtLogin); throw err; }
@@ -253,7 +256,7 @@ async function start() {
           if (result.canceled) break;
           const backup = await readBackup(result.filePaths[0], { text: nativeText });
           const { tasks, notes, attachments } = backup.state;
-          const when = backup.createdAt ? new Date(backup.createdAt).toLocaleString(language() === 'en' ? 'en-US' : 'ar-IQ') : nativeText('غير معروف', 'unknown');
+          const when = backup.createdAt ? new Date(backup.createdAt).toLocaleString(localeTag()) : nativeText('غير معروف', 'unknown');
           const { response } = await dialog.showMessageBox(mainWindow, { type: 'warning', title: nativeText('استعادة نسخة احتياطية', 'Restore a backup'),
             message: nativeText('ستحل هذه النسخة محل كل مهامك وملاحظاتك الحالية.', 'This backup will replace all your current tasks and notes.'),
             detail: nativeText(`${tasks.length} مهمة، ${notes.length} ملاحظة، ${attachments.length} مرفق • تاريخ النسخة: ${when}
