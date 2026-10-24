@@ -1,0 +1,67 @@
+name: Release
+
+# Pushing a tag such as v1.4.1 builds the Windows installer, attests where it was built,
+# and publishes it with SHA-256 checksums. Running it by hand only builds and uploads the files.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check the tag matches package.json
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($env:TAG -ne "v$version") { throw "Tag $env:TAG does not match package.json version $version" }
+      - run: pnpm test
+      - run: pnpm run package
+      - run: pnpm run installer
+      - name: Write SHA-256 checksums
+        shell: pwsh
+        working-directory: release/installer
+        run: |
+          # LF line endings so `sha256sum -c SHA256SUMS.txt` also works outside Windows.
+          $lines = Get-ChildItem -Filter 'Remember-Me-Setup-*.exe' | ForEach-Object { '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name }
+          Set-Content -Encoding ascii -NoNewline SHA256SUMS.txt -Value (($lines -join "`n") + "`n")
+          Get-Content SHA256SUMS.txt
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: release/installer/Remember-Me-Setup-*.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer
+          path: |
+            release/installer/Remember-Me-Setup-*.exe
+            release/installer/SHA256SUMS.txt
+          if-no-files-found: error
+      - name: Publish the release
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          $installer = Get-ChildItem release/installer -Filter 'Remember-Me-Setup-*.exe' | Select-Object -First 1
+          gh release create $env:TAG $installer.FullName release/installer/SHA256SUMS.txt --title "ذكرني | Remember Me $env:TAG" --generate-notes --verify-tag

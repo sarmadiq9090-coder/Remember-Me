@@ -9,10 +9,12 @@ build({
   publish: 'never',
   config: {
     extends: null,
+    // package.json holds a semver range; use the exact installed version, as tools/package.mjs does.
+    electronVersion: require('electron/package.json').version,
     appId: 'com.waqt.reminder', productName: 'ذكرني - Remember Me',
     executableName: 'Waqt',
     directories: { output: path.join(root, 'release/installer') },
-    compression: 'normal',
+    compression: 'maximum',
     win: { icon: path.join(root, 'assets/icon.ico'), signAndEditExecutable: false },
     nsis: {
       oneClick: false, perMachine: false, allowElevation: false,

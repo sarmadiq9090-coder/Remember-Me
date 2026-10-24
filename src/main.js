@@ -25,18 +25,20 @@ function secure(win) {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', e => e.preventDefault());
 }
-function createMain() {
-  mainWindow = new BrowserWindow({ width: 1250, height: 850, minWidth: 900, minHeight: 650,
+function createMain(visible = !process.argv.includes('--background')) {
+  const win = mainWindow = new BrowserWindow({ width: 1250, height: 850, minWidth: 900, minHeight: 650,
     title: 'ذكرني • مساحة ليومك', icon, show: false, backgroundColor: '#f7f8fa', autoHideMenuBar: true, webPreferences: options() });
-  mainWindow.setMenu(null);
-  secure(mainWindow);
-  mainWindow.loadFile(path.join(__dirname, '../ui/index.html'));
-  mainWindow.on('session-end', () => { quitting = true; });
-  mainWindow.on('close', e => { if (!quitting) { e.preventDefault(); mainWindow.hide(); } });
-  mainWindow.once('ready-to-show', () => { if (!process.argv.includes('--background')) mainWindow.show(); });
+  win.setMenu(null);
+  secure(win);
+  win.loadFile(path.join(__dirname, '../ui/index.html'));
+  win.on('session-end', () => { quitting = true; });
+  win.on('close', e => { if (!quitting) { e.preventDefault(); win.hide(); } });
+  // A page-initiated window.close() destroys the window without a cancelable close; rebuild it on demand.
+  win.on('closed', () => { if (mainWindow === win) mainWindow = null; });
+  win.once('ready-to-show', () => { if (visible) win.show(); });
 }
 function showMain() {
-  if (!mainWindow) return;
+  if (!mainWindow) { if (!quitting) createMain(true); return; }
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show(); mainWindow.focus();
 }
