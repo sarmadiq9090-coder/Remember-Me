@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session } = require('electron');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { Store, saveTask, completeTask, snoozeTask, dueTasks } = require('./core');
@@ -96,6 +96,9 @@ function setLogin(enabled) {
   app.setLoginItemSettings({ openAtLogin: enabled, path: process.execPath, args: ['--background'] });
 }
 async function start() {
+  // The UI needs no camera, microphone, notifications, location or other browser permissions.
+  session.defaultSession.setPermissionRequestHandler((contents, permission, callback) => callback(false));
+  session.defaultSession.setPermissionCheckHandler(() => false);
   store = new Store(app.getPath('userData'));
   driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, notifyViews);
   createMain();
@@ -206,6 +209,7 @@ async function start() {
   screen.on('display-removed', placeAlert);
   scan();
 }
+app.on('web-contents-created', (event, contents) => contents.on('will-attach-webview', e => e.preventDefault()));
 app.on('activate', showMain);
 app.on('window-all-closed', () => {});
 app.on('before-quit', () => { quitting = true; clearInterval(interval); clearInterval(backupInterval); });
