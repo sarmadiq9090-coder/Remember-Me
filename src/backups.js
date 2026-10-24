@@ -35,12 +35,17 @@ async function readBackup(folder, { text = arabic } = {}) {
   return { folder, state, verified: !!info, kind: info?.kind || 'unknown', createdAt: info?.createdAt || null };
 }
 
+// A complete copy of the current data in the backups folder, taken before a restore or an
+// update. Safety copies are never rotated away.
+async function safetyBackup(directory, state, prefix) {
+  const parent = path.join(directory, 'backups');
+  await fsp.mkdir(parent, { recursive: true });
+  return exportBackup(state, directory, parent, { kind: 'safety', prefix });
+}
 // Replaces the current data with a backup read by readBackup. The current data is exported
 // first, so a restore can always be undone from the backups folder.
 async function restoreBackup(directory, store, backup) {
-  const parent = path.join(directory, 'backups');
-  await fsp.mkdir(parent, { recursive: true });
-  const safety = await exportBackup(store.state, directory, parent, { kind: 'safety', prefix: 'RememberMe-before-restore-' });
+  const safety = await safetyBackup(directory, store.state, 'RememberMe-before-restore-');
   for (const record of backup.state.attachments) {
     const source = attachmentPath(backup.folder, record), target = attachmentPath(directory, record);
     const existing = await fsp.lstat(target).catch(() => null);
@@ -76,4 +81,4 @@ async function rotateBackups(parent, keep, protect) {
   for (const folder of expired) await fsp.rm(folder, { recursive: true, force: true });
   return expired;
 }
-module.exports = { BACKUP_PREFIXES, validKeep, readBackup, restoreBackup, expiredBackups, rotateBackups };
+module.exports = { BACKUP_PREFIXES, validKeep, readBackup, safetyBackup, restoreBackup, expiredBackups, rotateBackups };

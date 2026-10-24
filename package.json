@@ -12,9 +12,12 @@
   "keywords": ["reminder", "todo", "notes", "windows", "electron", "arabic", "english"],
   "scripts": {
     "start": "electron .",
-    "test": "node --test tests/core.test.js tests/scheduling.test.js tests/ipc.test.js tests/search.test.js tests/attachments.test.js tests/backups.test.js tests/drive-backup.test.js tests/data-folder.test.js tests/login-item.test.js",
+    "test": "node --test tests/core.test.js tests/scheduling.test.js tests/ipc.test.js tests/search.test.js tests/attachments.test.js tests/backups.test.js tests/drive-backup.test.js tests/data-folder.test.js tests/login-item.test.js tests/updates.test.js",
     "package": "node tools/package.mjs",
     "installer": "node tools/installer.cjs"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.10"
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",

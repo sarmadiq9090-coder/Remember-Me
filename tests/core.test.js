@@ -113,7 +113,8 @@ test('loading normalizes out-of-range fields instead of rejecting the file, and 
   valid.notes.push({ id: 'n1', title: 'ملاحظة', body: 'نص', attachments: [], color: 'green', createdAt: '2026-10-23T06:00:00.000Z', updatedAt: '2026-10-23T06:00:00.000Z' });
   valid.settings = { sound: false, startAtLogin: true, alertSide: 'left', language: 'en' };
   const before = JSON.parse(JSON.stringify(valid));
-  assert.deepEqual(validateState(JSON.parse(JSON.stringify(valid))), before);
+  // Only the update question, which v1.4.0 never asked, is added.
+  assert.deepEqual(validateState(JSON.parse(JSON.stringify(valid))), { ...before, settings: { ...before.settings, autoUpdate: null } });
 
   const odd = JSON.parse(JSON.stringify(valid));
   Object.assign(odd.tasks[0], { priority: 'urgent', category: 42, repeat: 'monthly', snoozedAt: 'yesterday' });

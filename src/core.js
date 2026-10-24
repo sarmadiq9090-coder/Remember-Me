@@ -5,7 +5,7 @@ const path = require('node:path');
 const { attachmentIds, validateAttachment } = require('./attachments');
 
 function initialState() {
-  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'ar' } };
+  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'ar', autoUpdate: null } };
 }
 function title(value) {
   if (typeof value !== 'string' || !value.trim() || value.trim().length > 200) throw new Error('اكتب عنوانًا من 1 إلى 200 حرف.');
@@ -110,6 +110,8 @@ function validateState(data) {
   for (const key of ['sound', 'startAtLogin']) if (typeof data.settings[key] !== 'boolean') data.settings[key] = defaults[key];
   data.settings.alertSide = data.settings.alertSide === 'left' ? 'left' : 'right';
   data.settings.language = data.settings.language === 'en' ? 'en' : 'ar';
+  // null until the user answers the one-time question about automatic updates.
+  if (data.settings.autoUpdate !== true && data.settings.autoUpdate !== false) data.settings.autoUpdate = null;
   return data;
 }
 // Antivirus scanners, the search indexer and sync clients briefly lock new files on Windows.

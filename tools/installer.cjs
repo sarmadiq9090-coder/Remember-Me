@@ -2,10 +2,12 @@ const path = require('node:path');
 const { build, Platform, Arch } = require('electron-builder');
 const root = path.resolve(__dirname, '..');
 const version = require('../package.json').version;
+const { FEED } = require('../src/updates.js');
 build({
   projectDir: root,
   prepackaged: path.join(root, 'release', `v${version}`, 'Remember Me-win32-x64'),
   targets: Platform.WINDOWS.createTarget('nsis', Arch.x64),
+  // Never upload: the release workflow publishes the files itself.
   publish: 'never',
   config: {
     extends: null,
@@ -16,6 +18,8 @@ build({
     appId: 'com.waqt.reminder', productName: 'Remember Me',
     executableName: 'Remember Me',
     directories: { output: path.join(root, 'release/installer') },
+    // Makes electron-builder write latest.yml and the installer's .blockmap for the app's updater.
+    publish: [FEED],
     compression: 'maximum',
     win: { icon: path.join(root, 'assets/icon.ico'), signAndEditExecutable: false },
     nsis: {
