@@ -16,6 +16,14 @@ function todayEnd() { const d = new Date(); d.setHours(23, 59, 59, 999); return 
 function todayTasks() { return state.tasks.filter(t => !t.completedAt && (!t.dueAt || Date.parse(t.dueAt) <= todayEnd())); }
 function setView(next) {
   view = next; filter = 'all'; query = ''; $('search').value = ''; render();
+  if (next === 'settings') loadStorage();
+}
+let storage = null;
+async function loadStorage() { try { storage = await api('storage'); } catch { storage = null; } renderStorage(); }
+function renderStorage() {
+  $('storage-usage').textContent = storage ? `${tr('المرفقات', 'Attachments')}: ${fileSize(storage.attachments)} • ${tr('النسخ الاحتياطية المحلية', 'Local backups')}: ${fileSize(storage.backups)}` : '';
+  $('clean-orphans').hidden = !storage?.orphans;
+  if (storage?.orphans) $('clean-orphans').textContent = uiLanguage === 'en' ? `Clean up ${storage.orphans} unused attachments (${fileSize(storage.orphanBytes)})` : `تنظيف ${storage.orphans} من المرفقات غير المستخدمة (${fileSize(storage.orphanBytes)})`;
 }
 function render() {
   if (!state) return;
@@ -52,6 +60,7 @@ function render() {
     $('setting-side').value = state.settings.alertSide;
     $('setting-language').value = state.settings.language;
     $('data-path').textContent = state.dataPath;
+    renderStorage();
     renderDriveBackup();
   } else {
     let tasks = view === 'today' ? today : view === 'upcoming' ? upcoming : view === 'completed' ? complete : active;
@@ -210,6 +219,11 @@ $('restore-data').addEventListener('click', async () => {
   $('restore-data').disabled = true;
   try { if (await api('restore')) { await refresh(); toast(tr('استُعيدت النسخة الاحتياطية. حُفظت بياناتك السابقة في مجلد النسخ.', 'Backup restored. Your previous data was saved in the backups folder.')); } }
   catch (err) { toast(err.message); } finally { $('restore-data').disabled = false; }
+});
+$('clean-orphans').addEventListener('click', async () => {
+  $('clean-orphans').disabled = true;
+  try { const before = storage?.orphans; const usage = await api('cleanOrphans'); if (usage) { storage = usage; renderStorage(); if (usage.orphans < before) toast(tr('حُذفت المرفقات غير المستخدمة.', 'Unused attachments were deleted.')); } }
+  catch (err) { toast(err.message); } finally { $('clean-orphans').disabled = false; }
 });
 $('open-data').addEventListener('click', async () => { try { await api('dataFolder'); } catch (err) { toast(err.message); } });
 async function driveAction(action, payload) { try { const value = await api(action, payload); await refresh(); return value; } catch (error) { toast(error.message); await refresh(); } }

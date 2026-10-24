@@ -3,7 +3,7 @@ const path = require('node:path');
 const { fileURLToPath } = require('node:url');
 const ACTIONS = new Set(['state', 'alerts', 'language', 'saveTask', 'complete', 'snooze', 'reopen', 'deleteTask', 'saveNote', 'deleteNote',
   'attachFiles', 'openAttachment', 'imagePreview', 'chooseDriveFolder', 'driveBackupNow', 'driveAutomatic', 'driveKeep', 'driveHelp', 'openDriveFolder',
-  'settings', 'preview', 'export', 'restore', 'dataFolder', 'open']);
+  'settings', 'preview', 'export', 'restore', 'storage', 'cleanOrphans', 'dataFolder', 'open']);
 // The always-on-top alert only needs to read its queue and act on the reminder it shows.
 const ALERT_ACTIONS = new Set(['alerts', 'language', 'complete', 'snooze', 'open', 'openAttachment', 'imagePreview']);
 const ID_ACTIONS = new Set(['complete', 'snooze', 'reopen', 'deleteTask', 'deleteNote', 'openAttachment', 'imagePreview']);

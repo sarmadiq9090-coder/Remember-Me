@@ -68,3 +68,29 @@ test('programs, scripts, installers and disk images are revealed instead of open
     'a.iso', 'a.img', 'a.vhdx', 'a.xll', 'a.py', 'a.wsb', 'a.rdp', 'invoice' + String.fromCharCode(0x202e) + 'fdp.exe', 'photo' + String.fromCharCode(0x202e) + 'gpj.txt']) assert.equal(opensAsProgram(name), true, name);
   for (const name of ['خطة.pdf', 'جدول.xlsx', 'a.XLSM', 'a.docx', 'a.txt', 'a.csv', 'a.png', 'exe.pdf', 'archive.zip', 'README', 'a.exe.pdf']) assert.equal(opensAsProgram(name), false, name);
 });
+test('storage usage counts orphaned attachments, and cleanup removes only files no task or note uses', async () => {
+  const { storageUsage, removeOrphans } = require('../src/attachments');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-orphans-'));
+  const data = path.join(root, 'data'); const store = new Store(data);
+  const files = ['used.pdf', 'detached.pdf', 'draft.pdf', 'history.pdf'].map(name => { const f = path.join(root, name); fs.writeFileSync(f, name.repeat(100)); return f; });
+  const [used, detached, draft, history] = await importFiles(data, files);
+  store.change(s => {
+    s.attachments.push(used, detached, draft, history);
+    saveTask(s, { title: 'مستخدم', attachments: [used.id] });
+    const t = saveTask(s, { title: 'سيُفصل', attachments: [detached.id, history.id], dueAt: '2026-10-24T09:00:00Z', repeat: 'daily' });
+    completeTask(s, t.id, new Date('2026-10-24T10:00:00Z'));
+    saveTask(s, { ...t, attachments: [] });
+  });
+  const stray = path.join(data, 'attachments', randomUUID()); fs.mkdirSync(stray); fs.writeFileSync(path.join(stray, 'left.txt'), 'x');
+  const unrelated = path.join(data, 'attachments', 'my notes'); fs.mkdirSync(unrelated);
+  const usage = await storageUsage(store.state, data);
+  assert.equal(usage.orphans, 2, 'The never-saved draft file and the stray folder; files kept by completed history count as used');
+  assert.equal(usage.orphanBytes, draft.size + 1);
+  assert.ok(usage.attachments >= used.size + detached.size + draft.size + history.size);
+  await removeOrphans(store, data);
+  assert.deepEqual(store.state.attachments.map(a => a.name).sort(), ['detached.pdf', 'history.pdf', 'used.pdf']);
+  assert.ok(!fs.existsSync(attachmentPath(data, draft)) && !fs.existsSync(stray));
+  for (const record of [used, detached, history]) assert.ok(fs.existsSync(attachmentPath(data, record)));
+  assert.ok(fs.existsSync(unrelated), 'Folders the app did not create are left alone');
+  assert.equal((await storageUsage(new Store(data).state, data)).orphans, 0);
+});

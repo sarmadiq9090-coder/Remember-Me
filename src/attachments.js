@@ -95,4 +95,45 @@ async function exportBackup(state, directory, destination, { kind = 'manual', pr
   await fsp.writeFile(path.join(folder, 'data.json'), text, { encoding: 'utf8', flag: 'wx' });
   return folder;
 }
-module.exports = { MAX_ATTACHMENTS, BACKUP_INFO, attachmentIds, opensAsProgram, hashFile, validateAttachment, attachmentPath, importFiles, resolveAttachment, exportBackup };
+async function folderSize(folder) {
+  let total = 0;
+  for (const entry of await fsp.readdir(folder, { withFileTypes: true }).catch(() => [])) {
+    const item = path.join(folder, entry.name);
+    if (entry.isDirectory()) total += await folderSize(item);
+    else if (entry.isFile()) total += (await fsp.stat(item)).size;
+  }
+  return total;
+}
+// Attachment records no task or note uses (removed from an item, or added to a draft that was
+// never saved), and attachment folders with no record at all. Backups hold their own copies.
+async function findOrphans(state, directory) {
+  const used = new Set([...state.tasks, ...state.notes].flatMap(item => item.attachments || []));
+  const known = new Set(state.attachments.map(a => a.id));
+  const records = state.attachments.filter(a => !used.has(a.id));
+  const root = path.join(directory, 'attachments');
+  const strays = (await fsp.readdir(root, { withFileTypes: true }).catch(() => [])).filter(e => e.isDirectory() && idPattern.test(e.name) && !known.has(e.name)).map(e => e.name);
+  let bytes = 0;
+  for (const id of [...records.map(a => a.id), ...strays]) bytes += await folderSize(path.join(root, id));
+  return { records: records.map(a => a.id), strays, count: records.length + strays.length, bytes };
+}
+async function storageUsage(state, directory) {
+  const orphans = await findOrphans(state, directory);
+  return { attachments: await folderSize(path.join(directory, 'attachments')), backups: await folderSize(path.join(directory, 'backups')), orphans: orphans.count, orphanBytes: orphans.bytes };
+}
+// Drops unused records first, so data.json never points at a deleted file, then deletes the folders.
+async function removeOrphans(store, directory) {
+  const orphans = await findOrphans(store.state, directory);
+  let removed = [];
+  if (orphans.records.length) store.change(s => {
+    // Re-check against the state being saved, in case an item started using a file meanwhile.
+    const used = new Set([...s.tasks, ...s.notes].flatMap(item => item.attachments || []));
+    removed = orphans.records.filter(id => !used.has(id));
+    s.attachments = s.attachments.filter(a => !removed.includes(a.id));
+  });
+  for (const id of [...removed, ...orphans.strays]) {
+    if (store.state.attachments.some(a => a.id === id)) continue;
+    await fsp.rm(path.join(directory, 'attachments', id), { recursive: true, force: true });
+  }
+  return orphans;
+}
+module.exports = { findOrphans, storageUsage, removeOrphans, MAX_ATTACHMENTS, BACKUP_INFO, attachmentIds, opensAsProgram, hashFile, validateAttachment, attachmentPath, importFiles, resolveAttachment, exportBackup };

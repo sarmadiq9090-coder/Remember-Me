@@ -3,7 +3,7 @@ const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonit
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { Store, saveTask, completeTask, snoozeTask, dueTasks } = require('./core');
-const { attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
+const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
 const { checkRequest, fromPage } = require('./ipc');
@@ -228,11 +228,25 @@ A safety copy of your current data is saved in the backups folder first.`),
           value = await restoreBackup(app.getPath('userData'), store, backup);
           break;
         }
+        case 'storage': value = await storageUsage(store.state, app.getPath('userData')); break;
+        case 'cleanOrphans': {
+          const usage = await storageUsage(store.state, app.getPath('userData'));
+          if (!usage.orphans) { value = usage; break; }
+          const size = (usage.orphanBytes / 1048576).toFixed(1);
+          const { response } = await dialog.showMessageBox(mainWindow, { type: 'warning', title: nativeText('تنظيف المرفقات', 'Clean up attachments'),
+            message: nativeText(`ستُحذف ${usage.orphans} من المرفقات غير المستخدمة (${size} ميغابايت).`, `${usage.orphans} unused attachments (${size} MB) will be deleted.`),
+            detail: nativeText('لا تتبع هذه الملفات أي مهمة أو ملاحظة، بما فيها المهام المكتملة. النسخ الاحتياطية تحتفظ بنسخها الخاصة.', 'No task or note uses these files, including completed tasks. Backups keep their own copies.'),
+            buttons: [nativeText('إلغاء', 'Cancel'), nativeText('حذف', 'Delete')], defaultId: 0, cancelId: 0 });
+          if (response !== 1) break;
+          await removeOrphans(store, app.getPath('userData'));
+          value = await storageUsage(store.state, app.getPath('userData'));
+          break;
+        }
         case 'dataFolder': await shell.openPath(app.getPath('userData')); break;
         case 'open': showMain(); break;
         default: throw new Error('إجراء غير معروف.');
       }
-      if (!['state', 'alerts', 'language', 'open', 'openAttachment', 'imagePreview', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder'].includes(action)) { scan(); notifyViews(); }
+      if (!['state', 'alerts', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder'].includes(action)) { scan(); notifyViews(); }
       return { ok: true, value };
     } catch (error) { return { ok: false, error: error.message }; }
   });
