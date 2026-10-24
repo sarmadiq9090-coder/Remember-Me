@@ -17,6 +17,7 @@
     "lint": "eslint .",
     "test:desktop": "node tests/desktop-smoke.cjs",
     "test:release-qa": "node tests/release-qa/run.cjs",
+    "screenshots": "node tools/desktop-screenshots.cjs",
     "package": "node tools/package.mjs",
     "installer": "node tools/installer.cjs"
   },

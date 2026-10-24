@@ -20,6 +20,13 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
   <img src="docs/screenshots/alert-en.png" width="23%" alt="Sticky reminder above the taskbar: an overdue task with Done, snooze choices and a queue of two">
 </p>
 
+<p align="center">
+  <img src="docs/screenshots/notes-en.png" width="45.5%" alt="Notes as sticky notes, lined paper and plain cards in several paper colors">
+  <img src="docs/screenshots/dark-en.png" width="45.5%" alt="The main window in dark mode with the Ocean palette">
+</p>
+
+<p align="center">In Arabic: <a href="docs/screenshots/main-ar.png">main window</a> · <a href="docs/screenshots/alert-ar.png">reminder</a></p>
+
 ## Features
 
 - **Sticky reminders:** a persistent alert above the taskbar, shown on top of other windows until you choose **Done** or snooze it. It shows how overdue a reminder is, its priority and repeat, and the next occurrence; when several are waiting it shows them one at a time with a *1 of N* counter, and **Open task** opens the task itself.
@@ -162,6 +169,8 @@ pnpm run installer
 ```
 
 Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable build in `release/v<version>`, and `pnpm run installer` produces an NSIS installer in `release/installer`.
+
+`pnpm run screenshots` retakes the pictures in `docs/screenshots` (`tools/desktop-screenshots.cjs`): it runs the app in test mode with made-up sample tasks and notes in a temporary data folder, in English and Arabic, light and dark, so no personal data ends up in the repository. It needs Playwright, a devDependency.
 
 `pnpm run assets` redraws the icons in `assets/` with Electron: `icon.ico` with 10 sizes from 16 to 256 px (16-32 px use the simpler `icon-small.svg` glyph without rays), `icon.png`, and the tray images `tray.png` and `tray-waiting.png` with `@1.5x` and `@2x` versions. It also writes [`docs/icon-preview.png`](docs/icon-preview.png), every size on a light and a dark taskbar.
 
