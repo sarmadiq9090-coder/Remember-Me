@@ -1,5 +1,16 @@
 # ذكرني | Remember Me
 
+<p align="center">
+  <img src="assets/icon.png" width="112" alt="Remember Me icon">
+</p>
+
+<p align="center">
+  <a href="https://github.com/sarmadiq9090-coder/Remember-Me/actions"><img src="https://img.shields.io/github/actions/workflow/status/sarmadiq9090-coder/Remember-Me/test.yml?branch=main&label=tests" alt="Tests"></a>
+  <a href="https://github.com/sarmadiq9090-coder/Remember-Me/releases/latest"><img src="https://img.shields.io/github/v/release/sarmadiq9090-coder/Remember-Me" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/sarmadiq9090-coder/Remember-Me" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4" alt="Windows 10 and 11">
+</p>
+
 تطبيق مهام وملاحظات وتذكيرات مفتوح المصدر لويندوز 64-bit، بواجهة عربية وإنجليزية. يعمل دون حساب أو اتصال دائم بالإنترنت، ويُبقي التنبيه ظاهرًا حتى تنجز المهمة أو تؤجله.
 
 Open-source task, note, and reminder app for 64-bit Windows with Arabic and English interfaces. It works without an account or a permanent internet connection, and keeps reminders visible until completed or snoozed.
@@ -15,7 +26,7 @@ Open-source task, note, and reminder app for 64-bit Windows with Arabic and Engl
 
 ## التشغيل
 
-حمّل ملف التثبيت من صفحة [Releases](https://github.com/sarmadiq9090-coder/Remember-Me/releases) عند توفره، ثم افتحه على Windows 10 أو 11 بنواة 64-bit. بيانات المستخدم الشخصية لا تدخل في المستودع أو المثبّت.
+حمّل أحدث ملف تثبيت من صفحة [Releases](https://github.com/sarmadiq9090-coder/Remember-Me/releases/latest)، ثم افتحه على Windows 10 أو 11 بنواة 64-bit. بيانات المستخدم الشخصية لا تدخل في المستودع أو المثبّت.
 
 ## الاستخدام
 
