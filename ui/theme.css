@@ -17,7 +17,8 @@
               --warning-soft, --warning-ink
    Other      --hero-* the dark welcome card · --art-1/--art-2 its illustration · --toast-bg/--toast-ink
               --backdrop dialog backdrop · --shadow shadow color
-   Note paper (independent of the palette, per note color) --paper, --paper-edge, --paper-ink, --paper-muted */
+   Note paper (independent of the palette, per note color) --paper, --paper-edge, --paper-ink, --paper-muted,
+              --paper-rule and --paper-margin (lined paper), --paper-tape (sticky note) */
 :root{color-scheme:light}
 @media (prefers-color-scheme:dark){:root{color-scheme:dark}}
 :root,[data-palette=lavender]{
@@ -116,7 +117,7 @@
   --purple:var(--accent);--purple-light:var(--accent-soft);--green:var(--success);
 }
 /* Note paper. Light papers use dark ink and dark papers light ink, at least 4.5:1 for both. */
-[data-paper]{--paper-ink:#2b2620;--paper-muted:#5c544b;--paper-tape:#ffffff8c}
+[data-paper]{--paper-ink:#2b2620;--paper-muted:#5c544b;--paper-tape:#ffffff8c;--paper-margin:#e0707099;--paper-rule:color-mix(in srgb,var(--paper-edge),var(--paper-ink) 12%)}
 [data-paper=cream]{--paper:#fbf5e9;--paper-edge:#e9e1d3}
 [data-paper=yellow]{--paper:#fdf4bf;--paper-edge:#ecdc8a}
 [data-paper=orange]{--paper:#fde4cb;--paper-edge:#efc69c}
@@ -128,7 +129,7 @@
 [data-paper=gray]{--paper:#eceef1;--paper-edge:#d5d9df}
 [data-paper=white]{--paper:#ffffff;--paper-edge:#e4e4ea}
 @media (prefers-color-scheme:dark){
-[data-paper]{--paper-ink:#f2ede6;--paper-muted:#cfc6bb;--paper-tape:#ffffff2e}
+[data-paper]{--paper-ink:#f2ede6;--paper-muted:#cfc6bb;--paper-tape:#ffffff2e;--paper-margin:#d0707080;--paper-rule:color-mix(in srgb,var(--paper-edge),var(--paper-ink) 10%)}
 [data-paper=cream]{--paper:#2e2a22;--paper-edge:#4b4232}
 [data-paper=yellow]{--paper:#35301a;--paper-edge:#5a4f1f}
 [data-paper=orange]{--paper:#3a2a1c;--paper-edge:#614228}
@@ -138,5 +139,5 @@
 [data-paper=blue]{--paper:#1f2a3b;--paper-edge:#35486a}
 [data-paper=green]{--paper:#1f3028;--paper-edge:#33533f}
 [data-paper=gray]{--paper:#2a2d33;--paper-edge:#454951}
-[data-paper=white]{--paper:#3a3d45;--paper-edge:#565a64}
+[data-paper=white]{--paper:#474a52;--paper-edge:#62666f}
 }

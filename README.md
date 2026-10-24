@@ -28,14 +28,14 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 - **Early notice:** an optional Windows notification from 5 minutes to 1 day before a reminder is due.
 - **Undo and Trash:** undo Done from the main window or the alert; deleted tasks and notes wait 30 days in the Trash and can be restored.
 - **No dropped alerts:** several due reminders are queued and shown one at a time, with a count of how many are waiting.
-- **Notes:** colored notes you can edit, search and delete.
+- **Notes:** notes you can edit, search and delete, on ten paper colors as a plain card, a sticky note or lined paper.
 - **Attachments:** add PDFs, Excel sheets, documents, images or any other file to tasks and notes, up to 20 files per item and 50 MB per file. Images preview inline, including in the alert.
 - **Safe file handling:** programs, scripts, installers and shortcuts are revealed in File Explorer instead of being launched.
 - **Smart search (Ctrl+K):** searches tasks and notes, and matches Arabic text regardless of diacritics and common spelling variants.
 - **Arabic and English interfaces:** a full right-to-left Arabic UI and a left-to-right English UI, switchable in Settings. Mixed-language text keeps its reading order.
 - **Local-first data:** atomic saves, an automatic `.bak` copy and automatic recovery if the data file is damaged.
 - **Backups:** export a full backup with all attachments and checksums, restore one from Settings after it's verified, or copy daily backups into a synced Google Drive folder.
-- **Dark mode and display options:** light, dark or follow Windows, and choose the first day of the week.
+- **Themes and display options:** light, dark or follow Windows, six color palettes (Lavender, Ocean, Forest, Sunset, Graphite and High contrast), and the first day of the week.
 - **Multi-monitor aware:** the alert sits above the taskbar wherever it is (bottom, top, left or right) and adapts to scaled and secondary displays.
 - **Runs in the background:** closing the window keeps Remember Me in the notification area, and it can start with Windows.
 - **Optional automatic updates:** with your permission, new versions are downloaded from GitHub Releases and installed when you restart.

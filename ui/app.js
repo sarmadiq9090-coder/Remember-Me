@@ -155,7 +155,7 @@ function taskCard(t) {
 }
 function renderNotes() {
   const notes = state.notes.filter(n => matchesSearch(n, query)).sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
-  $('notes-list').innerHTML = notes.map(n => `<article class="note-card ${esc(n.color)}" data-id="${esc(n.id)}"><div class="note-edit-target" tabindex="0" role="button" aria-label="${tr('تعديل','Edit')} ${esc(n.title)}"><h3 dir="auto">${esc(n.title)}</h3><p dir="auto">${esc(n.body)}</p></div>${n.attachments?.length ? `<div class="file-chips">${attachmentChips(n.attachments)}</div>` : ''}<footer><span>${new Date(n.updatedAt).toLocaleDateString(locale(), { day: 'numeric', month: 'long' })}</span><button class="icon-button" data-action="delete" aria-label="${tr('حذف الملاحظة','Delete note')}">${icon('trash')}</button></footer></article>`).join('');
+  $('notes-list').innerHTML = notes.map(n => `<article class="note-card paper" data-paper="${esc(n.color)}" data-note-style="${esc(n.style || 'plain')}" data-id="${esc(n.id)}"><div class="note-edit-target" tabindex="0" role="button" aria-label="${tr('تعديل','Edit')} ${esc(n.title)}"><h3 dir="auto">${esc(n.title)}</h3><p dir="auto">${esc(n.body)}</p></div>${n.attachments?.length ? `<div class="file-chips">${attachmentChips(n.attachments)}</div>` : ''}<footer><span>${new Date(n.updatedAt).toLocaleDateString(locale(), { day: 'numeric', month: 'long' })}</span><button class="icon-button" data-action="delete" aria-label="${tr('حذف الملاحظة','Delete note')}">${icon('trash')}</button></footer></article>`).join('');
   $('notes-empty').hidden = !!notes.length;
   $('notes-empty').querySelector('h3').textContent = query ? tr('لا توجد ملاحظات مطابقة','No matching notes') : tr('أفكارك تستحق مكانًا','Your ideas deserve a place');
 }
@@ -217,7 +217,7 @@ function toggleReminder() { $('reminder-fields').hidden = !$('task-reminder').ch
 function openNoteEditor(note) {
   $('note-form').reset(); $('note-error').textContent = '';
   $('note-id').value = note?.id || ''; $('note-title').value = note?.title || ''; $('note-body').value = note?.body || '';
-  $('note-color').value = note?.color || 'cream'; $('note-dialog-title').textContent = note ? tr('تفاصيل الملاحظة','Note details') : tr('ملاحظة جديدة','New note');
+  renderNoteLook(); setNoteLook(note?.color || 'cream', note?.style || 'plain'); $('note-dialog-title').textContent = note ? tr('تفاصيل الملاحظة','Note details') : tr('ملاحظة جديدة','New note');
   noteAttachments = [...(note?.attachments || [])]; renderEditorFiles('note');
   $('note-dialog').showModal(); $('note-title').focus();
 }
@@ -377,7 +377,7 @@ $('task-list').addEventListener('click', async e => {
 $('task-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('task-edit-target')) { e.preventDefault(); e.target.click(); } });
 $('note-form').addEventListener('submit', async e => {
   e.preventDefault(); e.submitter.disabled = true;
-  try { await api('saveNote', { id: $('note-id').value || undefined, title: $('note-title').value, body: $('note-body').value, color: $('note-color').value, attachments: noteAttachments }); $('note-dialog').close(); await refresh(); toast(tr('حُفظت ملاحظتك.','Note saved.')); }
+  try { await api('saveNote', { id: $('note-id').value || undefined, title: $('note-title').value, body: $('note-body').value, color: checked('note-color', 'cream'), style: checked('note-style', 'plain'), attachments: noteAttachments }); $('note-dialog').close(); await refresh(); toast(tr('حُفظت ملاحظتك.','Note saved.')); }
   catch (err) { $('note-error').textContent = err.message; } finally { e.submitter.disabled = false; }
 });
 $('notes-list').addEventListener('click', e => { const file = e.target.closest('[data-file-id]'); if (file) return openFile(file.dataset.fileId); const card = e.target.closest('[data-id]'); if (!card) return; if (e.target.closest('[data-action="delete"]')) return moveToTrash('Note', card.dataset.id); openNoteEditor(state.notes.find(n => n.id === card.dataset.id)); });
@@ -428,6 +428,30 @@ function renderAppearance() {
   if (appearanceSaving) return;
   for (const [name, value] of [['theme-mode', state.settings.theme], ['palette', state.settings.palette]]) card.querySelector(`input[name="${name}"][value="${value}"]`).checked = true;
 }
+// Note editor: paper colors and styles as radio groups, with a live preview (ids match src/core.js).
+const NOTE_COLORS = [['cream', 'كريمي', 'Cream'], ['yellow', 'أصفر', 'Yellow'], ['orange', 'برتقالي', 'Orange'], ['red', 'أحمر', 'Red'], ['pink', 'وردي', 'Pink'], ['purple', 'بنفسجي', 'Purple'], ['blue', 'أزرق', 'Blue'], ['green', 'أخضر', 'Green'], ['gray', 'رمادي', 'Gray'], ['white', 'أبيض', 'White']];
+const NOTE_STYLES = [['plain', 'بطاقة بسيطة', 'Plain card'], ['sticky', 'ورقة لاصقة', 'Sticky note'], ['lined', 'ورق مسطّر', 'Lined paper']];
+let noteLookLanguage;
+function renderNoteLook() {
+  if (noteLookLanguage === uiLanguage) return;
+  noteLookLanguage = uiLanguage;
+  $('note-look').innerHTML = `<div><span class="look-label" id="note-color-label">${tr('لون الملاحظة', 'Note color')}</span><div class="swatches" role="radiogroup" aria-labelledby="note-color-label">${NOTE_COLORS.map(([id, ar, en]) => `<label class="swatch" title="${tr(ar, en)}"><input type="radio" name="note-color" value="${id}" aria-label="${tr(ar, en)}"><span class="swatch-paper" data-paper="${id}">${icon('check')}</span></label>`).join('')}</div>`
+    + `<span class="look-label" id="note-style-label">${tr('الشكل', 'Style')}</span><div class="style-tiles" role="radiogroup" aria-labelledby="note-style-label">${NOTE_STYLES.map(([id, ar, en]) => `<label class="style-tile"><input type="radio" name="note-style" value="${id}"><span class="style-sample paper" data-paper="cream" data-note-style="${id}" aria-hidden="true"><i></i><i></i><i></i></span>${tr(ar, en)}</label>`).join('')}</div></div>`
+    + '<div class="note-preview paper" data-paper="cream" data-note-style="plain" aria-hidden="true"><strong dir="auto"></strong><p dir="auto"></p></div>';
+}
+function setNoteLook(color, style) {
+  for (const [name, value] of [['note-color', color], ['note-style', style]]) $('note-look').querySelector(`input[name="${name}"][value="${value}"]`).checked = true;
+  updateNotePreview();
+}
+function updateNotePreview() {
+  const color = checked('note-color', 'cream'), preview = $('note-look').querySelector('.note-preview');
+  for (const paper of $('note-look').querySelectorAll('.style-sample, .note-preview')) paper.dataset.paper = color;
+  preview.dataset.noteStyle = checked('note-style', 'plain');
+  preview.querySelector('strong').textContent = $('note-title').value || tr('عنوان الملاحظة', 'Note title');
+  preview.querySelector('p').textContent = $('note-body').value;
+}
+$('note-look').addEventListener('change', updateNotePreview);
+for (const id of ['note-title', 'note-body']) $(id).addEventListener('input', updateNotePreview);
 $('appearance-card').addEventListener('change', async e => {
   // The palette shows at once; main then updates the alert window and the window backgrounds.
   if (e.target.name === 'palette') applyPalette(e.target.value);

@@ -134,7 +134,7 @@
 .mock-side{display:flex;flex-direction:column;gap:5px;width:32%;padding:8px 6px;background:var(--surface);border-inline-end:1px solid var(--border)}
 .mock-logo{width:14px;height:14px;margin-bottom:3px;background:var(--accent)}
 .mock-nav{height:7px;background:var(--hover)}
-.mock-nav.on{background:var(--accent-soft-2);box-shadow:inset 3px 0 var(--accent-ink)}
+.mock-nav.on{background:var(--accent-soft-2);border-inline-start:3px solid var(--accent-ink)}
 .mock-page{display:flex;flex:1;flex-direction:column;gap:5px;padding:8px;min-width:0}
 .mock-hero{height:20px;background:var(--hero-bg)}
 .mock-row{display:flex;align-items:center;gap:5px;padding:3px 4px;border:1px solid var(--border);border-radius:4px;background:var(--surface)}
@@ -143,3 +143,42 @@
 .mock-line.short{flex:.55;background:var(--muted)}
 .mock-button{width:40%;height:10px;margin-top:auto;background:var(--accent)}
 @media(max-width:1050px){.palette-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Note paper: the colors come from [data-paper] in theme.css; data-note-style is plain, sticky or lined. */
+.paper{position:relative;background:var(--paper);border:1px solid var(--paper-edge);color:var(--paper-ink)}
+.paper[data-note-style=sticky]{border-color:transparent;border-radius:3px;box-shadow:0 10px 18px -8px var(--shadow),0 1px 3px var(--shadow);transform:rotate(-1deg)}
+.notes-grid .paper[data-note-style=sticky]:nth-child(even){transform:rotate(.8deg)}
+.paper[data-note-style=sticky]::before{content:'';position:absolute;top:-10px;left:calc(50% - 36px);width:72px;height:20px;background:var(--paper-tape);border:1px solid color-mix(in srgb,var(--paper-edge) 60%,transparent);transform:rotate(-2deg)}
+.paper[data-note-style=lined]{--margin:28px;border-radius:4px;padding-inline-start:calc(var(--margin) + 12px);background-image:linear-gradient(to right,transparent var(--margin),var(--paper-margin) var(--margin) calc(var(--margin) + 1px),transparent 0)}
+[dir=rtl] .paper[data-note-style=lined]{background-image:linear-gradient(to left,transparent var(--margin),var(--paper-margin) var(--margin) calc(var(--margin) + 1px),transparent 0)}
+/* Ruled lines sit under the text: each line box is --line tall. */
+.paper[data-note-style=lined] p{background-image:repeating-linear-gradient(transparent 0 calc(var(--line) - 1px),var(--paper-rule) calc(var(--line) - 1px) var(--line))}
+.note-card{--line:28px}
+.note-card[data-note-style=lined] .note-edit-target{display:flex;flex-direction:column}
+.note-card p{line-height:var(--line)}
+/* Note editor: paper swatches, style tiles and a live preview. */
+.note-look{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:18px;align-items:start;margin-bottom:17px}
+.look-label{display:block;font-size:13px;color:var(--ink-2);margin-bottom:9px}
+.swatches{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.swatch{position:relative;cursor:pointer}
+.swatch-paper{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;background:var(--paper);border:1px solid var(--paper-edge);color:var(--paper-ink);transition:transform .15s}
+.swatch:hover .swatch-paper{transform:scale(1.08)}
+.swatch-paper svg{width:16px;height:16px;stroke-width:2.6;visibility:hidden}
+.swatch input:checked+.swatch-paper{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--accent)}
+.swatch input:checked+.swatch-paper svg{visibility:visible}
+.swatch input:focus-visible+.swatch-paper{outline:3px solid var(--focus);outline-offset:5px}
+.style-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.style-tile{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 6px 8px;border:1px solid var(--border);border-radius:10px;font-size:11px;color:var(--ink-2);text-align:center;cursor:pointer}
+.style-tile:hover{border-color:var(--border-strong)}
+.style-tile:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);color:var(--accent-ink);font-weight:600}
+.style-tile:has(input:focus-visible){outline:3px solid var(--focus);outline-offset:2px}
+.style-sample{display:flex;flex-direction:column;gap:5px;width:58px;height:46px;padding:10px 8px;border-radius:6px}
+.style-sample i{display:block;height:3px;border-radius:2px;background:var(--paper-muted);opacity:.7}
+.style-sample i:first-child{width:70%;background:var(--paper-ink)}
+.style-sample[data-note-style=sticky]::before{top:-6px;left:calc(50% - 13px);width:26px;height:9px}
+.style-sample[data-note-style=lined]{--margin:9px;padding-inline-start:14px;background-image:linear-gradient(to right,transparent var(--margin),var(--paper-margin) var(--margin) calc(var(--margin) + 1px),transparent 0),repeating-linear-gradient(transparent 0 7px,var(--paper-rule) 7px 8px)}
+[dir=rtl] .style-sample[data-note-style=lined]{background-image:linear-gradient(to left,transparent var(--margin),var(--paper-margin) var(--margin) calc(var(--margin) + 1px),transparent 0),repeating-linear-gradient(transparent 0 7px,var(--paper-rule) 7px 8px)}
+.note-preview{--line:22px;min-height:168px;padding:16px 14px;border-radius:10px;overflow:hidden}
+.note-preview strong{display:block;font-size:13px;margin-bottom:6px;overflow-wrap:anywhere}
+.note-preview p{font-size:12px;line-height:var(--line);min-height:calc(var(--line) * 5);color:var(--paper-muted);white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+.note-preview[data-note-style=lined]{--margin:18px}

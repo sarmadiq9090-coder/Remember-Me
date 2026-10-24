@@ -107,3 +107,13 @@ test('note colors and styles validate, with cream and plain as fallbacks', () =>
   assert.equal(load(note({ style: 'curly' })).style, 'plain');
   assert.equal(load(note({ color: 'neon' })).color, 'cream');
 });
+
+test('the note editor offers every color and style', () => {
+  const app = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
+  const listed = name => [...(app.match(new RegExp(`const ${name} = \\[(.*)\\];`)) || [, ''])[1].matchAll(/\['(\w+)'/g)].map(m => m[1]);
+  assert.deepEqual(listed('NOTE_COLORS'), NOTE_COLORS);
+  assert.deepEqual(listed('NOTE_STYLES'), NOTE_STYLES);
+  assert.deepEqual(listed('PALETTE_NAMES'), PALETTES);
+  const shared = fs.readFileSync(path.join(__dirname, '../ui/shared.js'), 'utf8');
+  assert.deepEqual([...shared.match(/const PALETTES = \[(.*)\];/)[1].matchAll(/'(\w+)'/g)].map(m => m[1]), PALETTES);
+});
