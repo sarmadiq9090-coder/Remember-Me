@@ -194,7 +194,12 @@ function undoComplete(state, id, copyId, now = new Date()) {
 const TRASH_DAYS = 30;
 function list(state, kind) { if (kind !== 'tasks' && kind !== 'notes') throw new Error('invalid kind'); return state[kind]; }
 function trashItem(state, kind, id, now = new Date()) { const item = list(state, kind).find(i => i.id === id); if (item && !item.deletedAt) item.deletedAt = now.toISOString(); }
-function restoreItem(state, kind, id) { const item = list(state, kind).find(i => i.id === id); if (item) item.deletedAt = null; }
+function restoreItem(state, kind, id) {
+  const item = list(state, kind).find(i => i.id === id && i.deletedAt);
+  // The 30-day purge may have removed it while the trash was on screen.
+  if (!item) throw new Error('This item is no longer in the trash.');
+  item.deletedAt = null;
+}
 function purgeItem(state, kind, id) { state[kind] = list(state, kind).filter(i => !(i.id === id && i.deletedAt)); }
 function purgeTrash(state, now = new Date(), all = false) {
   const limit = now.getTime() - TRASH_DAYS * 86400000;

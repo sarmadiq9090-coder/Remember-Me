@@ -168,6 +168,7 @@ test('deleted items wait 30 days in the trash, out of every list and alert, and 
   assert.deepEqual(s.notes.map(n => n.id), ['n1']);
   purgeItem(s, 'notes', 'n1');
   assert.equal(s.notes.length, 0);
+  assert.throws(() => restoreItem(s, 'notes', 'n1'), /no longer in the trash/, 'A purged item cannot be reported as restored');
   const loaded = validateState({ ...initialState(), tasks: [{ ...t, deletedAt: 'garbage' }] });
   assert.equal(loaded.tasks[0].deletedAt, null, 'A malformed deletion date restores the task rather than hiding it');
   assert.throws(() => trashItem(s, 'settings', 'x'));
