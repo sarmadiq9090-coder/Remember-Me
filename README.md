@@ -147,11 +147,15 @@ pnpm run installer
 
 Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable build in `release/v<version>`, and `pnpm run installer` produces an NSIS installer in `release/installer`.
 
+`pnpm run assets` redraws the icons in `assets/` with Electron: `icon.ico` with 10 sizes from 16 to 256 px (16-32 px use the simpler `icon-small.svg` glyph without rays), `icon.png`, and the tray images `tray.png` and `tray-waiting.png` with `@1.5x` and `@2x` versions. It also writes [`docs/icon-preview.png`](docs/icon-preview.png), every size on a light and a dark taskbar.
+
 ### Tests
 
 - `tests/core.test.js`: scheduling, repeats, snoozing, saving and recovery.
 - `tests/scheduling.test.js`: repeats across daylight-saving time, time-zone changes and the clock moving backwards; 20 reminders in the same minute; a full day of missed reminders among thousands of tasks.
-- `tests/ipc.test.js`: only the app's own pages are accepted, the alert window gets a limited set of actions, and payloads are validated.
+- `tests/ipc.test.js`: only the app's own pages are accepted, the alert window gets a limited set of actions, and payloads are validated, including About links, which must be one of six fixed IDs.
+- `tests/about.test.js`: the About links are exact GitHub addresses, and diagnostic info holds only versions, language and theme.
+- `tests/icons.test.js`: every size in `icon.ico` and the tray images' dimensions.
 - `tests/search.test.js`: Arabic-aware search matching.
 - `tests/winget-manifest.test.js`: the winget manifests written from a release's `SHA256SUMS.txt`.
 - `tests/updates.test.js`: the update consent, background schedule, Check now, the ready banner, and installing after a safety backup.

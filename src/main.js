@@ -51,6 +51,10 @@ function announceUpcoming() {
   }
 }
 const icon = path.join(__dirname, '../assets/icon.png');
+// Windows picks the matching size from the ICO for the title bar, taskbar and Alt+Tab.
+const windowIcon = path.join(__dirname, '../assets/icon.ico');
+// 16 px tray images; nativeImage also loads their @1.5x and @2x files for scaled displays.
+const trayIcon = waiting => path.join(__dirname, '../assets', waiting ? 'tray-waiting.png' : 'tray.png');
 // The tray shows a dotted variant while real reminders are waiting; trayWaiting avoids calling setImage every second.
 let trayWaiting = false;
 if (!app.requestSingleInstanceLock()) app.quit();
@@ -71,7 +75,7 @@ function secure(win) {
 }
 function createMain(visible = !process.argv.includes('--background')) {
   const win = mainWindow = new BrowserWindow({ width: 1250, height: 850, minWidth: 900, minHeight: 650,
-    title: nativeText('ذكرني • مساحة ليومك', 'Remember Me • Your day'), icon, show: false, backgroundColor: background('#f7f8fa', '#181d27'), autoHideMenuBar: true, webPreferences: options() });
+    title: nativeText('ذكرني • مساحة ليومك', 'Remember Me • Your day'), icon: windowIcon, show: false, backgroundColor: background('#f7f8fa', '#181d27'), autoHideMenuBar: true, webPreferences: options() });
   win.setMenu(null);
   secure(win);
   win.loadFile(path.join(__dirname, '../ui/index.html'));
@@ -131,7 +135,7 @@ function scanNow() {
   if (tasks.length) {
     if (!alertWindow || alertWindow.isDestroyed()) {
       alertWindow = new BrowserWindow({ width: 410, height: 570, frame: false, resizable: false, minimizable: false,
-        maximizable: false, skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: background('#ffffff', '#15171e'), icon, webPreferences: options() });
+        maximizable: false, skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: background('#ffffff', '#15171e'), icon: windowIcon, webPreferences: options() });
       secure(alertWindow);
       alertWindow.setAlwaysOnTop(true, 'pop-up-menu');
       placeAlert();
@@ -146,7 +150,7 @@ function scanNow() {
   } else { repeatBeep(null, 0); if (alertWindow && !(undoable && undoable.until > Date.now())) { alertWindow.destroy(); alertWindow = null; } }
   if (newlyDue) notifyViews();
   const waiting = tasks.length > 0 && tasks[0].id !== '__preview';
-  if (tray && waiting !== trayWaiting) { trayWaiting = waiting; tray.setImage(nativeImage.createFromPath(waiting ? path.join(__dirname, '../assets/tray-waiting.png') : icon)); }
+  if (tray && waiting !== trayWaiting) { trayWaiting = waiting; tray.setImage(nativeImage.createFromPath(trayIcon(waiting))); }
   if (tray) tray.setToolTip(tasks.length ? (language() === 'en' ? `Remember Me • ${tasks.length} reminders waiting` : `ذكرني • ${tasks.length} تذكير بانتظارك`) : nativeText('ذكرني • مهامك في وقتها', 'Remember Me • Your tasks on time'));
 }
 function purgeExpiredTrash() {
@@ -180,7 +184,7 @@ async function start() {
   }
   updates = createUpdates();
   createMain();
-  tray = new Tray(nativeImage.createFromPath(icon));
+  tray = new Tray(nativeImage.createFromPath(trayIcon(false)));
   rebuildTrayMenu();
   tray.on('double-click', showMain);
   tray.on('click', showMain);

@@ -9,6 +9,7 @@
 
 ### Changed
 
+- Sharper icons: `icon.ico` now has 10 sizes from 16 to 256 px instead of one 256 px image, with a simpler, heavier bell and a larger check at 32 px and below. The notification-area icon has its own 16, 24 and 32 px images, for the normal and the waiting state.
 - The app is called Remember Me everywhere: `Remember Me.exe`, the installer, its shortcuts and the Apps & features entry.
 - The installer shows the privacy notice and the license, in English or Arabic, before installing. The uninstaller says your data in `%APPDATA%\Remember Me` is kept.
 - Data moves from `%APPDATA%\Waqt` to `%APPDATA%\Remember Me` automatically the first time the app starts. If the folder is locked it is copied and checked instead, and the original is kept as `Waqt.migrated-<date>`. The old data is never deleted.
