@@ -76,3 +76,47 @@ test('new installs start in English, saved languages are kept and unknown ones f
   assert.equal(validateState({ ...structuredClone(v140), settings: older }).settings.language, 'ar', 'Settings from before the language option were Arabic');
   assert.equal(validateState({ ...structuredClone(v140), settings: 'broken' }).settings.language, 'en');
 });
+
+test('user text in a sentence is isolated, so its direction cannot reorder the punctuation around it', () => {
+  const { translate, isolate } = require('../ui/lib/translate');
+  const ar = { 'Completed "{title}"': 'أُنجزت «{title}»' };
+  const text = translate(ar, {}, 'ar', 'Completed "{title}"', { title: isolate('Call Bob!') });
+  assert.equal(text, 'أُنجزت «' + String.fromCharCode(0x2068) + 'Call Bob!' + String.fromCharCode(0x2069) + '»');
+  assert.equal(isolate(undefined), String.fromCharCode(0x2068, 0x2069));
+});
+
+test('file sizes use the unit names and decimal mark of the locale, with Western digits', () => {
+  const { formatSize } = require('../ui/lib/translate');
+  assert.equal(formatSize(1572864, 'en-US-u-nu-latn'), '1.5 MB');
+  assert.equal(formatSize(1572864, 'de-DE-u-nu-latn'), '1,5 MB');
+  assert.equal(formatSize(1536, 'fr-FR-u-nu-latn').replace(/\s/g, ' '), '1,5 ko');
+  assert.match(formatSize(1572864, 'ru-RU-u-nu-latn'), /^1,5\sМБ$/);
+  assert.match(formatSize(5, 'ar-IQ-u-nu-latn'), /^5 /);
+  assert.doesNotMatch(formatSize(1572864, 'ar-IQ-u-nu-latn'), /[٠-٩]/);
+});
+
+test('errors thrown by the updater safety backup are collected and translated', () => {
+  const key = 'The safety backup took too long.';
+  assert.ok(collectKeys().includes(key));
+  for (const { code } of LOCALES) assert.ok(key in loadLocale(code), code);
+});
+
+test('native date, time and number fields start in the saved language, always with digits 0-9', () => {
+  const os = require('node:os');
+  const { startupControlsLocale } = require('../src/main/i18n');
+  // Chromium's ar shows Arabic-Indic digits in native fields (Node's ICU does not, so this cannot be
+  // checked with Intl here); the release QA suite checks the packaged app.
+  assert.ok(LOCALES.every(l => !/^(?:ar|fa|ur|bn|mr|ne)\b/.test(l.chromium)), 'No Chromium locale whose native fields use other digits');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-controls-'));
+  const save = (name, settings) => fs.writeFileSync(path.join(dir, name), JSON.stringify({ version: 1, tasks: [], notes: [], settings }));
+  assert.equal(startupControlsLocale(dir), 'en-US', 'No data yet: the default language');
+  save('data.json', { language: 'fr' });
+  assert.equal(startupControlsLocale(dir), 'fr');
+  save('data.json', { language: 'ar' });
+  assert.equal(startupControlsLocale(dir), 'en-GB', 'Arabic uses a Chromium locale with digits 0-9');
+  save('data.json', { sound: true });
+  assert.equal(startupControlsLocale(dir), 'en-GB', 'Settings from before the language option were Arabic');
+  fs.writeFileSync(path.join(dir, 'data.json'), '{ damaged');
+  save('data.json.bak', { language: 'de' });
+  assert.equal(startupControlsLocale(dir), 'de', 'The backup is read when the data file is damaged');
+});

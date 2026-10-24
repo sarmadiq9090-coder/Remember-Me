@@ -168,6 +168,7 @@ test('deleted items wait 30 days in the trash, out of every list and alert, and 
   assert.deepEqual(s.notes.map(n => n.id), ['n1']);
   purgeItem(s, 'notes', 'n1');
   assert.equal(s.notes.length, 0);
+  assert.throws(() => restoreItem(s, 'notes', 'n1'), /no longer in the trash/, 'A purged item cannot be reported as restored');
   const loaded = validateState({ ...initialState(), tasks: [{ ...t, deletedAt: 'garbage' }] });
   assert.equal(loaded.tasks[0].deletedAt, null, 'A malformed deletion date restores the task rather than hiding it');
   assert.throws(() => trashItem(s, 'settings', 'x'));
@@ -225,6 +226,39 @@ test('checklist steps are validated, ticked one by one and reset on the next occ
   assert.throws(() => toggleStep(s, t.id, 'missing'), /step/);
   assert.ok(!('checklist' in saveTask(s, { title: 'بلا خطوات', checklist: [{ text: '  ' }] })));
   assert.equal(validateState({ ...initialState(), tasks: [{ ...t, checklist: [{ text: 'ok', done: 'yes' }] }] }).tasks[0].checklist[0].done, false);
+});
+test('undoing Done on a repeat brings its checklist ticks back', () => {
+  const { toggleStep, undoComplete } = require('../src/core/tasks');
+  const s = initialState();
+  const t = saveTask(s, { title: 'daily', dueAt: '2026-10-24T09:00:00.000Z', repeat: 'daily', checklist: [{ text: 'a' }, { text: 'b' }, { text: 'c' }] });
+  toggleStep(s, t.id, t.checklist[0].id); toggleStep(s, t.id, t.checklist[2].id);
+  const done = completeTask(s, t.id, new Date('2026-10-24T09:05:00Z'));
+  assert.deepEqual(t.checklist.map(x => x.done), [false, false, false]);
+  undoComplete(s, done.id, done.copyId);
+  assert.deepEqual(t.checklist.map(x => x.done), [true, false, true]);
+  assert.equal(t.dueAt, '2026-10-24T09:00:00.000Z');
+  assert.equal(s.tasks.length, 1, 'The history copy is removed');
+});
+test('an editor left open while a repeat was completed does not carry its ticks into the next occurrence', () => {
+  const { toggleStep } = require('../src/core/tasks');
+  const s = initialState();
+  const t = saveTask(s, { title: 'daily', dueAt: '2026-10-24T09:00:00.000Z', repeat: 'daily', checklist: [{ text: 'a' }, { text: 'b' }] }, new Date('2026-10-24T08:00:00Z'));
+  toggleStep(s, t.id, t.checklist[0].id); toggleStep(s, t.id, t.checklist[1].id);
+  // The editor opens now, with both steps ticked.
+  const opened = { updatedAt: t.updatedAt, checklist: t.checklist.map(x => ({ ...x })), dueAt: t.dueAt };
+  completeTask(s, t.id, new Date('2026-10-24T09:05:00Z'));
+  const next = t.dueAt;
+  saveTask(s, { id: t.id, title: 'renamed', dueAt: opened.dueAt, repeat: 'daily', checklist: [...opened.checklist, { text: 'new', done: true }], updatedAt: opened.updatedAt, timeEdited: false }, new Date('2026-10-24T09:06:00Z'));
+  assert.equal(t.title, 'renamed');
+  assert.equal(t.dueAt, next, 'The completion is kept');
+  assert.deepEqual(t.checklist.map(x => x.text), ['a', 'b', 'new'], 'Step edits are applied');
+  assert.deepEqual(t.checklist.map(x => x.done), [false, false, false], 'The next occurrence keeps its unticked steps');
+  // A snooze from the alert does not start a new occurrence, so the editor's ticks still apply.
+  const u = saveTask(s, { title: 'once', dueAt: '2026-10-24T09:00:00.000Z', repeat: 'daily', checklist: [{ text: 'a' }] }, new Date('2026-10-24T08:00:00Z'));
+  const before = u.updatedAt;
+  u.updatedAt = '2026-10-24T09:01:00.000Z';
+  saveTask(s, { id: u.id, title: 'once', dueAt: u.dueAt, repeat: 'daily', checklist: [{ ...u.checklist[0], done: true }], updatedAt: before, timeEdited: false });
+  assert.equal(u.checklist[0].done, true);
 });
 test('a repeated Done or snooze for an occurrence that already moved on changes nothing', () => {
   const s = initialState();

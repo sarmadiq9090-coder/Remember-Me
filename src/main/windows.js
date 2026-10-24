@@ -3,6 +3,7 @@ const { BrowserWindow, screen, nativeTheme } = require('electron');
 const path = require('node:path');
 const { alertBounds } = require('../core/placement');
 const { windowColors } = require('../platform/themes');
+const { findLocale } = require('../../ui/lib/translate');
 // Windows picks the matching size from the ICO for the title bar, taskbar and Alt+Tab.
 const windowIcon = path.join(__dirname, '../../assets/icon.ico');
 
@@ -16,12 +17,12 @@ function createWindows(ctx) {
     nativeTheme.themeSource = ctx.store.state.settings.theme;
     for (const [win, kind] of [[mainWindow, 'main'], [alertWindow, 'alert']]) if (win && !win.isDestroyed()) win.setBackgroundColor(background(kind));
   }
-  // The preload hands the saved palette to the page so its first paint already uses it; later changes arrive
-  // with waqt:update. Page URLs stay plain file paths: the desktop tests and fromPage() match on them.
+  // The preload hands the saved palette, language and direction to the page so its first paint already uses
+  // them; later changes arrive with waqt:update. Page URLs stay plain file paths: the desktop tests and fromPage() match on them.
   function options() {
-    const { store } = ctx;
+    const { store } = ctx, locale = findLocale(store.state.settings.language);
     return { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true,
-      additionalArguments: [`--waqt-palette=${store.state.settings.palette}`] };
+      additionalArguments: [`--waqt-palette=${store.state.settings.palette}`, `--waqt-language=${locale.code}`, `--waqt-dir=${locale.dir}`] };
   }
   function secure(win) {
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));

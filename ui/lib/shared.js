@@ -39,10 +39,14 @@ function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({ '&'
 // (ar-IQ would otherwise use Arabic-Indic digits), so labels keep their width and layout.
 function locale() { return uiLocale.intl + '-u-nu-latn'; }
 function num(value) { return String(value); }
-// Required fields and date inputs report problems in the app's language, not the system's.
+// Required fields, number and date inputs report problems in the app's language, not the system's
+// (Chromium's own messages follow the Windows language, with its digits).
 document.addEventListener('invalid', e => {
   const field = e.target;
-  field.setCustomValidity(field.validity.valueMissing ? tr('Please fill in this field.') : field.validity.badInput || field.validity.typeMismatch ? tr('Please enter a valid value.') : '');
+  const v = field.validity;
+  field.setCustomValidity(v.valueMissing ? tr('Please fill in this field.')
+    : v.rangeUnderflow || v.rangeOverflow ? tr('Enter a number from {min} to {max}.', { min: field.min, max: field.max })
+    : v.badInput || v.typeMismatch || v.stepMismatch ? tr('Please enter a valid value.') : '');
 }, true);
 document.addEventListener('input', e => e.target.setCustomValidity?.(''), true);
 // Week order for the repeat-day picker and labels: Saturday first unless the user chose another day.
@@ -67,6 +71,12 @@ function dateLabel(value) { if (!value) return ''; const d = new Date(value); re
 const PALETTES = ['lavender', 'ocean', 'forest', 'sunset', 'graphite', 'contrast'];
 function applyPalette(palette) { document.documentElement.dataset.palette = PALETTES.includes(palette) ? palette : 'lavender'; }
 applyPalette(globalThis.waqt?.palette);
+// The saved language's code and direction from the preload, so the page is mirrored from its first paint.
+// The body stays hidden (styles.css) until the page has been translated and filled in (showPage()), so
+// it never shows its English source text; if that fails, it appears after 2 seconds anyway.
+if (globalThis.waqt?.language) Object.assign(document.documentElement, { lang: globalThis.waqt.language, dir: globalThis.waqt.dir });
+function showPage() { document.documentElement.dataset.ready = ''; }
+if (typeof setTimeout === 'function') setTimeout(showPage, 2000);
 // The app icon drawn with the --mark-* theme tokens, so it matches every palette and mode (issue #18).
 // Same artwork as assets/icon.svg; small marks use the simplified glyph of assets/icon-small.svg.
 // The Windows icon files stay fixed purple. Any element with data-brand-mark ("small" for the glyph) gets one.
@@ -81,11 +91,15 @@ function brandMark(small = false, name = '') {
 }
 function hydrateBrandMarks(root = document) { root.querySelectorAll('[data-brand-mark]').forEach(el => { el.innerHTML = brandMark(el.dataset.brandMark === 'small'); }); }
 async function api(action, payload) { const result = await window.waqt.call(action, payload); if (!result.ok) throw new Error(result.error); return result.value; }
-function fileSize(bytes) { return bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1048576).toFixed(1)} MB`; }
-function fileBadge(name) { const ext = name.includes('.') ? name.split('.').pop().toUpperCase() : 'FILE'; return ext.slice(0, 5); }
+// Tags are separated by commas or semicolons in any script: Latin, Arabic (، ؛) and CJK (、 ， ､ ；).
+// The tag field is filled with tr(", "), which every locale translates to one of these.
+const TAG_SEPARATORS = /[,;،؛、，､；]/;
+function parseTags(text) { return text.split(TAG_SEPARATORS).map(t => t.trim()).filter(Boolean); }
+function fileSize(bytes) { return formatSize(bytes, locale()); }
+function fileBadge(name) { const ext = name.includes('.') ? name.split('.').pop().toUpperCase() : tr('FILE@badge'); return ext.slice(0, 5); }
 function isImageFile(record) { return /\.(png|jpe?g|webp|gif|bmp|ico|avif)$/i.test(record.name); }
 function photoMarkup(record) {
-  return `<button type="button" class="inline-photo" data-file-id="${esc(record.id)}" title="${tr("Open")} ${esc(record.name)}"><img data-preview-id="${esc(record.id)}" alt="${esc(record.name)}" decoding="async"><span class="photo-placeholder">${tr("Loading image…")}</span><span class="photo-caption"><bdi>${esc(record.name)}</bdi></span></button>`;
+  return `<button type="button" class="inline-photo" data-file-id="${esc(record.id)}" title="${esc(tr("Open {name}", { name: isolate(record.name) }))}"><img data-preview-id="${esc(record.id)}" alt="${esc(record.name)}" decoding="async"><span class="photo-placeholder">${tr("Loading image…")}</span><span class="photo-caption"><bdi>${esc(record.name)}</bdi></span></button>`;
 }
 const previewCache = new Map();
 let previewObserver;
@@ -118,7 +132,7 @@ function hydratePreviews(root = document) {
 }
 function fileMarkup(record, removable = false) {
   const kind = /\.(xlsx?|xlsm|csv)$/i.test(record.name) ? 'excel' : /\.pdf$/i.test(record.name) ? 'pdf' : 'other';
-  const row = `<div class="attachment-item"><button type="button" class="attachment-open" data-file-id="${esc(record.id)}" title="${tr("Open")} ${esc(record.name)}"><span class="file-badge ${kind}">${esc(fileBadge(record.name))}</span><span class="attachment-name"><bdi>${esc(record.name)}</bdi><small dir="ltr">${fileSize(record.size)}</small></span>${icon('arrowLeft')}</button>${removable ? `<button type="button" class="attachment-remove icon-button" data-remove-file="${esc(record.id)}" aria-label="${tr("Remove")} ${esc(record.name)}" title="${tr("Remove attachment")}">${icon('x')}</button>` : ''}</div>`;
+  const row = `<div class="attachment-item"><button type="button" class="attachment-open" data-file-id="${esc(record.id)}" title="${esc(tr("Open {name}", { name: isolate(record.name) }))}"><span class="file-badge ${kind}">${esc(fileBadge(record.name))}</span><span class="attachment-name"><bdi>${esc(record.name)}</bdi><small dir="ltr">${fileSize(record.size)}</small></span>${icon('arrowLeft')}</button>${removable ? `<button type="button" class="attachment-remove icon-button" data-remove-file="${esc(record.id)}" aria-label="${esc(tr("Remove {name}", { name: isolate(record.name) }))}" title="${tr("Remove attachment")}">${icon('x')}</button>` : ''}</div>`;
   return isImageFile(record) ? `<div class="image-attachment">${photoMarkup(record)}${row}</div>` : row;
 }
 hydrateIcons();

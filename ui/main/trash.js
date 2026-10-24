@@ -8,7 +8,7 @@ function askPurge(action, id) {
 async function moveToTrash(kind, id) {
   // Undo puts focus back on the restored item's control.
   const mark = focusMark();
-  try { await api('delete' + kind, { id }); await refresh(); toast(kind === 'Task' ? tr("Task moved to the trash.") : tr("Note moved to the trash."), () => api('restore' + kind, { id }), mark); }
+  try { await api('delete' + kind, { id }); await refresh(); toast(kind === 'Task' ? tr("Task moved to the trash.") : tr("Note moved to the trash."), () => api('restore' + kind, { id }), { mark }); }
   catch (err) { toast(err.message); }
 }
 function renderTrash() {
@@ -19,7 +19,7 @@ function renderTrash() {
     const left = Math.max(1, 30 - Math.floor((Date.now() - Date.parse(item.deletedAt)) / 86400000));
     const values = { date: dateLabel(item.deletedAt), count: left };
     const when = kind === 'Task' ? tr('Task • deleted {date} • removed in {count} days', values) : tr('Note • deleted {date} • removed in {count} days', values);
-    return `<article class="task-row" data-kind="${kind}" data-id="${esc(item.id)}"><div class="task-info"><div class="task-name" dir="auto">${esc(item.title)}</div><div class="task-meta"><span>${icon('trash')}${esc(when)}</span></div></div><div class="task-actions"><button class="soft-button" data-trash="restore" aria-label="${tr("Restore")}: ${esc(item.title)}">${icon('undo')} ${tr("Restore")}</button><button class="icon-button" data-trash="purge" title="${tr("Delete permanently")}" aria-label="${tr("Delete permanently")} ${esc(item.title)}">${icon('x')}</button></div></article>`;
+    return `<article class="task-row" data-kind="${kind}" data-id="${esc(item.id)}"><div class="task-info"><div class="task-name" dir="auto">${esc(item.title)}</div><div class="task-meta"><span>${icon('trash')}${esc(when)}</span></div></div><div class="task-actions"><button class="soft-button" data-trash="restore" aria-label="${esc(tr("Restore {title}", { title: isolate(item.title) }))}">${icon('undo')} ${tr("Restore")}</button><button class="icon-button" data-trash="purge" title="${tr("Delete permanently")}" aria-label="${esc(tr("Delete {title} permanently", { title: isolate(item.title) }))}">${icon('x')}</button></div></article>`;
   }).join(''), $('page-title'));
   $('trash-empty').hidden = !!items.length;
 }

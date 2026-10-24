@@ -64,3 +64,9 @@ test('importing never floods the alert queue: past one-time items are skipped an
   assert.ok(Date.parse(daily.dueAt) > now.getTime() && daily.scheduleAt === daily.dueAt);
   assert.equal(s.tasks.find(t => t.title.startsWith('xxx')).title.length, 200);
 });
+
+test('CSV tags split on Latin, Arabic and CJK separators', () => {
+  const [row] = fromCSV('title,tags\nA,"仕事、家，週末；買い物"\n');
+  assert.deepEqual(row.tags, ['仕事', '家', '週末', '買い物']);
+  assert.deepEqual(fromCSV('title,tags\nB,"عمل، بيت؛ x;y,z"\n')[0].tags, ['عمل', 'بيت', 'x', 'y', 'z']);
+});

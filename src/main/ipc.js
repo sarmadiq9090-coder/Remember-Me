@@ -6,7 +6,7 @@ const ACTIONS = new Set(['state', 'alerts', 'language', 'saveTask', 'complete', 
   'attachFiles', 'openAttachment', 'imagePreview', 'chooseDriveFolder', 'driveBackupNow', 'driveAutomatic', 'driveKeep', 'driveHelp', 'openDriveFolder',
   'undoComplete', 'undoable', 'toggleStep', 'restoreTask', 'restoreNote', 'purgeTask', 'purgeNote', 'emptyTrash',
   'locale', 'settings', 'preview', 'export', 'restore', 'storage', 'cleanOrphans', 'dataFolder', 'open',
-  'updateConsent', 'checkUpdates', 'installUpdate', 'dismissUpdate', 'openLink', 'copyDiagnostics', 'openLogs']);
+  'updateConsent', 'checkUpdates', 'installUpdate', 'dismissUpdate', 'openLink', 'copyDiagnostics', 'openLogs', 'relaunch']);
 // The always-on-top alert only needs to read its queue and act on the reminder it shows.
 const ALERT_ACTIONS = new Set(['alerts', 'language', 'locale', 'complete', 'skip', 'undoComplete', 'undoable', 'snooze', 'open', 'openAttachment', 'imagePreview']);
 const ID_ACTIONS = new Set(['toggleStep', 'complete', 'skip', 'undoComplete', 'snooze', 'reopen', 'deleteTask', 'deleteNote', 'restoreTask', 'restoreNote', 'purgeTask', 'purgeNote', 'openAttachment', 'imagePreview']);

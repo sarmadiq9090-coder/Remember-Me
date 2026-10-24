@@ -87,7 +87,7 @@ $('task-list').addEventListener('click', async e => {
     // For 'complete', done is null when the occurrence was already handled; skip returns false then. No toast either way.
     const done = await api(action, action === 'reopen' ? { id } : { id, expectedDueAt: state.tasks.find(t => t.id === id)?.dueAt ?? null }); await refresh();
     const next = state.tasks.find(t => t.id === id)?.dueAt;
-    if (action === 'reopen' || done) toast(action === 'complete' ? tr("Task completed. Well done—every step counts!") : action === 'skip' ? tr("Skipped this time. Next: {value}", { value: dateLabel(next) }) : tr("Task reopened without a due date. Open it to set a reminder."), action === 'complete' && done ? () => api('undoComplete', done) : undefined, mark);
+    if (action === 'reopen' || done) toast(action === 'complete' ? tr("Task completed. Well done—every step counts!") : action === 'skip' ? tr("Skipped this time. Next: {value}", { value: dateLabel(next) }) : tr("Task reopened without a due date. Open it to set a reminder."), action === 'complete' && done ? () => api('undoComplete', done) : undefined, { mark });
   } catch (err) { toast(err.message); } finally { busyRows.delete(id); button.disabled = false; restoreFocus(mark); }
 });
 $('task-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('task-edit-target')) { e.preventDefault(); e.target.click(); } });
@@ -104,7 +104,9 @@ $('trash-list').addEventListener('click', async e => {
   const button = e.target.closest('[data-trash]'), row = e.target.closest('[data-id]'); if (!button || !row) return;
   const { kind, id } = row.dataset;
   if (button.dataset.trash === 'purge') return askPurge('purge' + kind, id);
-  try { await api('restore' + kind, { id }); await refresh(); toast(kind === 'Task' ? tr("Task restored.") : tr("Note restored.")); } catch (err) { toast(err.message); }
+  try { await api('restore' + kind, { id }); await refresh(); toast(kind === 'Task' ? tr("Task restored.") : tr("Note restored.")); }
+  // The item may have been purged meanwhile: say so and drop the stale row.
+  catch (err) { toast(err.message); refresh().catch(() => {}); }
 });
 $('empty-trash').addEventListener('click', () => askPurge('emptyTrash'));
 for (const id of ['preview-alert', 'settings-preview']) $(id).addEventListener('click', async () => { try { await api('preview'); toast(tr("The alert appeared above the taskbar.")); } catch (err) { toast(err.message); } });

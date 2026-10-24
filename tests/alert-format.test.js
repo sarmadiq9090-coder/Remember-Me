@@ -65,6 +65,8 @@ test('alert shortcuts wait for the user to interact with the window, and held ke
   assert.equal(guard.allows(enter), false, 'Focus alone, as when the window appears, is not enough');
   guard.key(enter); guard.key(key('2', 'Digit2'));
   assert.equal(guard.allows(enter), false, 'Shortcut keys typed into the window do not engage it');
+  for (const typed of [key('o', 'KeyO'), key('k', 'KeyK'), key('Shift', 'ShiftLeft'), key('Backspace', 'Backspace'), key('ت', 'KeyJ'), key('7', 'Digit7'), key('Control', 'ControlLeft')]) guard.key(typed);
+  assert.equal(guard.allows(enter), false, 'Nor does text typed into it, such as "ok then"');
   guard.key(key('Tab', 'Tab', true));
   assert.equal(guard.allows(enter), false, 'Nor does a held key');
   guard.key(key('Alt', 'AltLeft'));
@@ -74,4 +76,8 @@ test('alert shortcuts wait for the user to interact with the window, and held ke
   assert.equal(guard.allows(enter), false, 'Losing focus starts over');
   guard.pointer();
   assert.equal(guard.allows(key('1', 'Digit1')), true, 'A click in the window engages it');
+  for (const nav of ['Tab', 'ArrowLeft', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown', 'AltGraph']) {
+    guard.reset(); guard.key(key(nav, nav));
+    assert.equal(guard.allows(enter), true, nav);
+  }
 });

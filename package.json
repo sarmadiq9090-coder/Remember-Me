@@ -1,7 +1,7 @@
 {
   "name": "remember-me",
   "version": "1.4.0",
-  "description": "تطبيق مهام وملاحظات وتذكيرات عربي وإنجليزي لويندوز",
+  "description": "A task, note and reminder app for Windows in 12 languages, with alerts that stay on screen until you deal with them",
   "main": "src/main/index.js",
   "private": true,
   "author": "Sarmad",
@@ -17,6 +17,7 @@
     "lint": "eslint .",
     "test:desktop": "node tests/desktop-smoke.cjs",
     "test:release-qa": "node tests/release-qa/run.cjs",
+    "screenshots": "node tools/desktop-screenshots.cjs",
     "package": "node tools/package.mjs",
     "installer": "node tools/installer.cjs"
   },

@@ -10,7 +10,8 @@ Releases are built only by `.github/workflows/release.yml` on GitHub Actions, ne
 - [ ] In `package.json`, set `"version": "1.5.0"`. The lockfile doesn't change.
 - [ ] In `CHANGELOG.md`, replace `## v1.5.0 (unreleased)` with `## v1.5.0 (YYYY-MM-DD)` and check the entries match what's merged.
 - [ ] Check the entry against `git log v1.4.0..main --oneline` and the merged pull requests: every user-visible change since the last release needs a line with its PR. Replace or delete every **TODO** line and the 'Before release' note.
-- [ ] In the README's "Verify the download" section, change the example file name to `Remember-Me-Setup-1.5.0-x64.exe`.
+- [ ] If the interface changed, run `pnpm run screenshots` and commit the new `docs/screenshots` (sample data only).
+- [ ] In the README's "Verify the download" section, change the example file name to `Remember-Me-Setup-1.5.0-x64.exe` in both commands, and the attestation's `--source-ref` to `refs/tags/v1.5.0`.
 - [ ] Merge these changes through a pull request, and wait for **Tests** to pass on `main`.
 
 ## 2. Dry run (recommended)
@@ -30,8 +31,8 @@ git push origin v1.5.0
 
 - [ ] Watch **Actions → Release**. The `build` job stops if the tag doesn't match `package.json`, if any test fails, or if `latest.yml` or the `.blockmap` is missing. The `publish` job then checks the checksums, attests the installer and creates the release.
 - [ ] When it finishes, open the new release and edit its notes if needed:
-  - Paste the CHANGELOG entry, and mention that v1.4.0 users install this version by hand once.
-  - Link the [code signing policy](README.md#code-signing-policy): `See the [code signing policy](https://github.com/sarmadiq9090-coder/Remember-Me#code-signing-policy).` SignPath requires it on every release page.
+  - Replace the generated notes with `docs/release-notes/v1.5.0.md`: `gh release edit v1.5.0 --notes-file docs/release-notes/v1.5.0.md`. It has the highlights, the full CHANGELOG entry, the line saying v1.4.0 users install this version by hand once, and the code signing policy link.
+  - For a later release without such a file: paste the CHANGELOG entry and link the [code signing policy](README.md#code-signing-policy): `See the [code signing policy](https://github.com/sarmadiq9090-coder/Remember-Me#code-signing-policy).` SignPath requires it on every release page.
 
 ## 4. Verify the release
 

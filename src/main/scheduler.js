@@ -5,6 +5,7 @@ const { alertQueue, upcomingTasks, purgeTrash, TRASH_DAYS } = require('../core/t
 const { createRepeatBeep } = require('../core/repeat-beep');
 const { shownAlerts } = require('../core/pause');
 const { createEarlyNotices } = require('../core/early-notices');
+const { isolate } = require('../../ui/lib/translate');
 const icon = path.join(__dirname, '../../assets/icon.png');
 
 // The reminder loop: what is due, the sticky alert, sounds, early notices, the preview alert and the
@@ -19,7 +20,7 @@ function createScheduler(ctx) {
   // "Coming up" notifications, each occurrence once. While paused they are only recorded.
   const earlyNotices = createEarlyNotices({ show: task => {
     const time = new Date(task.dueAt).toLocaleTimeString(localeTag(), { hour: 'numeric', minute: '2-digit' });
-    const message = { title: tr("Coming up: {title}", { title: task.title }), body: tr("Due at {time}", { time }) };
+    const message = { title: tr("Coming up: {title}", { title: isolate(task.title) }), body: tr("Due at {time}", { time }) };
     if (testMode) { earlyLog.push(message); return null; }
     if (!Notification.isSupported()) return null;
     const notification = new Notification({ ...message, icon, silent: !ctx.store.state.settings.sound });
@@ -59,7 +60,10 @@ function createScheduler(ctx) {
   function purgeExpiredTrash() {
     const { store } = ctx;
     const limit = Date.now() - TRASH_DAYS * 86400000;
-    if ([...store.state.tasks, ...store.state.notes].some(i => i.deletedAt && Date.parse(i.deletedAt) <= limit)) log.info('trash-purged', { count: store.change(s => purgeTrash(s)) });
+    if (![...store.state.tasks, ...store.state.notes].some(i => i.deletedAt && Date.parse(i.deletedAt) <= limit)) return;
+    log.info('trash-purged', { count: store.change(s => purgeTrash(s)) });
+    // An open Trash view still lists what was just removed.
+    ctx.windows.notifyViews();
   }
   return {
     activeAlerts, scan, purgeExpiredTrash, earlyLog,

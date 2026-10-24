@@ -14,7 +14,12 @@ function settingsPayload() {
   return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: Number($('setting-week').value), theme: checked('theme-mode', state.settings.theme), palette: checked('palette', state.settings.palette), remindAgain: Number($('setting-remind-again').value) };
 }
 for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-week', 'setting-remind-again']) $(id).addEventListener('change', async () => {
-  try { await api('settings', settingsPayload()); await refresh(); toast(tr('Settings saved.')); }
+  try {
+    const saved = await api('settings', settingsPayload()); await refresh();
+    // Native date and time fields take a new language only when the app starts again.
+    if (saved?.restart) toast(tr("Settings saved. Date and time fields switch to the new language after a restart."), () => api('relaunch'), { label: tr("Restart now") });
+    else toast(tr('Settings saved.'));
+  }
   catch (err) { toast(err.message); } await refresh();
 });
 // The value of a radio group in the page, or the saved one before the group is built.
@@ -44,7 +49,7 @@ function renderNoteLook() {
   noteLookLanguage = uiLanguage;
   $('note-look').innerHTML = `<div><span class="look-label" id="note-color-label">${tr('Note color')}</span><div class="swatches" role="radiogroup" aria-labelledby="note-color-label">${NOTE_COLORS.map(([id, name]) => `<label class="swatch" title="${tr(name)}"><input type="radio" name="note-color" value="${id}" aria-label="${tr(name)}"><span class="swatch-paper" data-paper="${id}">${icon('check')}</span></label>`).join('')}</div>`
     + `<span class="look-label" id="note-style-label">${tr('Style')}</span><div class="style-tiles" role="radiogroup" aria-labelledby="note-style-label">${NOTE_STYLES.map(([id, name]) => `<label class="style-tile"><input type="radio" name="note-style" value="${id}"><span class="style-sample paper" data-paper="cream" data-note-style="${id}" aria-hidden="true"><i></i><i></i><i></i></span>${tr(name)}</label>`).join('')}</div></div>`
-    + '<div class="note-preview paper" data-paper="cream" data-note-style="plain" aria-hidden="true"><strong dir="auto"></strong><p dir="auto"></p></div>';
+    + '<div class="note-preview paper" data-paper="cream" data-note-style="plain" aria-hidden="true" translate="no"><strong dir="auto"></strong><p dir="auto"></p></div>';
 }
 function setNoteLook(color, style) {
   for (const [name, value] of [['note-color', color], ['note-style', style]]) $('note-look').querySelector(`input[name="${name}"][value="${value}"]`).checked = true;
@@ -69,7 +74,7 @@ $('appearance-card').addEventListener('change', async e => {
 // Names the attachments a backup had to leave out because their files are missing, with the task or note each belongs to.
 function skippedText(skipped = []) {
   if (!skipped.length) return '';
-  const list = skipped.map(s => s.itemTitle ? `${s.name} (${s.itemTitle})` : s.name).join(tr(", "));
+  const list = skipped.map(s => s.itemTitle ? `${isolate(s.name)} (${isolate(s.itemTitle)})` : isolate(s.name)).join(tr(", "));
   return tr("{count} attachments were left out because their files are missing: {list}", { count: skipped.length, list });
 }
 $('export-data').addEventListener('click', async () => {

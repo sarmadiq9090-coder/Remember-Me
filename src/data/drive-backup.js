@@ -49,7 +49,7 @@ class DriveBackup {
     const root = path.resolve(folder), local = path.resolve(this.directory);
     if (root === local || root.startsWith(local + path.sep)) throw new Error('Choose a destination outside the Remember Me data folder.');
     this.config.folder = root;
-    this.config.error = '';
+    this.config.error = ''; this.config.errorKey = null; this.config.errorParams = null;
     this.config.unavailableSince = null;
     this.config.lastDrivePath = '';
     this.config.lastCopiedAt = null;
@@ -114,7 +114,7 @@ class DriveBackup {
       this.config.lastDrivePath = await this.copySnapshot(this.config.lastLocalPath);
       this.config.lastCopiedAt = new Date(this.clock()).toISOString();
       this.config.pending = false;
-      this.config.error = '';
+      this.config.error = ''; this.config.errorKey = null; this.config.errorParams = null;
       this.save();
       // Old copies are only removed after a new one is complete; a failure here never fails the backup.
       await this.rotate().catch(error => this.log.warn('backup-rotation-failed', error));

@@ -46,7 +46,7 @@ true (see "Keeping this document current").
 | Shared by both windows: languages (`translate.js`, `i18n.js`), helpers and icons (`shared.js`), keeping keyboard focus when lists are rebuilt (`focus.js`), search, alert formatting | `ui/lib/*.js` |
 | Stylesheets and theme tokens | `ui/styles/*.css` |
 | Translations | `ui/locales/*.json` |
-| Packaging, installer, winget manifests, icon generator | `tools/` |
+| Packaging, installer, winget manifests, icon generator, screenshots | `tools/` |
 | Unit tests (`node --test`) and Playwright desktop suites (`*-desktop.cjs`, `desktop-smoke.cjs`) | `tests/` |
 | Lint rules (folder-agnostic) and editor settings | `eslint.config.cjs`, `.editorconfig` |
 
@@ -101,7 +101,7 @@ registry throws if an allowed action has no handler, has two, or a handler is no
 | Backups | `export`, `restore`, `chooseDriveFolder`, `driveBackupNow`, `driveAutomatic`, `driveKeep`, `driveHelp`, `openDriveFolder` |
 | Updates | `updateConsent`, `checkUpdates`, `installUpdate`, `dismissUpdate` |
 | About | `openLink`, `copyDiagnostics`, `openLogs` |
-| App | `settings`, `preview`, `dataFolder`, `open` |
+| App | `settings`, `relaunch`, `preview`, `dataFolder`, `open` |
 
 The alert window may only use `alerts`, `language`, `locale`, `complete`, `skip`, `undoComplete`,
 `undoable`, `snooze`, `open` (optionally with the shown task's `id`), `openAttachment` and

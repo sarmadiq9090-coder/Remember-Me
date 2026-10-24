@@ -3,10 +3,13 @@
 // text, ui/locales/<code>.json holds the translations, and a missing entry falls back to English.
 (function (root) {
   // name is the language's own name (endonym), as shown in the language picker.
-  // chromium is the Chromium .pak kept in the packaged app for native strings in that language.
+  // chromium is the locale Chromium starts with (its .pak is kept in the packaged app). It sets how
+  // native date, time and number fields look. Chromium's Arabic always shows Arabic-Indic digits
+  // there (it turns ar-u-nu-latn and ar-MA back into ar), so Arabic uses en-GB: digits 0-9 and
+  // day/month order, like the rest of the app.
   const LOCALES = [
     { code: 'en', name: 'English', dir: 'ltr', intl: 'en-US', chromium: 'en-US', weekStart: 0 },
-    { code: 'ar', name: 'العربية', dir: 'rtl', intl: 'ar-IQ', chromium: 'ar', weekStart: 6 },
+    { code: 'ar', name: 'العربية', dir: 'rtl', intl: 'ar-IQ', chromium: 'en-GB', weekStart: 6 },
     { code: 'es', name: 'Español', dir: 'ltr', intl: 'es-ES', chromium: 'es', weekStart: 1 },
     { code: 'fr', name: 'Français', dir: 'ltr', intl: 'fr-FR', chromium: 'fr', weekStart: 1 },
     { code: 'de', name: 'Deutsch', dir: 'ltr', intl: 'de-DE', chromium: 'de', weekStart: 1 },
@@ -36,7 +39,16 @@
     for (const [name, value] of Object.entries(params)) shown[name] = typeof value === 'number' ? display(value) : value;
     return format(entry, shown);
   }
-  const api = { LOCALES, DEFAULT, findLocale, format, translate };
+  // Wraps user text (a title, a file name) placed in a sentence in first-strong isolate marks, so its
+  // own direction never reorders the punctuation around it, e.g. "Call Bob!" in an Arabic sentence.
+  const FSI = String.fromCharCode(0x2068), PDI = String.fromCharCode(0x2069);
+  function isolate(text) { return FSI + String(text ?? '') + PDI; }
+  // A file size in the locale's own unit names and decimal mark, e.g. "1,5 MB" in German.
+  function formatSize(bytes, intl) {
+    const [value, unit] = bytes < 1024 ? [bytes, 'byte'] : bytes < 1048576 ? [bytes / 1024, 'kilobyte'] : [bytes / 1048576, 'megabyte'];
+    return new Intl.NumberFormat(intl, { style: 'unit', unit, unitDisplay: 'short', maximumFractionDigits: 1 }).format(value);
+  }
+  const api = { LOCALES, DEFAULT, findLocale, format, translate, isolate, formatSize };
   if (typeof module === 'object' && module.exports) module.exports = api;
-  else Object.assign(root, { LOCALES, findLocale, translate });
+  else Object.assign(root, { LOCALES, findLocale, translate, isolate, formatSize });
 })(this);

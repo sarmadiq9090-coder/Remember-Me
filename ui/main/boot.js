@@ -22,8 +22,9 @@ $('drive-install').addEventListener('click', () => driveAction('driveHelp'));
 $('drive-open').addEventListener('click', () => driveAction('openDriveFolder'));
 document.addEventListener('keydown', e => {
   if (document.querySelector('dialog[open]')) return;
-  if (e.ctrlKey && e.key.toLowerCase() === 'n') { e.preventDefault(); view === 'notes' ? openNoteEditor() : openTaskEditor(); }
-  if (e.ctrlKey && e.key.toLowerCase() === 'k') { e.preventDefault(); $('search').focus(); }
+  // e.code is the physical key, so the shortcuts also work while an Arabic, Russian or other layout is active.
+  if (e.ctrlKey && !e.altKey && e.code === 'KeyN') { e.preventDefault(); view === 'notes' ? openNoteEditor() : openTaskEditor(); }
+  if (e.ctrlKey && !e.altKey && e.code === 'KeyK') { e.preventDefault(); $('search').focus(); }
 });
 window.waqt.onUpdate(refresh);
 window.waqt.onShow(section => { if (section === 'about') showAbout(); });

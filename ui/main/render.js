@@ -51,7 +51,7 @@ function render() {
   } else {
     let tasks = view === 'today' ? today : view === 'upcoming' ? upcoming : view === 'completed' ? complete : active;
     if (filter === 'high') tasks = tasks.filter(t => t.priority === 'high');
-    else if (filter.startsWith('tag:')) tasks = tasks.filter(t => (t.tags || []).includes(filter.slice(4)));
+    else if (filter.startsWith('tag:')) tasks = tasks.filter(t => (t.tags || []).some(tag => sameTag(tag, filter.slice(4))));
     if (query) tasks = tasks.filter(t => matchesSearch(t, query));
     const rank = { high: 0, medium: 1, normal: 2 };
     tasks = [...tasks].sort((a, b) => $('sort').value === 'priority' ? rank[a.priority] - rank[b.priority] : $('sort').value === 'newest' ? Date.parse(b.createdAt) - Date.parse(a.createdAt) : $('sort').value === 'title' ? a.title.localeCompare(b.title, locale()) : (Date.parse(a.dueAt) || Infinity) - (Date.parse(b.dueAt) || Infinity));
@@ -67,11 +67,13 @@ function render() {
   renderStartupWarning();
   hydratePreviews();
 }
+// Tags that differ only in case are one tag, as in allTags().
+function sameTag(a, b) { return a.toLowerCase() === b.toLowerCase(); }
 function allTags() { const tags = new Map(); for (const t of state.tasks) for (const tag of t.tags || []) tags.set(tag.toLowerCase(), tag); return [...tags.values()].sort((a, b) => a.localeCompare(b, locale())); }
 // One filter button per tag in use, after All and High priority.
 function renderTagFilters() {
   const tags = allTags();
-  if (filter.startsWith('tag:') && !tags.includes(filter.slice(4))) filter = 'all';
+  if (filter.startsWith('tag:')) { const shown = tags.find(tag => sameTag(tag, filter.slice(4))); filter = shown ? 'tag:' + shown : 'all'; }
   // Rebuilt only when the tags change, so the filter just pressed keeps the focus.
   const html = tags.map(tag => `<button class="filter" data-filter="tag:${esc(tag)}"><bdi>#${esc(tag)}</bdi></button>`).join('');
   if (markups.get($('filters')) !== html) {
@@ -82,4 +84,3 @@ function renderTagFilters() {
   }
   $('tag-options').innerHTML = tags.map(tag => `<option value="${esc(tag)}">`).join('');
 }
-function parseTags(text) { return text.split(/[,،;؛]/).map(t => t.trim()).filter(Boolean); }

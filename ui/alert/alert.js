@@ -1,7 +1,7 @@
 // The sticky reminder window: one reminder at a time from the queue, with Done, snooze presets,
 // Skip for repeats, Snooze all and Open task. Every action carries the due time that was shown,
 // so the main process ignores it if that occurrence was already handled.
-let tasks = [], index = 0, shownId = null, busy = false;
+let tasks = [], index = 0, shownId = null, busy = false, weekStart;
 const $ = id => document.getElementById(id);
 const MARK = String.fromCharCode(1);
 const current = () => tasks[index];
@@ -9,16 +9,18 @@ const repeating = task => !!task && task.id !== '__preview' && task.repeat && ta
 async function refreshAlert() {
   try {
     const look = await api('language');
-    await setLanguage(look); applyPalette(look.palette);
+    await setLanguage(look); applyPalette(look.palette); weekStart = look.weekStart;
     tasks = await api('alerts');
+    // Shown before rendering: nothing in a hidden page can take the focus.
+    showPage();
     // After the last Done the window stays briefly so it can be undone; show that instead of an empty card.
     document.body.classList.toggle('all-done', !tasks.length);
     $('alert-all-done').hidden = !!tasks.length;
-    if (!tasks.length) { shownId = null; return; }
+    if (!tasks.length) { if (shownId !== null) allDone(); shownId = null; return; }
     const kept = tasks.findIndex(t => t.id === shownId);
     index = kept >= 0 ? kept : Math.min(index, tasks.length - 1);
     render();
-  } catch (e) { $('alert-error').textContent = e.message; }
+  } catch (e) { $('alert-error').textContent = e.message; } finally { showPage(); }
 }
 function whenText(iso, now) { return tr('{day}, {time}', dueWhen(iso, now, locale())); }
 // Renders the shown reminder. Labels are rebuilt each time so they follow the language and the clock.
@@ -35,7 +37,7 @@ function render(navigated = false) {
   else chips.push(overdue ? ['red', tr('Overdue · {age}', { age: overdueAge(task.dueAt, now, intl) })] : ['', tr('Due now')]);
   if (task.priority === 'high') chips.push(['amber', tr('High priority')]);
   else if (task.priority === 'medium') chips.push(['amber', tr('Medium')]);
-  if (repeating(task)) chips.push(['', '↻ ' + repeatLabel(task)]);
+  if (repeating(task)) chips.push(['', '↻ ' + repeatLabel(task, weekStart)]);
   if (task.snoozeCount) chips.push(['', tr('Snoozed {count}×', { count: task.snoozeCount })]);
   $('alert-chips').innerHTML = chips.map(([kind, text]) => `<span class="chip ${kind}">${esc(text)}</span>`).join('');
   $('alert-title').textContent = task.title;
@@ -98,13 +100,19 @@ function renderFiles(task) {
   const files = task.files || [];
   $('alert-files').hidden = !files.length;
   const thumbnails = !task.body && files.length <= 3;
-  $('alert-files').innerHTML = files.map(file => `<button type="button" class="alert-file" data-file-id="${esc(file.id)}" title="${esc(tr('Open') + ' ' + file.name)}">${thumbnails && isImageFile(file) ? `<img alt="" data-thumb="${esc(file.id)}">` : `<span class="file-badge">${esc(fileBadge(file.name))}</span>`}<bdi>${esc(file.name)}</bdi></button>`).join('');
+  $('alert-files').innerHTML = files.map(file => `<button type="button" class="alert-file" data-file-id="${esc(file.id)}" title="${esc(tr('Open {name}', { name: isolate(file.name) }))}">${thumbnails && isImageFile(file) ? `<img alt="" data-thumb="${esc(file.id)}">` : `<span class="file-badge">${esc(fileBadge(file.name))}</span>`}<bdi>${esc(file.name)}</bdi></button>`).join('');
   for (const img of $('alert-files').querySelectorAll('[data-thumb]')) api('imagePreview', { id: img.dataset.thumb }).then(src => { if (src && img.isConnected) img.src = src; }).catch(() => {});
 }
 function move(step) {
   if (busy || !tasks.length) return;
   index = Math.max(0, Math.min(tasks.length - 1, index + step));
   render(true);
+}
+// The last reminder is done: say so, and give the keyboard Undo (while it lasts) or the message to stand on.
+function allDone() {
+  const undo = !$('alert-undo').hidden;
+  $('alert-live').textContent = undo ? `${$('alert-undo-text').textContent}. ${$('alert-all-done').textContent}` : $('alert-all-done').textContent;
+  (undo ? $('alert-undo-button') : $('alert-all-done')).focus({ preventScroll: true });
 }
 function openPicker() {
   $('snooze-form').hidden = false;
@@ -113,9 +121,12 @@ function openPicker() {
   $('snooze-until').focus();
 }
 function closePicker() {
+  // Hiding the field under the focus would drop it to the page; it goes back to Pick a time.
+  const hadFocus = $('snooze-form').contains(document.activeElement);
   $('snooze-form').hidden = true;
   $('snooze-until').value = '';
   document.querySelector('[data-preset="pick"]').setAttribute('aria-expanded', 'false');
+  if (hadFocus) document.querySelector('[data-preset="pick"]').focus({ preventScroll: true });
 }
 // Disabling the focused button during an action drops the focus; give it back to Done.
 function restoreFocus() { if (current() && (document.activeElement === document.body || !document.activeElement)) $('alert-complete').focus({ preventScroll: true }); }
@@ -143,10 +154,14 @@ async function snoozeAll(until) {
 }
 let undoTimer;
 function showUndo(info) {
-  $('alert-undo-text').textContent = tr('Completed "{title}"', { title: info.title });
+  $('alert-undo-text').textContent = tr('Completed "{title}"', { title: isolate(info.title) });
   Object.assign($('alert-undo').dataset, { id: info.id, copyId: info.copyId });
   $('alert-undo').hidden = false;
-  clearTimeout(undoTimer); undoTimer = setTimeout(() => { $('alert-undo').hidden = true; }, Math.max(0, info.until - Date.now()));
+  clearTimeout(undoTimer); undoTimer = setTimeout(() => {
+    const hadFocus = document.activeElement === $('alert-undo-button');
+    $('alert-undo').hidden = true;
+    if (hadFocus && !current()) $('alert-all-done').focus({ preventScroll: true });
+  }, Math.max(0, info.until - Date.now()));
 }
 $('alert-undo-button').addEventListener('click', async () => {
   const { id, copyId } = $('alert-undo').dataset;

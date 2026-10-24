@@ -19,23 +19,27 @@ const views = {
   trash: [msg("Trash"), msg("Recently deleted"), msg("Deleted items stay here for 30 days, then are removed for good."), ""],
   settings: [msg("Settings"), msg("Remember Me, your way"), msg("Small details that make the space feel yours."), ""],
 };
-// An optional undo callback adds an Undo button (also Ctrl+Z) and keeps the message up longer. The message
-// stays while the pointer or focus is on it. After an undo, focus returns to the mark (see focusMark).
+// An optional action adds a button: Undo (also Ctrl+Z), or one named by label, such as Restart now. The message
+// stays up longer then, and while the pointer or focus is on it. After an undo, focus returns to the mark (see focusMark).
 let toastUndo = null, toastDelay = 0;
-function toast(message, undo, mark) {
+function toast(message, action, { label, mark } = {}) {
   const el = $('toast'); el.textContent = message; toastUndo = null;
-  if (undo) {
-    const button = document.createElement('button'); button.type = 'button'; button.className = 'toast-action'; button.textContent = tr("Undo");
-    const kbd = document.createElement('kbd'); kbd.textContent = 'Ctrl Z'; button.append(' ', kbd); button.setAttribute('aria-keyshortcuts', 'Control+Z');
-    const run = toastUndo = async () => {
-      if (toastUndo !== run) return;
+  if (action) {
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'toast-action'; button.textContent = label || tr("Undo");
+    let ran = false;
+    const run = async () => {
+      if (ran) return; ran = true;
       hideToast();
-      try { await undo(); await refresh(); restoreFocus(mark); } catch (e) { toast(e.message); }
+      try { await action(); await refresh(); restoreFocus(mark); } catch (e) { toast(e.message); }
     };
+    if (!label) {
+      toastUndo = run;
+      const kbd = document.createElement('kbd'); kbd.textContent = 'Ctrl Z'; button.append(' ', kbd); button.setAttribute('aria-keyshortcuts', 'Control+Z');
+    }
     button.addEventListener('click', run);
     el.append(' ', button);
   }
-  el.hidden = false; toastDelay = undo ? 10000 : 4500; holdToast();
+  el.hidden = false; toastDelay = action ? 10000 : 4500; holdToast();
 }
 function hideToast() { clearTimeout(toastTimer); $('toast').hidden = true; toastUndo = null; }
 function holdToast() { const el = $('toast'); clearTimeout(toastTimer); if (!el.hidden && !el.matches(':hover, :focus-within')) toastTimer = setTimeout(hideToast, toastDelay); }
@@ -53,13 +57,15 @@ async function refresh() {
     await setLanguage(state.settings.language);
     // While a palette choice is being saved, an older refresh must not switch the page back.
     if (!appearanceSaving) applyPalette(state.settings.palette);
+    // Shown before rendering: nothing in a hidden page can take the focus.
+    showPage();
     render();
     // The tray's New task, or Open task in the alert, asked for an editor.
     if (state.openTask && !document.querySelector('dialog[open]')) {
       const task = state.openTask === 'new' ? null : state.tasks.find(t => t.id === state.openTask);
       if (state.openTask === 'new' || (task && !task.completedAt)) openTaskEditor(task || undefined);
     }
-  } catch (e) { toast(e.message); }
+  } catch (e) { toast(e.message); } finally { showPage(); }
 }
 function todayEnd() { const d = new Date(); d.setHours(23, 59, 59, 999); return d.getTime(); }
 function todayTasks() { return state.tasks.filter(t => !t.completedAt && (!t.dueAt || Date.parse(t.dueAt) <= todayEnd())); }
@@ -70,7 +76,7 @@ function setView(next) {
 let storage = null;
 async function loadStorage() { try { storage = await api('storage'); } catch { storage = null; } renderStorage(); }
 function renderStorage() {
-  $('storage-usage').textContent = storage ? `${tr("Attachments")}: ${fileSize(storage.attachments)} • ${tr("Local backups")}: ${fileSize(storage.backups)}` : '';
+  $('storage-usage').textContent = storage ? tr("Attachments: {attachments} • Local backups: {backups}", { attachments: fileSize(storage.attachments), backups: fileSize(storage.backups) }) : '';
   $('clean-orphans').hidden = !storage?.orphans;
   if (storage?.orphans) $('clean-orphans').textContent = tr("Clean up {count} unused attachments ({value})", { count: storage.orphans, value: fileSize(storage.orphanBytes) });
 }
