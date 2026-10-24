@@ -98,7 +98,7 @@ function renderFiles(task) {
   const files = task.files || [];
   $('alert-files').hidden = !files.length;
   const thumbnails = !task.body && files.length <= 3;
-  $('alert-files').innerHTML = files.map(file => `<button type="button" class="alert-file" data-file-id="${esc(file.id)}" title="${esc(tr('Open') + ' ' + file.name)}">${thumbnails && isImageFile(file) ? `<img alt="" data-thumb="${esc(file.id)}">` : `<span class="file-badge">${esc(fileBadge(file.name))}</span>`}<bdi>${esc(file.name)}</bdi></button>`).join('');
+  $('alert-files').innerHTML = files.map(file => `<button type="button" class="alert-file" data-file-id="${esc(file.id)}" title="${esc(tr('Open {name}', { name: isolate(file.name) }))}">${thumbnails && isImageFile(file) ? `<img alt="" data-thumb="${esc(file.id)}">` : `<span class="file-badge">${esc(fileBadge(file.name))}</span>`}<bdi>${esc(file.name)}</bdi></button>`).join('');
   for (const img of $('alert-files').querySelectorAll('[data-thumb]')) api('imagePreview', { id: img.dataset.thumb }).then(src => { if (src && img.isConnected) img.src = src; }).catch(() => {});
 }
 function move(step) {

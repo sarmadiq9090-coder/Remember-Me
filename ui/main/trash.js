@@ -17,7 +17,7 @@ function renderTrash() {
     const left = Math.max(1, 30 - Math.floor((Date.now() - Date.parse(item.deletedAt)) / 86400000));
     const values = { date: dateLabel(item.deletedAt), count: left };
     const when = kind === 'Task' ? tr('Task • deleted {date} • removed in {count} days', values) : tr('Note • deleted {date} • removed in {count} days', values);
-    return `<article class="task-row" data-kind="${kind}" data-id="${esc(item.id)}"><div class="task-info"><div class="task-name" dir="auto">${esc(item.title)}</div><div class="task-meta"><span>${icon('trash')}${esc(when)}</span></div></div><div class="task-actions"><button class="soft-button" data-trash="restore">${icon('undo')} ${tr("Restore")}</button><button class="icon-button" data-trash="purge" title="${tr("Delete permanently")}" aria-label="${tr("Delete permanently")} ${esc(item.title)}">${icon('x')}</button></div></article>`;
+    return `<article class="task-row" data-kind="${kind}" data-id="${esc(item.id)}"><div class="task-info"><div class="task-name" dir="auto">${esc(item.title)}</div><div class="task-meta"><span>${icon('trash')}${esc(when)}</span></div></div><div class="task-actions"><button class="soft-button" data-trash="restore">${icon('undo')} ${tr("Restore")}</button><button class="icon-button" data-trash="purge" title="${tr("Delete permanently")}" aria-label="${esc(tr("Delete {title} permanently", { title: isolate(item.title) }))}">${icon('x')}</button></div></article>`;
   }).join('');
   $('trash-empty').hidden = !!items.length;
 }

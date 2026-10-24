@@ -98,7 +98,7 @@ function fileSize(bytes) { return formatSize(bytes, locale()); }
 function fileBadge(name) { const ext = name.includes('.') ? name.split('.').pop().toUpperCase() : tr('FILE@badge'); return ext.slice(0, 5); }
 function isImageFile(record) { return /\.(png|jpe?g|webp|gif|bmp|ico|avif)$/i.test(record.name); }
 function photoMarkup(record) {
-  return `<button type="button" class="inline-photo" data-file-id="${esc(record.id)}" title="${tr("Open")} ${esc(record.name)}"><img data-preview-id="${esc(record.id)}" alt="${esc(record.name)}" decoding="async"><span class="photo-placeholder">${tr("Loading image…")}</span><span class="photo-caption"><bdi>${esc(record.name)}</bdi></span></button>`;
+  return `<button type="button" class="inline-photo" data-file-id="${esc(record.id)}" title="${esc(tr("Open {name}", { name: isolate(record.name) }))}"><img data-preview-id="${esc(record.id)}" alt="${esc(record.name)}" decoding="async"><span class="photo-placeholder">${tr("Loading image…")}</span><span class="photo-caption"><bdi>${esc(record.name)}</bdi></span></button>`;
 }
 const previewCache = new Map();
 let previewObserver;
@@ -131,7 +131,7 @@ function hydratePreviews(root = document) {
 }
 function fileMarkup(record, removable = false) {
   const kind = /\.(xlsx?|xlsm|csv)$/i.test(record.name) ? 'excel' : /\.pdf$/i.test(record.name) ? 'pdf' : 'other';
-  const row = `<div class="attachment-item"><button type="button" class="attachment-open" data-file-id="${esc(record.id)}" title="${tr("Open")} ${esc(record.name)}"><span class="file-badge ${kind}">${esc(fileBadge(record.name))}</span><span class="attachment-name"><bdi>${esc(record.name)}</bdi><small dir="ltr">${fileSize(record.size)}</small></span>${icon('arrowLeft')}</button>${removable ? `<button type="button" class="attachment-remove icon-button" data-remove-file="${esc(record.id)}" aria-label="${tr("Remove")} ${esc(record.name)}" title="${tr("Remove attachment")}">${icon('x')}</button>` : ''}</div>`;
+  const row = `<div class="attachment-item"><button type="button" class="attachment-open" data-file-id="${esc(record.id)}" title="${esc(tr("Open {name}", { name: isolate(record.name) }))}"><span class="file-badge ${kind}">${esc(fileBadge(record.name))}</span><span class="attachment-name"><bdi>${esc(record.name)}</bdi><small dir="ltr">${fileSize(record.size)}</small></span>${icon('arrowLeft')}</button>${removable ? `<button type="button" class="attachment-remove icon-button" data-remove-file="${esc(record.id)}" aria-label="${esc(tr("Remove {name}", { name: isolate(record.name) }))}" title="${tr("Remove attachment")}">${icon('x')}</button>` : ''}</div>`;
   return isImageFile(record) ? `<div class="image-attachment">${photoMarkup(record)}${row}</div>` : row;
 }
 hydrateIcons();

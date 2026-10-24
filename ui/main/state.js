@@ -55,7 +55,7 @@ function setView(next) {
 let storage = null;
 async function loadStorage() { try { storage = await api('storage'); } catch { storage = null; } renderStorage(); }
 function renderStorage() {
-  $('storage-usage').textContent = storage ? `${tr("Attachments")}: ${fileSize(storage.attachments)} • ${tr("Local backups")}: ${fileSize(storage.backups)}` : '';
+  $('storage-usage').textContent = storage ? tr("Attachments: {attachments} • Local backups: {backups}", { attachments: fileSize(storage.attachments), backups: fileSize(storage.backups) }) : '';
   $('clean-orphans').hidden = !storage?.orphans;
   if (storage?.orphans) $('clean-orphans').textContent = tr("Clean up {count} unused attachments ({value})", { count: storage.orphans, value: fileSize(storage.orphanBytes) });
 }
