@@ -7,6 +7,7 @@ const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles,
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
 const { checkRequest, fromPage } = require('./ipc');
+const { alertBounds } = require('./placement');
 const { readBackup, restoreBackup } = require('./backups');
 const testMode = process.env.WAQT_TEST === '1';
 app.setName('ذكرني');
@@ -48,10 +49,7 @@ function showMain() {
 }
 function placeAlert() {
   if (!alertWindow || alertWindow.isDestroyed()) return;
-  const area = screen.getPrimaryDisplay().workArea;
-  const width = Math.min(410, area.width - 24), height = Math.min(570, area.height - 24);
-  alertWindow.setBounds({ x: store.state.settings.alertSide === 'left' ? area.x + 16 : area.x + area.width - width - 16,
-    y: area.y + area.height - height - 12, width, height });
+  alertWindow.setBounds(alertBounds(screen.getPrimaryDisplay(), store.state.settings.alertSide));
 }
 function notifyViews() {
   for (const win of [mainWindow, alertWindow]) if (win && !win.isDestroyed()) win.webContents.send('waqt:update');
@@ -280,6 +278,7 @@ A safety copy of your current data is saved in the backups folder first.`),
   powerMonitor.on('unlock-screen', scan);
   screen.on('display-metrics-changed', placeAlert);
   screen.on('display-removed', placeAlert);
+  screen.on('display-added', placeAlert);
   scan();
 }
 app.on('web-contents-created', (event, contents) => contents.on('will-attach-webview', e => e.preventDefault()));
