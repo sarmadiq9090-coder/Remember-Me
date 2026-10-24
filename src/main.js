@@ -9,6 +9,7 @@ const { DriveBackup } = require('./drive-backup');
 const { checkRequest, fromPage } = require('./ipc');
 const { readBackup, restoreBackup } = require('./backups');
 const { migrateDataFolder } = require('./data-folder');
+const { setLoginItem, refreshLoginItem } = require('./login-item');
 const testMode = process.env.WAQT_TEST === '1';
 app.setName('Remember Me');
 // Runs before anything (including the single-instance lock) creates files in the data folder.
@@ -102,7 +103,7 @@ function scanNow() {
 function setLogin(enabled) {
   if (testMode) return;
   if (!app.isPackaged) { if (enabled) throw new Error('شغّل نسخة البرنامج الجاهزة لتفعيل التشغيل مع ويندوز.'); return; }
-  app.setLoginItemSettings({ openAtLogin: enabled, path: process.execPath, args: ['--background'] });
+  setLoginItem(app, enabled, process.execPath);
 }
 async function start() {
   // The UI needs no camera, microphone, notifications, location or other browser permissions.
@@ -110,6 +111,10 @@ async function start() {
   session.defaultSession.setPermissionCheckHandler(() => false);
   store = new Store(app.getPath('userData'));
   driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, notifyViews, { text: nativeText });
+  // After an upgrade the entry may still point at the old Waqt.exe, or at an old install folder.
+  if (store.state.settings.startAtLogin && app.isPackaged && !testMode) {
+    try { refreshLoginItem(app, process.execPath); } catch (error) { console.error('Could not update start with Windows:', error); }
+  }
   createMain();
   tray = new Tray(nativeImage.createFromPath(icon));
   rebuildTrayMenu();
