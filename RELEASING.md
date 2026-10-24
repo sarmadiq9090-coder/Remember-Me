@@ -28,7 +28,9 @@ git push origin v1.5.0
 ```
 
 - [ ] Watch **Actions → Release**. It stops if the tag doesn't match `package.json`, if any test fails, or if `latest.yml` or the `.blockmap` is missing.
-- [ ] When it finishes, open the new release and edit its notes if needed. Paste the CHANGELOG entry and mention that v1.4.0 users install this version by hand once.
+- [ ] When it finishes, open the new release and edit its notes if needed:
+  - Paste the CHANGELOG entry, and mention that v1.4.0 users install this version by hand once.
+  - Link the [code signing policy](README.md#code-signing-policy): `See the [code signing policy](https://github.com/sarmadiq9090-coder/Remember-Me#code-signing-policy).` SignPath requires it on every release page.
 
 ## 4. Verify the release
 
