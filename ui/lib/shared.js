@@ -39,10 +39,14 @@ function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({ '&'
 // (ar-IQ would otherwise use Arabic-Indic digits), so labels keep their width and layout.
 function locale() { return uiLocale.intl + '-u-nu-latn'; }
 function num(value) { return String(value); }
-// Required fields and date inputs report problems in the app's language, not the system's.
+// Required fields, number and date inputs report problems in the app's language, not the system's
+// (Chromium's own messages follow the Windows language, with its digits).
 document.addEventListener('invalid', e => {
   const field = e.target;
-  field.setCustomValidity(field.validity.valueMissing ? tr('Please fill in this field.') : field.validity.badInput || field.validity.typeMismatch ? tr('Please enter a valid value.') : '');
+  const v = field.validity;
+  field.setCustomValidity(v.valueMissing ? tr('Please fill in this field.')
+    : v.rangeUnderflow || v.rangeOverflow ? tr('Enter a number from {min} to {max}.', { min: field.min, max: field.max })
+    : v.badInput || v.typeMismatch || v.stepMismatch ? tr('Please enter a valid value.') : '');
 }, true);
 document.addEventListener('input', e => e.target.setCustomValidity?.(''), true);
 // Week order for the repeat-day picker and labels: Saturday first unless the user chose another day.
