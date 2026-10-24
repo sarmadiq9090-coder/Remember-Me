@@ -78,7 +78,7 @@ async function photos(page, selector, count) {
     await pick([syncDir]); await page.locator('#choose-drive-folder').click();
     await page.waitForFunction(() => !document.getElementById('drive-now').disabled);
     await page.locator('#drive-now').click();
-    await page.waitForFunction(() => document.getElementById('drive-status').textContent.includes('آخر نسخة'));
+    await page.waitForFunction(() => document.getElementById('drive-status').textContent.includes('Last copy'));
     state = await call(page, 'state');
     assert.ok(state.driveBackup.lastCopiedAt);
     const cloud = state.driveBackup.lastDrivePath;

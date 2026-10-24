@@ -37,15 +37,24 @@ async function alertPage() {
 (async () => {
   try {
     let page = await launch();
-    assert.ok((await page.title()).includes('ذكرني'));
+    // A new install starts in English, left to right.
+    assert.ok((await page.title()).includes('Remember Me'));
+    assert.equal(await page.evaluate(() => [document.documentElement.lang, document.documentElement.dir].join()), 'en,ltr');
     assert.equal(await page.locator('.local-label').count(), 0);
     assert.equal(await page.locator('[data-category], #task-category, [data-filter="work"], [data-filter="study"], [data-filter="personal"]').count(), 0);
     await page.locator('.brand-mark').waitFor();
     await page.locator('[data-view="settings"]').click();
-    await page.locator('#setting-language').selectOption('en');
-    await page.waitForFunction(() => document.documentElement.dir === 'ltr');
     assert.equal(await page.locator('#setting-language').inputValue(), 'en');
-    assert.ok((await page.title()).includes('Remember Me'));
+    // No Arabic is left in the English interface, apart from the language's own name and the digit sample.
+    const arabicLeft = await page.evaluate(() => {
+      const found = [], allowed = /^(العربية|Arabic-Indic ١٢٣)$/;
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      let node; while ((node = walker.nextNode())) { const text = node.nodeValue.trim(); if (/[؀-ۿ]/.test(text) && !allowed.test(text)) found.push(text); }
+      for (const el of document.querySelectorAll('[placeholder],[title],[aria-label],[alt]')) for (const attr of ['placeholder', 'title', 'aria-label', 'alt']) if (/[؀-ۿ]/.test(el.getAttribute(attr) || '')) found.push(attr + ': ' + el.getAttribute(attr));
+      return found;
+    });
+    assert.deepEqual(arabicLeft, [], 'Arabic text in the English interface');
+    assert.deepEqual(await page.locator('#setting-language option').allTextContents(), ['English', 'العربية'], 'Languages are listed by their own names');
     assert.ok((await page.locator('.brand').textContent()).includes('Remember Me'));
     assert.ok((await page.locator('#settings-section').textContent()).includes('Language'));
     await page.locator('#settings-preview').click();

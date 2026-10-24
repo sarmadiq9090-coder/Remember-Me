@@ -7,6 +7,8 @@ const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles,
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
 const { checkRequest, fromPage } = require('./ipc');
+const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale, translate } = require('../ui/translate');
+const fs = require('node:fs');
 const { alertBounds } = require('./placement');
 const { readBackup, restoreBackup } = require('./backups');
 const testMode = process.env.WAQT_TEST === '1';
@@ -30,7 +32,7 @@ function announceUpcoming() {
     if (announced.has(key)) continue;
     announced.add(key);
     const time = new Date(task.dueAt).toLocaleTimeString(localeTag(), { hour: 'numeric', minute: '2-digit' });
-    const message = { title: nativeText(`قريبًا: ${task.title}`, `Coming up: ${task.title}`), body: nativeText(`الموعد عند ${time}`, `Due at ${time}`) };
+    const message = { title: tr("Coming up: {title}", { title: task.title }), body: tr("Due at {time}", { time }) };
     if (testMode) { earlyLog.push(message); continue; }
     if (!Notification.isSupported()) continue;
     const notification = new Notification({ ...message, icon, silent: !store.state.settings.sound });
@@ -42,7 +44,7 @@ const icon = path.join(__dirname, '../assets/icon.png');
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => showMain());
-  app.whenReady().then(start).catch(error => { dialog.showErrorBox('تعذّر تشغيل ذكرني', error.message); app.quit(); });
+  app.whenReady().then(start).catch(error => { dialog.showErrorBox(tr('Remember Me could not start'), errorText(error)); app.quit(); });
 }
 // Window backgrounds match ui/dark.css so opening a window never flashes the other theme.
 function background(light, dark) { return nativeTheme.shouldUseDarkColors ? dark : light; }
@@ -57,7 +59,7 @@ function secure(win) {
 }
 function createMain(visible = !process.argv.includes('--background')) {
   const win = mainWindow = new BrowserWindow({ width: 1250, height: 850, minWidth: 900, minHeight: 650,
-    title: 'ذكرني • مساحة ليومك', icon, show: false, backgroundColor: background('#f7f8fa', '#181d27'), autoHideMenuBar: true, webPreferences: options() });
+    title: tr('Remember Me • Your day'), icon, show: false, backgroundColor: background('#f7f8fa', '#181d27'), autoHideMenuBar: true, webPreferences: options() });
   win.setMenu(null);
   secure(win);
   win.loadFile(path.join(__dirname, '../ui/index.html'));
@@ -79,18 +81,30 @@ function placeAlert() {
 function notifyViews() {
   for (const win of [mainWindow, alertWindow]) if (win && !win.isDestroyed()) win.webContents.send('waqt:update');
 }
-function language() { return store?.state?.settings?.language === 'en' ? 'en' : 'ar'; }
+function language() { const code = store?.state?.settings?.language; return LOCALES.some(l => l.code === code) ? code : DEFAULT_LOCALE; }
 // The same locale the windows use, including a chosen digit style.
-function localeTag() { const digits = store?.state?.settings?.digits; return (language() === 'en' ? 'en-US' : 'ar-IQ') + (digits === 'arab' || digits === 'latn' ? '-u-nu-' + digits : ''); }
-function nativeText(ar, en) { return language() === 'en' ? en : ar; }
+function localeTag() { const digits = store?.state?.settings?.digits; return findLocale(language()).intl + (digits === 'arab' || digits === 'latn' ? '-u-nu-' + digits : ''); }
+// Interface text comes from ui/locales/<code>.json, read once per language; English is the fallback.
+const messageCache = new Map();
+function messages(code) {
+  if (!messageCache.has(code)) {
+    let data = {};
+    try { data = JSON.parse(fs.readFileSync(path.join(__dirname, '../ui/locales', code + '.json'), 'utf8')); } catch (error) { console.error('Locale ' + code + ' could not be read:', error.message); }
+    messageCache.set(code, data);
+  }
+  return messageCache.get(code);
+}
+function tr(key, params) { const code = language(); return translate(messages(code), messages(DEFAULT_LOCALE), findLocale(code).intl, key, params, n => n.toLocaleString(localeTag())); }
+// Errors from the data modules are English; known ones are shown in the interface language.
+function errorText(error) { return error?.key ? tr(error.key, error.params) : tr(String(error?.message || error)); }
 function rebuildTrayMenu() {
   if (!tray) return;
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: nativeText('فتح ذكرني', 'Open Remember Me'), click: showMain },
-    { label: nativeText('مهمة جديدة', 'New task'), click: () => { showMain(); mainWindow.webContents.send('waqt:update'); mainWindow.webContents.executeJavaScript('window.openTaskEditor?.()'); } },
+    { label: tr("Open Remember Me"), click: showMain },
+    { label: tr("New task"), click: () => { showMain(); mainWindow.webContents.send('waqt:update'); mainWindow.webContents.executeJavaScript('window.openTaskEditor?.()'); } },
     { type: 'separator' },
-    { label: nativeText('خروج وإيقاف التذكيرات', 'Exit and stop reminders'), click: async () => {
-      const { response } = await dialog.showMessageBox(mainWindow, { type: 'question', title: nativeText('إغلاق ذكرني', 'Close Remember Me'), message: nativeText('ستتوقف التذكيرات حتى تفتح البرنامج مجددًا.', 'Reminders will stop until you open the app again.'), buttons: [nativeText('البقاء في الخلفية', 'Keep running'), nativeText('خروج', 'Exit')], defaultId: 0, cancelId: 0 });
+    { label: tr("Exit and stop reminders"), click: async () => {
+      const { response } = await dialog.showMessageBox(mainWindow, { type: 'question', title: tr("Close Remember Me"), message: tr("Reminders will stop until you open the app again."), buttons: [tr("Keep running"), tr("Exit")], defaultId: 0, cancelId: 0 });
       if (response === 1) { quitting = true; app.quit(); }
     } }
   ]));
@@ -120,7 +134,7 @@ function scanNow() {
     if (newlyDue && store.state.settings.sound && !testMode) shell.beep();
   } else if (alertWindow && !(undoable && undoable.until > Date.now())) { alertWindow.destroy(); alertWindow = null; }
   if (newlyDue) notifyViews();
-  if (tray) tray.setToolTip(tasks.length ? (language() === 'en' ? `Remember Me • ${tasks.length} reminders waiting` : `ذكرني • ${tasks.length} تذكير بانتظارك`) : nativeText('ذكرني • مهامك في وقتها', 'Remember Me • Your tasks on time'));
+  if (tray) tray.setToolTip(tasks.length ? (tr("Remember Me • {count} reminders waiting", { count: tasks.length })) : tr("Remember Me • Your tasks on time"));
 }
 function purgeExpiredTrash() {
   const limit = Date.now() - TRASH_DAYS * 86400000;
@@ -128,7 +142,7 @@ function purgeExpiredTrash() {
 }
 function setLogin(enabled) {
   if (testMode) return;
-  if (!app.isPackaged) { if (enabled) throw new Error('شغّل نسخة البرنامج الجاهزة لتفعيل التشغيل مع ويندوز.'); return; }
+  if (!app.isPackaged) { if (enabled) throw new Error(tr('Use the installed version of the app to start it with Windows.')); return; }
   app.setLoginItemSettings({ openAtLogin: enabled, path: process.execPath, args: ['--background'] });
 }
 async function start() {
@@ -138,7 +152,7 @@ async function start() {
   store = new Store(app.getPath('userData'));
   nativeTheme.themeSource = store.state.settings.theme;
   nativeTheme.on('updated', applyTheme);
-  driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, notifyViews, { text: nativeText });
+  driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, notifyViews);
   createMain();
   tray = new Tray(nativeImage.createFromPath(icon));
   rebuildTrayMenu();
@@ -148,13 +162,18 @@ async function start() {
     try {
       const fromAlert = !!alertWindow && event.sender === alertWindow.webContents;
       const page = path.join(__dirname, '../ui', fromAlert ? 'alert.html' : 'index.html');
-      if ((!fromAlert && event.sender !== mainWindow?.webContents) || !fromPage(event.senderFrame?.url, page)) throw new Error(nativeText('طلب غير مسموح.', 'Request not allowed.'));
-      payload = checkRequest(action, payload, { fromAlert, text: nativeText });
+      if ((!fromAlert && event.sender !== mainWindow?.webContents) || !fromPage(event.senderFrame?.url, page)) throw new Error(tr("Request not allowed."));
+      payload = checkRequest(action, payload, { fromAlert });
       let value;
       switch (action) {
         case 'state': value = { ...store.state, dataPath: app.getPath('userData'), packaged: app.isPackaged, recovered: store.recovered, driveBackup: driveBackup.status() }; break;
         case 'alerts': value = activeAlerts().map(t => ({ ...t, files: (t.attachments || []).map(id => store.state.attachments.find(a => a.id === id)).filter(Boolean) })); break;
         case 'language': value = { language: language(), digits: store.state.settings.digits }; break;
+        case 'locale': {
+          const code = LOCALES.some(l => l.code === payload.code) ? payload.code : language();
+          value = { ...findLocale(code), messages: messages(code), fallback: messages(DEFAULT_LOCALE) };
+          break;
+        }
         case 'saveTask': store.change(s => saveTask(s, payload)); break;
         case 'complete':
           if (payload.id === '__preview') preview = null;
@@ -166,14 +185,14 @@ async function start() {
           }
           break;
         case 'undoComplete':
-          if (fromAlert && (!undoable || undoable.id !== payload.id || undoable.copyId !== payload.copyId)) throw new Error(nativeText('انتهت مهلة التراجع.', 'It is too late to undo.'));
+          if (fromAlert && (!undoable || undoable.id !== payload.id || undoable.copyId !== payload.copyId)) throw new Error(tr("It is too late to undo."));
           store.change(s => undoComplete(s, payload.id, String(payload.copyId || '')));
           undoable = null;
           break;
         case 'toggleStep': store.change(s => toggleStep(s, payload.id, String(payload.stepId || ''))); break;
         case 'undoable': value = undoable && undoable.until > Date.now() ? undoable : null; break;
         case 'snooze':
-          if (payload.id === '__preview') { if (!payload.until || Date.parse(payload.until) <= Date.now()) throw new Error('اختر وقتًا لاحقًا.'); preview = null; }
+          if (payload.id === '__preview') { if (!payload.until || Date.parse(payload.until) <= Date.now()) throw new Error(tr('Choose a later time.')); preview = null; }
           else value = store.change(s => snoozeTask(s, payload.id, payload.until, new Date(), { expectedDueAt: payload.expectedDueAt }));
           break;
         case 'reopen': store.change(s => { const t = s.tasks.find(t => t.id === payload.id); if (t) { t.completedAt = null; t.dueAt = null; t.scheduleAt = null; t.repeat = 'none'; t.snoozedAt = null; } }); break;
@@ -182,7 +201,7 @@ async function start() {
         case 'purgeTask': store.change(s => purgeItem(s, 'tasks', payload.id)); break;
         case 'saveNote': store.change(s => {
           const title = String(payload.title || '').trim();
-          if (!title || title.length > 200) throw new Error('أضف عنوانًا للملاحظة، حتى 200 حرف.');
+          if (!title || title.length > 200) throw new Error(tr('Add a note title of up to 200 characters.'));
           let note = s.notes.find(n => n.id === payload.id);
           if (!note) { note = { id: randomUUID(), createdAt: new Date().toISOString() }; s.notes.push(note); }
           Object.assign(note, { title, body: String(payload.body || '').slice(0, 50000), attachments: attachmentIds(payload.attachments ?? note.attachments ?? []), color: ['cream', 'green', 'blue', 'pink'].includes(payload.color) ? payload.color : 'cream', updatedAt: new Date().toISOString() });
@@ -193,33 +212,33 @@ async function start() {
         case 'emptyTrash': store.change(s => purgeTrash(s, new Date(), true)); break;
         case 'attachFiles': {
           const remaining = Math.min(MAX_ATTACHMENTS, Math.max(0, Number(payload?.remaining) || 0));
-          if (!remaining) throw new Error('وصلت إلى الحد الأقصى: 20 مرفقًا.');
-          const result = await dialog.showOpenDialog(mainWindow, { title: 'إضافة مرفقات — PDF وExcel وبقية الملفات', properties: ['openFile', 'multiSelections'], filters: [
-            { name: 'كل الملفات', extensions: ['*'] }, { name: 'صور', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif'] }, { name: 'PDF', extensions: ['pdf'] }, { name: 'Excel', extensions: ['xlsx', 'xls', 'xlsm', 'csv'] }, { name: 'مستندات', extensions: ['docx', 'doc', 'txt', 'rtf'] }
+          if (!remaining) throw new Error(tr('You have reached the limit of 20 attachments.'));
+          const result = await dialog.showOpenDialog(mainWindow, { title: tr('Add attachments: PDF, Excel and other files'), properties: ['openFile', 'multiSelections'], filters: [
+            { name: tr('All files'), extensions: ['*'] }, { name: tr('Images'), extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif'] }, { name: 'PDF', extensions: ['pdf'] }, { name: 'Excel', extensions: ['xlsx', 'xls', 'xlsm', 'csv'] }, { name: 'مستندات', extensions: ['docx', 'doc', 'txt', 'rtf'] }
           ] });
           if (result.canceled) { value = []; break; }
-          if (result.filePaths.length > remaining) throw new Error(`يمكنك إضافة ${remaining} ملفات أخرى إلى هذا العنصر.`);
+          if (result.filePaths.length > remaining) throw new Error(tr('You can add {count} more files to this item.', { count: remaining }));
           const records = await importFiles(app.getPath('userData'), result.filePaths);
           store.change(s => { s.attachments.push(...records); });
           value = records; break;
         }
         case 'openAttachment': {
-          if (event.sender === alertWindow?.webContents && !activeAlerts().some(t => (t.attachments || []).includes(payload.id))) throw new Error('المرفق لا يتبع تنبيهًا نشطًا.');
+          if (event.sender === alertWindow?.webContents && !activeAlerts().some(t => (t.attachments || []).includes(payload.id))) throw new Error(tr('This attachment does not belong to an active reminder.'));
           const { file, record } = resolveAttachment(store.state, app.getPath('userData'), payload.id);
           if (opensAsProgram(record.name)) shell.showItemInFolder(file);
           else {
             const error = await shell.openPath(file);
-            if (error) throw new Error('تعذّر فتح الملف. تأكد من وجود برنامج مناسب لهذا النوع، مثل قارئ PDF أو Excel.');
+            if (error) throw new Error(tr('The file could not be opened. Make sure an app for this file type, such as a PDF reader or Excel, is installed.'));
           }
           break;
         }
         case 'imagePreview': {
-          if (event.sender === alertWindow?.webContents && !activeAlerts().some(t => (t.attachments || []).includes(payload.id))) throw new Error('الصورة لا تتبع تنبيهًا نشطًا.');
+          if (event.sender === alertWindow?.webContents && !activeAlerts().some(t => (t.attachments || []).includes(payload.id))) throw new Error(tr('This image does not belong to an active reminder.'));
           value = await imagePreview(store.state, app.getPath('userData'), payload.id);
           break;
         }
         case 'chooseDriveFolder': {
-          const result = await dialog.showOpenDialog(mainWindow, { title: nativeText('اختر مجلدًا متزامنًا داخل Google Drive', 'Choose a synced folder inside Google Drive'), properties: ['openDirectory', 'createDirectory'], defaultPath: driveBackup.status().folder || undefined });
+          const result = await dialog.showOpenDialog(mainWindow, { title: tr("Choose a synced folder inside Google Drive"), properties: ['openDirectory', 'createDirectory'], defaultPath: driveBackup.status().folder || undefined });
           if (!result.canceled) { await driveBackup.configure(result.filePaths[0]); value = driveBackup.status(); }
           break;
         }
@@ -229,10 +248,10 @@ async function start() {
           const keep = payload.keep;
           const expired = await driveBackup.expired(keep);
           if (expired.length) {
-            const { response } = await dialog.showMessageBox(mainWindow, { type: 'warning', title: nativeText('حذف النسخ القديمة', 'Delete old backups'),
-              message: nativeText(`ستُحذف ${expired.length} من النسخ التلقائية الأقدم.`, `${expired.length} older automatic backups will be deleted.`),
-              detail: nativeText('تبقى أحدث النسخ والنسخ التي صدّرتها بنفسك. ما يُحذف من مجلد Drive ينتقل إلى سلة محذوفات Google Drive.', 'The newest copies and backups you exported yourself are kept. Copies removed from the Drive folder go to the Google Drive trash.'),
-              buttons: [nativeText('إلغاء', 'Cancel'), nativeText('حذف', 'Delete')], defaultId: 0, cancelId: 0 });
+            const { response } = await dialog.showMessageBox(mainWindow, { type: 'warning', title: tr("Delete old backups"),
+              message: tr("{count} older automatic backups will be deleted.", { count: expired.length }),
+              detail: tr("The newest copies and backups you exported yourself are kept. Copies removed from the Drive folder go to the Google Drive trash."),
+              buttons: [tr("Cancel"), tr("Delete")], defaultId: 0, cancelId: 0 });
             if (response !== 1) break;
           }
           await driveBackup.setKeep(keep);
@@ -241,14 +260,14 @@ async function start() {
         case 'driveHelp': await shell.openExternal('https://www.google.com/drive/download/'); break;
         case 'openDriveFolder': {
           const folder = driveBackup.status().folder;
-          if (!folder) throw new Error(nativeText('اختر مجلد Google Drive أولًا.', 'Choose a Google Drive folder first.'));
+          if (!folder) throw new Error(tr("Choose a Google Drive folder first."));
           const error = await shell.openPath(folder);
-          if (error) throw new Error(nativeText('مجلد Google Drive غير متاح حاليًا.', 'The Google Drive folder is not available right now.'));
+          if (error) throw new Error(tr("The Google Drive folder is not available right now."));
           break;
         }
         case 'settings': {
           const old = store.state.settings;
-          const settings = { sound: !!payload.sound, startAtLogin: !!payload.startAtLogin, alertSide: payload.alertSide === 'left' ? 'left' : 'right', language: payload.language === 'en' ? 'en' : 'ar',
+          const settings = { sound: !!payload.sound, startAtLogin: !!payload.startAtLogin, alertSide: payload.alertSide === 'left' ? 'left' : 'right', language: LOCALES.some(l => l.code === payload.language) ? payload.language : DEFAULT_LOCALE,
             digits: ['arab', 'latn'].includes(payload.digits) ? payload.digits : 'auto', weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 'auto', hijri: !!payload.hijri, theme: ['light', 'dark'].includes(payload.theme) ? payload.theme : 'system' };
           if (old.startAtLogin !== settings.startAtLogin) setLogin(settings.startAtLogin);
           try { store.change(s => { s.settings = settings; }); }
@@ -256,30 +275,27 @@ async function start() {
           rebuildTrayMenu(); placeAlert(); applyTheme(); break;
         }
         case 'preview':
-          if (dueTasks(store.state).length) throw new Error(nativeText('يظهر الآن تذكير حقيقي. جرّب المعاينة بعد إنهائه.', 'A real reminder is showing now. Try the preview after you finish it.'));
-          preview = { id: '__preview', title: nativeText('حان وقت استراحة صغيرة ☕', 'Time for a short break ☕'), body: nativeText('هذا تنبيه تجريبي. يبقى ظاهرًا حتى تختار «تم» أو «ذكّرني لاحقًا». التأجيل هنا يغلق المعاينة فقط.', 'This is a preview alert. It stays visible until you choose Done or Snooze. Snoozing here only closes the preview.'), dueAt: new Date().toISOString(), priority: 'normal', category: 'personal' }; break;
+          if (dueTasks(store.state).length) throw new Error(tr("A real reminder is showing now. Try the preview after you finish it."));
+          preview = { id: '__preview', title: tr("Time for a short break ☕"), body: tr("This is a preview alert. It stays visible until you choose Done or Snooze. Snoozing here only closes the preview."), dueAt: new Date().toISOString(), priority: 'normal', category: 'personal' }; break;
         case 'export': {
-          const result = await dialog.showOpenDialog(mainWindow, { title: nativeText('اختر مكان حفظ النسخة الاحتياطية مع المرفقات', 'Choose where to save the backup with attachments'), properties: ['openDirectory', 'createDirectory'] });
+          const result = await dialog.showOpenDialog(mainWindow, { title: tr("Choose where to save the backup with attachments"), properties: ['openDirectory', 'createDirectory'] });
           if (result.canceled) break;
           const skipped = [];
           value = { folder: await exportBackup(store.state, app.getPath('userData'), result.filePaths[0], { skipped }), skipped };
           break;
         }
         case 'restore': {
-          const result = await dialog.showOpenDialog(mainWindow, { title: nativeText('اختر مجلد نسخة احتياطية من ذكرني', 'Choose a Remember Me backup folder'), properties: ['openDirectory'], defaultPath: path.join(app.getPath('userData'), 'backups') });
+          const result = await dialog.showOpenDialog(mainWindow, { title: tr("Choose a Remember Me backup folder"), properties: ['openDirectory'], defaultPath: path.join(app.getPath('userData'), 'backups') });
           if (result.canceled) break;
-          const backup = await readBackup(result.filePaths[0], { text: nativeText });
+          const backup = await readBackup(result.filePaths[0]);
           const { tasks, notes, attachments } = backup.state;
-          const when = backup.createdAt ? new Date(backup.createdAt).toLocaleString(localeTag()) : nativeText('غير معروف', 'unknown');
-          const { response } = await dialog.showMessageBox(mainWindow, { type: 'warning', title: nativeText('استعادة نسخة احتياطية', 'Restore a backup'),
-            message: nativeText('ستحل هذه النسخة محل كل مهامك وملاحظاتك الحالية.', 'This backup will replace all your current tasks and notes.'),
-            detail: nativeText(`${tasks.length} مهمة، ${notes.length} ملاحظة، ${attachments.length} مرفق • تاريخ النسخة: ${when}
-${backup.verified ? 'تحققنا من سلامة كل الملفات.' : 'نسخة أقدم دون بصمات: تحققنا من وجود الملفات وأحجامها فقط.'}
-قبل الاستبدال نحفظ نسخة أمان من بياناتك الحالية في مجلد النسخ.`,
-              `${tasks.length} tasks, ${notes.length} notes, ${attachments.length} attachments • Backup date: ${when}
-${backup.verified ? 'Every file was verified.' : 'Older backup without checksums: only file presence and sizes were checked.'}
-A safety copy of your current data is saved in the backups folder first.`),
-            buttons: [nativeText('إلغاء', 'Cancel'), nativeText('استعادة', 'Restore')], defaultId: 0, cancelId: 0 });
+          const when = backup.createdAt ? new Date(backup.createdAt).toLocaleString(localeTag()) : tr("unknown");
+          const { response } = await dialog.showMessageBox(mainWindow, { type: 'warning', title: tr("Restore a backup"),
+            message: tr("This backup will replace all your current tasks and notes."),
+            detail: [tr('Tasks: {tasks} • Notes: {notes} • Attachments: {attachments} • Backup date: {date}', { tasks: tasks.length, notes: notes.length, attachments: attachments.length, date: when }),
+              backup.verified ? tr('Every file was verified.') : tr('Older backup without checksums: only file presence and sizes were checked.'),
+              tr('A safety copy of your current data is saved in the backups folder first.')].join('\n'),
+            buttons: [tr("Cancel"), tr("Restore")], defaultId: 0, cancelId: 0 });
           if (response !== 1) break;
           preview = null;
           value = await restoreBackup(app.getPath('userData'), store, backup);
@@ -290,10 +306,10 @@ A safety copy of your current data is saved in the backups folder first.`),
           const usage = await storageUsage(store.state, app.getPath('userData'));
           if (!usage.orphans) { value = usage; break; }
           const size = (usage.orphanBytes / 1048576).toFixed(1);
-          const { response } = await dialog.showMessageBox(mainWindow, { type: 'warning', title: nativeText('تنظيف المرفقات', 'Clean up attachments'),
-            message: nativeText(`ستُحذف ${usage.orphans} من المرفقات غير المستخدمة (${size} ميغابايت).`, `${usage.orphans} unused attachments (${size} MB) will be deleted.`),
-            detail: nativeText('لا تتبع هذه الملفات أي مهمة أو ملاحظة، بما فيها المهام المكتملة. النسخ الاحتياطية تحتفظ بنسخها الخاصة.', 'No task or note uses these files, including completed tasks. Backups keep their own copies.'),
-            buttons: [nativeText('إلغاء', 'Cancel'), nativeText('حذف', 'Delete')], defaultId: 0, cancelId: 0 });
+          const { response } = await dialog.showMessageBox(mainWindow, { type: 'warning', title: tr("Clean up attachments"),
+            message: tr("{count} unused attachments ({size} MB) will be deleted.", { count: usage.orphans, size }),
+            detail: tr("No task or note uses these files, including completed tasks. Backups keep their own copies."),
+            buttons: [tr("Cancel"), tr("Delete")], defaultId: 0, cancelId: 0 });
           if (response !== 1) break;
           await removeOrphans(store, app.getPath('userData'));
           value = await storageUsage(store.state, app.getPath('userData'));
@@ -301,11 +317,11 @@ A safety copy of your current data is saved in the backups folder first.`),
         }
         case 'dataFolder': await shell.openPath(app.getPath('userData')); break;
         case 'open': showMain(); break;
-        default: throw new Error('إجراء غير معروف.');
+        default: throw new Error(tr('Unknown action.'));
       }
       if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder'].includes(action)) { scan(); notifyViews(); }
       return { ok: true, value };
-    } catch (error) { return { ok: false, error: error.message }; }
+    } catch (error) { return { ok: false, error: errorText(error) }; }
   });
   interval = setInterval(scan, 1000);
   purgeExpiredTrash();

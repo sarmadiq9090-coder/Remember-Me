@@ -33,18 +33,18 @@ test('damaged, incomplete or foreign backups are refused before anything is rest
   const { root, data, store, record } = await setup('مهمة', Buffer.from('original'));
   const folder = await exportBackup(store.state, data, root);
   fs.writeFileSync(attachmentPath(folder, record), 'tampered');  // same size, different bytes
-  await assert.rejects(readBackup(folder), /تالفة/);
-  await assert.rejects(readBackup(folder, { text: (ar, en) => en }), /damaged/);
+  await assert.rejects(readBackup(folder), /damaged/);
+  await assert.rejects(readBackup(folder), /damaged/);
   const second = await exportBackup(store.state, data, root);
   fs.appendFileSync(path.join(second, 'data.json'), ' ');
   await assert.rejects(readBackup(second), /data\.json/);
   const third = await exportBackup(store.state, data, root);
   fs.unlinkSync(attachmentPath(third, record));
-  await assert.rejects(readBackup(third), /ناقصة/);
-  await assert.rejects(readBackup(root), /لا يحتوي/);
+  await assert.rejects(readBackup(third), /incomplete/);
+  await assert.rejects(readBackup(root), /does not contain/);
   const traversal = path.join(root, 'evil'); fs.mkdirSync(traversal);
   fs.writeFileSync(path.join(traversal, 'data.json'), JSON.stringify({ ...store.state, attachments: [{ ...record, name: '..\\..\\x.exe' }] }));
-  await assert.rejects(readBackup(traversal), /غير صالح/);
+  await assert.rejects(readBackup(traversal), /invalid/);
 });
 
 test('backups from before checksums still restore, reported as unverified', async () => {

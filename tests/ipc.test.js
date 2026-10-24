@@ -7,18 +7,18 @@ const { checkRequest, fromPage, ALERT_ACTIONS } = require('../src/ipc');
 test('requests are limited to known actions, the alert window to its own subset', () => {
   assert.deepEqual(checkRequest('state'), {});
   assert.deepEqual(checkRequest('saveTask', { title: 'x' }), { title: 'x' });
-  for (const action of [undefined, 42, '__proto__', 'constructor', 'toString', 'deleteEverything']) assert.throws(() => checkRequest(action), /غير معروف/);
+  for (const action of [undefined, 42, '__proto__', 'constructor', 'toString', 'deleteEverything']) assert.throws(() => checkRequest(action), /Unknown action/);
   for (const action of ALERT_ACTIONS) assert.doesNotThrow(() => checkRequest(action, { id: 'a' }, { fromAlert: true }));
-  for (const action of ['saveTask', 'deleteTask', 'settings', 'export', 'attachFiles', 'dataFolder']) assert.throws(() => checkRequest(action, { id: 'a' }, { fromAlert: true }), /غير مسموح/);
-  assert.throws(() => checkRequest('saveTask', {}, { fromAlert: true, text: (ar, en) => en }), /Request not allowed/);
+  for (const action of ['saveTask', 'deleteTask', 'settings', 'export', 'attachFiles', 'dataFolder']) assert.throws(() => checkRequest(action, { id: 'a' }, { fromAlert: true }), /not allowed/);
+  assert.throws(() => checkRequest('saveTask', {}, { fromAlert: true}), /Request not allowed/);
 });
 
 test('payloads must be plain objects and item IDs short strings', () => {
-  for (const payload of ['text', 7, true, [1]]) assert.throws(() => checkRequest('settings', payload), /بيانات الطلب/);
-  for (const id of [undefined, '', 5, { toString: () => 'x' }, 'x'.repeat(101)]) assert.throws(() => checkRequest('deleteTask', { id }), /معرّف/);
+  for (const payload of ['text', 7, true, [1]]) assert.throws(() => checkRequest('settings', payload), /Invalid request data/);
+  for (const id of [undefined, '', 5, { toString: () => 'x' }, 'x'.repeat(101)]) assert.throws(() => checkRequest('deleteTask', { id }), /Invalid item ID/);
   assert.doesNotThrow(() => checkRequest('complete', { id: '__preview' }));
   assert.doesNotThrow(() => checkRequest('saveNote', { title: 'new note' }), 'Creating an item needs no ID');
-  assert.throws(() => checkRequest('saveNote', { id: 9, title: 'x' }), /معرّف/);
+  assert.throws(() => checkRequest('saveNote', { id: 9, title: 'x' }), /Invalid item ID/);
 });
 
 test('only the window’s own bundled page may call the main process', () => {
@@ -38,7 +38,7 @@ test('Done and snooze may carry the due time the user saw, and nothing else in i
   assert.doesNotThrow(() => checkRequest('snooze', { id: 'a', until: '2026-10-23T10:00:00.000Z', expectedDueAt: null }));
   assert.doesNotThrow(() => checkRequest('complete', { id: 'a' }), 'Older callers send no expected time');
   for (const expectedDueAt of ['soon', 5, {}, [], true, '2026-10-23T09:00:00.000Z'.repeat(3)]) {
-    assert.throws(() => checkRequest('complete', { id: 'a', expectedDueAt }), /موعد/, String(expectedDueAt));
-    assert.throws(() => checkRequest('snooze', { id: 'a', expectedDueAt }, { text: (ar, en) => en }), /Invalid time/);
+    assert.throws(() => checkRequest('complete', { id: 'a', expectedDueAt }), /Invalid time/, String(expectedDueAt));
+    assert.throws(() => checkRequest('snooze', { id: 'a', expectedDueAt }, {}), /Invalid time/);
   }
 });

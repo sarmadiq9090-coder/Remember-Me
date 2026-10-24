@@ -9,9 +9,9 @@ const version = require('../package.json').version;
 // Only the app itself goes into app.asar: never docs, CI files, worktrees or local data.
 const bundled = ['/package.json', '/LICENSE', '/src', '/ui', '/assets'];
 const ignore = file => !!file && !bundled.some(entry => file === entry || file.startsWith(entry + '/'));
-// Chromium's own strings (date pickers, form messages) are kept for the app's two languages;
-// other system languages fall back to en-US.
-const locales = new Set(['ar.pak', 'en-US.pak']);
+// Chromium's own strings (date pickers, context menus) are kept for every interface language in
+// ui/translate.js, so the list cannot drift from the app's; other system languages use en-US.
+const locales = new Set(require('../ui/translate.js').LOCALES.map(l => l.chromium + '.pak'));
 async function pruneLocales({ buildPath }) {
   const folder = path.join(buildPath, 'locales');
   for (const name of await fs.readdir(folder)) if (!locales.has(name)) await fs.rm(path.join(folder, name));

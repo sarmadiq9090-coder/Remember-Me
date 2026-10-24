@@ -1,19 +1,21 @@
 'use strict';
+const { UserError } = require('./errors');
 const { randomUUID } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { attachmentIds, validateAttachment } = require('./attachments');
+const { LOCALES, DEFAULT: DEFAULT_LOCALE } = require('../ui/translate');
 
 function initialState() {
-  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'ar', digits: 'auto', weekStart: 'auto', hijri: false, theme: 'system' } };
+  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: DEFAULT_LOCALE, digits: 'auto', weekStart: 'auto', hijri: false, theme: 'system' } };
 }
 function title(value) {
-  if (typeof value !== 'string' || !value.trim() || value.trim().length > 200) throw new Error('اكتب عنوانًا من 1 إلى 200 حرف.');
+  if (typeof value !== 'string' || !value.trim() || value.trim().length > 200) throw new Error('Write a title of 1 to 200 characters.');
   return value.trim();
 }
 function date(value) {
   if (!value) return null;
-  if (typeof value !== 'string' || !Number.isFinite(Date.parse(value))) throw new Error('موعد غير صالح.');
+  if (typeof value !== 'string' || !Number.isFinite(Date.parse(value))) throw new Error('Invalid time.');
   return new Date(value).toISOString();
 }
 // daily and weekly follow the previous occurrence; days repeats on chosen weekdays (0 = Sunday),
@@ -37,7 +39,7 @@ function applyRule(task, rule) { for (const key of RULE_FIELDS) delete task[key]
 function taskInput(input) {
   const dueAt = date(input.dueAt);
   const repeat = REPEATS.includes(input.repeat) ? input.repeat : 'none';
-  if (repeat !== 'none' && !dueAt) throw new Error('حدّد موعدًا للمهمة المتكررة.');
+  if (repeat !== 'none' && !dueAt) throw new Error('Set a time for a repeating task.');
   return { title: title(input.title), body: String(input.body || '').slice(0, 20000),
     priority: ['normal', 'medium', 'high'].includes(input.priority) ? input.priority : 'normal',
     category: ['personal', 'work', 'study'].includes(input.category) ? input.category : 'personal', dueAt, repeat, rule: repeat === 'none' ? {} : repeatRule(input, repeat, dueAt) };
@@ -66,7 +68,7 @@ function normalizeChecklist(value) {
 function setChecklist(task, value) { const steps = normalizeChecklist(value); if (steps.length) task.checklist = steps; else delete task.checklist; }
 function toggleStep(state, taskId, stepId) {
   const step = state.tasks.find(t => t.id === taskId && !t.completedAt && !t.deletedAt)?.checklist?.find(s => s.id === stepId);
-  if (!step) throw new Error('هذه الخطوة لم تعد موجودة.');
+  if (!step) throw new Error('This step no longer exists.');
   step.done = !step.done;
 }
 function setTags(task, value) { const tags = normalizeTags(value); if (tags.length) task.tags = tags; else delete task.tags; }
@@ -75,7 +77,7 @@ function saveTask(state, input, now = new Date()) {
   const { rule, ...fields } = taskInput(input);
   let task = input.id ? state.tasks.find(t => t.id === input.id) : null;
   fields.attachments = attachmentIds(input.attachments ?? task?.attachments ?? []);
-  if (input.id && !task) throw new Error('المهمة لم تعد موجودة.');
+  if (input.id && !task) throw new Error('This task no longer exists.');
   if (task) {
     // The editor sends the updatedAt it opened with and whether its reminder fields (on/off, time,
     // repeat) were edited. If the alert snoozed or completed the task meanwhile, only the text is
@@ -88,7 +90,7 @@ function saveTask(state, input, now = new Date()) {
       setChecklist(task, input.checklist ?? task.checklist);
       return task;
     }
-    if (task.completedAt) throw new Error('أعد فتح المهمة قبل تعديلها.');
+    if (task.completedAt) throw new Error('Reopen the task before editing it.');
     const changed = fields.dueAt !== task.dueAt;
     // A new time, or a repeat switched on or changed, anchors the series at the time the editor shows,
     // which for a snoozed task is the snoozed time rather than the original one.
@@ -177,7 +179,7 @@ function completeTask(state, id, now = new Date(), { expectedDueAt } = {}) {
 // completed and loses the history copy that completing it created.
 function undoComplete(state, id, copyId, now = new Date()) {
   const task = state.tasks.find(t => t.id === id);
-  if (!task) throw new Error('المهمة لم تعد موجودة.');
+  if (!task) throw new Error('This task no longer exists.');
   if (copyId === id) { if (task.completedAt) Object.assign(task, { completedAt: null, updatedAt: now.toISOString() }); return; }
   const copy = state.tasks.find(t => t.id === copyId && t.sourceId === id && t.completedAt);
   if (!copy) return;
@@ -200,10 +202,10 @@ function purgeTrash(state, now = new Date(), all = false) {
 // Returns false when expectedDueAt shows the reminder was already handled.
 function snoozeTask(state, id, until, now = new Date(), { expectedDueAt } = {}) {
   const task = state.tasks.find(t => t.id === id && !t.completedAt && !t.deletedAt);
-  if (!task) { if (expectedDueAt !== undefined) return false; throw new Error('هذا التذكير لم يعد نشطًا.'); }
+  if (!task) { if (expectedDueAt !== undefined) return false; throw new Error('This reminder is no longer active.'); }
   if (stale(task, expectedDueAt)) return false;
   const next = date(until);
-  if (!next || Date.parse(next) <= now.getTime()) throw new Error('اختر وقتًا لاحقًا للتذكير.');
+  if (!next || Date.parse(next) <= now.getTime()) throw new Error('Choose a later time for the reminder.');
   task.dueAt = next;
   task.snoozedAt = now.toISOString();
   task.updatedAt = now.toISOString();
@@ -239,19 +241,19 @@ function alertQueue(state, preview, now = new Date()) {
   return due.length ? { alerts: due, preview: null } : { alerts: preview ? [preview] : [], preview };
 }
 function validateState(data) {
-  if (!data || data.version !== 1 || !Array.isArray(data.tasks) || !Array.isArray(data.notes)) throw new Error('ملف البيانات غير صالح.');
+  if (!data || data.version !== 1 || !Array.isArray(data.tasks) || !Array.isArray(data.notes)) throw new Error('The data file is invalid.');
   data.attachments ??= [];
-  if (!Array.isArray(data.attachments)) throw new Error('قائمة المرفقات غير صالحة.');
+  if (!Array.isArray(data.attachments)) throw new Error('The attachment list is invalid.');
   const attachmentMap = new Set();
   for (const record of data.attachments) {
     validateAttachment(record);
-    if (attachmentMap.has(record.id)) throw new Error('معرّف مرفق مكرر.');
+    if (attachmentMap.has(record.id)) throw new Error('Duplicate attachment ID.');
     attachmentMap.add(record.id);
   }
   for (const item of [...data.tasks, ...data.notes]) {
-    if (!item || typeof item !== 'object') throw new Error('بيانات المهام أو الملاحظات غير صالحة.');
+    if (!item || typeof item !== 'object') throw new Error('Invalid task or note data.');
     item.attachments = attachmentIds(item.attachments);
-    if (item.attachments.some(id => !attachmentMap.has(id))) throw new Error('مرجع المرفق غير موجود.');
+    if (item.attachments.some(id => !attachmentMap.has(id))) throw new Error('A referenced attachment does not exist.');
   }
   const ids = new Set();
   for (const task of data.tasks) {
@@ -259,7 +261,7 @@ function validateState(data) {
     const { body, priority, category, dueAt, repeat, rule } = taskInput(task);
     Object.assign(task, { body, priority, category, dueAt, repeat });
     applyRule(task, rule);
-    if (typeof task.id !== 'string' || ids.has(task.id)) throw new Error('بيانات المهام غير صالحة.');
+    if (typeof task.id !== 'string' || ids.has(task.id)) throw new Error('Invalid task data.');
     ids.add(task.id);
     task.scheduleAt = date(task.scheduleAt); task.completedAt = date(task.completedAt);
     if (task.repeat !== 'none' && !task.scheduleAt) task.scheduleAt = task.dueAt;
@@ -271,7 +273,7 @@ function validateState(data) {
   for (const item of [...data.tasks, ...data.notes]) if ('deletedAt' in item) { try { item.deletedAt = date(item.deletedAt); } catch { item.deletedAt = null; } }
   for (const note of data.notes) {
     title(note.title);
-    if (typeof note.id !== 'string' || typeof note.body !== 'string') throw new Error('بيانات الملاحظات غير صالحة.');
+    if (typeof note.id !== 'string' || typeof note.body !== 'string') throw new Error('Invalid note data.');
     if (!['cream', 'green', 'blue', 'pink'].includes(note.color)) note.color = 'cream';
   }
   const defaults = initialState().settings;
@@ -282,7 +284,9 @@ function validateState(data) {
   if (!['system', 'light', 'dark'].includes(data.settings.theme)) data.settings.theme = 'system';
   if (!['auto', 0, 1, 6].includes(data.settings.weekStart)) data.settings.weekStart = 'auto';
   data.settings.alertSide = data.settings.alertSide === 'left' ? 'left' : 'right';
-  data.settings.language = data.settings.language === 'en' ? 'en' : 'ar';
+  // Saved choices are kept. Settings written before the language option existed were Arabic.
+  if (!('language' in saved) && Object.keys(saved).length) data.settings.language = 'ar';
+  if (!LOCALES.some(l => l.code === data.settings.language)) data.settings.language = DEFAULT_LOCALE;
   return data;
 }
 // Antivirus scanners, the search indexer and sync clients briefly lock new files on Windows.
@@ -320,7 +324,7 @@ class Store {
         fs.copyFileSync(this.file, this.file + '.damaged-' + Date.now());
         writeDurable(this.file, JSON.stringify(this.state, null, 2));
         this.recovered = true;
-      } catch { throw new Error('تعذّر قراءة البيانات والنسخة الاحتياطية. احتفظنا بالملفات دون تغيير في: ' + directory); }
+      } catch { throw new UserError('Could not read the data or its backup. The files were left unchanged in: {folder}', { folder: directory }); }
     }
   }
   change(fn) {

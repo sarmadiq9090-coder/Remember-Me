@@ -127,8 +127,8 @@ test('loading normalizes out-of-range fields instead of rejecting the file, and 
   assert.equal(fixed.tasks[2].scheduleAt, fixed.tasks[2].dueAt, 'A recurring task always keeps its recurrence anchor');
   assert.equal(fixed.notes[0].color, 'cream');
   assert.deepEqual(fixed.settings, initialState().settings);
-  assert.throws(() => validateState({ ...before, tasks: [null] }), /المهام/);
-  assert.throws(() => validateState({ ...before, version: 2 }), /غير صالح/);
+  assert.throws(() => validateState({ ...before, tasks: [null] }), /task/);
+  assert.throws(() => validateState({ ...before, version: 2 }), /invalid/);
 });
 test('undoing Done restores a one-time task, and a repeat to the occurrence that was completed', () => {
   const { undoComplete } = require('../src/core');
@@ -211,7 +211,7 @@ test('checklist steps are validated, ticked one by one and reset on the next occ
   completeTask(s, t.id, new Date('2026-10-24T10:00:00Z'));
   assert.deepEqual(s.tasks.find(x => x.completedAt).checklist.map(x => x.done), [true, false], 'History keeps the ticks');
   assert.deepEqual(t.checklist.map(x => x.done), [false, false], 'The next occurrence starts unticked');
-  assert.throws(() => toggleStep(s, t.id, 'missing'), /الخطوة/);
+  assert.throws(() => toggleStep(s, t.id, 'missing'), /step/);
   assert.ok(!('checklist' in saveTask(s, { title: 'بلا خطوات', checklist: [{ text: '  ' }] })));
   assert.equal(validateState({ ...initialState(), tasks: [{ ...t, checklist: [{ text: 'ok', done: 'yes' }] }] }).tasks[0].checklist[0].done, false);
 });
@@ -234,7 +234,7 @@ test('a repeated Done or snooze for an occurrence that already moved on changes 
   const once = saveTask(s, { title: 'once', dueAt: '2026-10-23T08:00:00Z' });
   assert.ok(completeTask(s, once.id, now, { expectedDueAt: '2026-10-23T08:00:00.000Z' }));
   assert.equal(snoozeTask(s, once.id, '2026-10-30T08:00:00Z', now, { expectedDueAt: '2026-10-23T08:00:00.000Z' }), false, 'A snooze queued behind Done is ignored');
-  assert.throws(() => snoozeTask(s, once.id, '2026-10-30T08:00:00Z', now), /نشطًا/);
+  assert.throws(() => snoozeTask(s, once.id, '2026-10-30T08:00:00Z', now), /no longer active/);
   const undated = saveTask(s, { title: 'undated' });
   assert.ok(completeTask(s, undated.id, now, { expectedDueAt: null }));
 });
@@ -283,7 +283,7 @@ test('saving an editor opened before a snooze or Done in the alert keeps the new
   assert.equal(done.body, 'not lost', 'Text edits land on the completed record');
   assert.ok(done.completedAt);
   assert.equal(done.dueAt, at(23, 10).toISOString());
-  assert.throws(() => saveTask(s, { ...done, body: 'x' }), /أعد فتح/, 'Older callers still cannot edit a completed task');
+  assert.throws(() => saveTask(s, { ...done, body: 'x' }), /Reopen/, 'Older callers still cannot edit a completed task');
 
   // An edit that does change the time still moves the task and its anchor, even after a snooze.
   const moved = saveTask(s, { title: 'moved', dueAt: at(23, 9).toISOString(), repeat: 'daily' }, at(22, 8));

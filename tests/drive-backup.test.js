@@ -36,7 +36,7 @@ test('missing Drive mount keeps a local pending copy, then retries without dupli
   const backup = new DriveBackup(data, () => store.state);
   await backup.configure(sync);
   fs.renameSync(sync, sync + '.offline');
-  await assert.rejects(backup.run(), /غير متاح/);
+  await assert.rejects(backup.run(), /unavailable/);
   assert.equal(backup.status().lastCopiedAt, null);
   assert.ok(backup.status().pending);
   const local = backup.status().lastLocalPath;
@@ -53,7 +53,7 @@ test('failed snapshots never report success and invalid recursive targets are re
   const data = path.join(root, 'data'), sync = path.join(root, 'Drive');
   fs.mkdirSync(sync); const store = new Store(data);
   const backup = new DriveBackup(data, () => store.state, () => {}, { exporter: async () => { throw new Error('disk full'); } });
-  await assert.rejects(backup.configure(data), /خارج/);
+  await assert.rejects(backup.configure(data), /outside/);
   await backup.configure(sync);
   await assert.rejects(backup.run(), /disk full/);
   assert.equal(backup.status().lastCopiedAt, null);
@@ -69,7 +69,7 @@ test('a Drive folder missing for over a day is reported as stale until it return
   const data = path.join(root, 'data'), sync = path.join(root, 'Drive');
   fs.mkdirSync(sync); const store = new Store(data);
   let now = Date.parse('2026-10-24T09:00:00Z');
-  const backup = new DriveBackup(data, () => store.state, () => {}, { clock: () => now, text: (ar, en) => en });
+  const backup = new DriveBackup(data, () => store.state, () => {}, { clock: () => now });
   await backup.configure(sync);
   backup.setAutomatic(false);
   fs.renameSync(sync, sync + '.away');

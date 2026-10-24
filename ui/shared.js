@@ -31,20 +31,26 @@ function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({ '&'
 // Locale for every date, time and number, with the chosen digits and optionally the Hijri calendar.
 function locale(hijri = false) {
   const extensions = [...(hijri ? ['ca-islamic-umalqura'] : []), ...(uiDigits === 'auto' ? [] : ['nu-' + uiDigits])];
-  return (uiLanguage === 'en' ? 'en-US' : 'ar-IQ') + (extensions.length ? '-u-' + extensions.join('-') : '');
+  return uiLocale.intl + (extensions.length ? '-u-' + extensions.join('-') : '');
 }
 // Counts keep plain digits unless a digit style was chosen explicitly.
 function num(value) { return uiDigits === 'auto' ? String(value) : Number(value).toLocaleString(locale()); }
+// Required fields and date inputs report problems in the app's language, not the system's.
+document.addEventListener('invalid', e => {
+  const field = e.target;
+  field.setCustomValidity(field.validity.valueMissing ? tr('Please fill in this field.') : field.validity.badInput || field.validity.typeMismatch ? tr('Please enter a valid value.') : '');
+}, true);
+document.addEventListener('input', e => e.target.setCustomValidity?.(''), true);
 function localDateValue(date) { const d = new Date(date); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }
 function isToday(value) { return value && new Date(value).toDateString() === new Date().toDateString(); }
 function timeLabel(value) { return new Date(value).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }); }
-function dateLabel(value) { if (!value) return ''; const d = new Date(value); return `${isToday(value) ? tr('اليوم', 'Today') : d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' })}${tr('، ', ', ')}${timeLabel(value)}`; }
+function dateLabel(value) { if (!value) return ''; const d = new Date(value); return `${isToday(value) ? tr("Today") : d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' })}${tr(", ")}${timeLabel(value)}`; }
 async function api(action, payload) { const result = await window.waqt.call(action, payload); if (!result.ok) throw new Error(result.error); return result.value; }
 function fileSize(bytes) { return bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1048576).toFixed(1)} MB`; }
 function fileBadge(name) { const ext = name.includes('.') ? name.split('.').pop().toUpperCase() : 'FILE'; return ext.slice(0, 5); }
 function isImageFile(record) { return /\.(png|jpe?g|webp|gif|bmp|ico|avif)$/i.test(record.name); }
 function photoMarkup(record) {
-  return `<button type="button" class="inline-photo" data-file-id="${esc(record.id)}" title="${tr('فتح', 'Open')} ${esc(record.name)}"><img data-preview-id="${esc(record.id)}" alt="${esc(record.name)}" decoding="async"><span class="photo-placeholder">${tr('جارٍ تحميل الصورة…', 'Loading image…')}</span><span class="photo-caption"><bdi>${esc(record.name)}</bdi></span></button>`;
+  return `<button type="button" class="inline-photo" data-file-id="${esc(record.id)}" title="${tr("Open")} ${esc(record.name)}"><img data-preview-id="${esc(record.id)}" alt="${esc(record.name)}" decoding="async"><span class="photo-placeholder">${tr("Loading image…")}</span><span class="photo-caption"><bdi>${esc(record.name)}</bdi></span></button>`;
 }
 const previewCache = new Map();
 let previewObserver;
@@ -62,7 +68,7 @@ async function loadPreview(img) {
   const source = await entry.promise;
   if (!img.isConnected) return;
   const container = img.closest('.inline-photo');
-  const failed = () => { container.classList.add('photo-failed'); container.querySelector('.photo-placeholder').textContent = tr('المعاينة غير متاحة • اضغط لفتح الملف', 'Preview unavailable • click to open'); };
+  const failed = () => { container.classList.add('photo-failed'); container.querySelector('.photo-placeholder').textContent = tr("Preview unavailable • click to open"); };
   if (!source) { failed(); return; }
   img.addEventListener('load', () => container.classList.add('photo-loaded'), { once: true });
   img.addEventListener('error', failed, { once: true });
@@ -77,7 +83,7 @@ function hydratePreviews(root = document) {
 }
 function fileMarkup(record, removable = false) {
   const kind = /\.(xlsx?|xlsm|csv)$/i.test(record.name) ? 'excel' : /\.pdf$/i.test(record.name) ? 'pdf' : 'other';
-  const row = `<div class="attachment-item"><button type="button" class="attachment-open" data-file-id="${esc(record.id)}" title="${tr('فتح', 'Open')} ${esc(record.name)}"><span class="file-badge ${kind}">${esc(fileBadge(record.name))}</span><span class="attachment-name"><bdi>${esc(record.name)}</bdi><small dir="ltr">${fileSize(record.size)}</small></span>${icon('arrowLeft')}</button>${removable ? `<button type="button" class="attachment-remove icon-button" data-remove-file="${esc(record.id)}" aria-label="${tr('إزالة', 'Remove')} ${esc(record.name)}" title="${tr('إزالة المرفق', 'Remove attachment')}">${icon('x')}</button>` : ''}</div>`;
+  const row = `<div class="attachment-item"><button type="button" class="attachment-open" data-file-id="${esc(record.id)}" title="${tr("Open")} ${esc(record.name)}"><span class="file-badge ${kind}">${esc(fileBadge(record.name))}</span><span class="attachment-name"><bdi>${esc(record.name)}</bdi><small dir="ltr">${fileSize(record.size)}</small></span>${icon('arrowLeft')}</button>${removable ? `<button type="button" class="attachment-remove icon-button" data-remove-file="${esc(record.id)}" aria-label="${tr("Remove")} ${esc(record.name)}" title="${tr("Remove attachment")}">${icon('x')}</button>` : ''}</div>`;
   return isImageFile(record) ? `<div class="image-attachment">${photoMarkup(record)}${row}</div>` : row;
 }
 hydrateIcons();
