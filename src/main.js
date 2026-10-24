@@ -2,12 +2,13 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session } = require('electron');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
-const { Store, saveTask, completeTask, skipOccurrence, snoozeTask, dueTasks, alertQueue } = require('./core');
+const { REMIND_AGAIN, Store, saveTask, completeTask, skipOccurrence, snoozeTask, dueTasks, alertQueue } = require('./core');
 const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
 const { checkRequest, fromPage } = require('./ipc');
 const { readBackup, restoreBackup } = require('./backups');
+const { createRepeatBeep } = require('./repeat-beep');
 const testMode = process.env.WAQT_TEST === '1';
 app.setName('ذكرني');
 app.setPath('userData', testMode && process.env.WAQT_DATA_DIR ? process.env.WAQT_DATA_DIR : path.join(app.getPath('appData'), 'Waqt'));
@@ -15,6 +16,7 @@ app.setAppUserModelId('com.waqt.reminder');
 let mainWindow, alertWindow, tray, store, quitting = false, interval, preview = null, driveBackup, backupInterval;
 const imagePreview = createPreviewService(nativeImage);
 let previousDue = new Set();
+const repeatBeep = createRepeatBeep(() => shell.beep());
 const icon = path.join(__dirname, '../assets/icon.png');
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
@@ -89,7 +91,8 @@ function scanNow() {
       alertWindow.on('closed', () => { alertWindow = null; });
     } else if (!alertWindow.isVisible()) alertWindow.showInactive();
     if (newlyDue && store.state.settings.sound && !testMode) shell.beep();
-  } else if (alertWindow) { alertWindow.destroy(); alertWindow = null; }
+    repeatBeep(store.state.settings.sound && !testMode && tasks[0].id !== '__preview' ? tasks[0].id : null, store.state.settings.remindAgain || 0);
+  } else { repeatBeep(null, 0); if (alertWindow) { alertWindow.destroy(); alertWindow = null; } }
   if (newlyDue) notifyViews();
   if (tray) tray.setToolTip(tasks.length ? (language() === 'en' ? `Remember Me • ${tasks.length} reminders waiting` : `ذكرني • ${tasks.length} تذكير بانتظارك`) : nativeText('ذكرني • مهامك في وقتها', 'Remember Me • Your tasks on time'));
 }
@@ -201,7 +204,7 @@ async function start() {
         }
         case 'settings': {
           const old = store.state.settings;
-          const settings = { sound: !!payload.sound, startAtLogin: !!payload.startAtLogin, alertSide: payload.alertSide === 'left' ? 'left' : 'right', language: payload.language === 'en' ? 'en' : 'ar' };
+          const settings = { sound: !!payload.sound, startAtLogin: !!payload.startAtLogin, alertSide: payload.alertSide === 'left' ? 'left' : 'right', language: payload.language === 'en' ? 'en' : 'ar', remindAgain: REMIND_AGAIN.includes(payload.remindAgain) ? payload.remindAgain : 0 };
           if (old.startAtLogin !== settings.startAtLogin) setLogin(settings.startAtLogin);
           try { store.change(s => { s.settings = settings; }); }
           catch (err) { if (old.startAtLogin !== settings.startAtLogin) setLogin(old.startAtLogin); throw err; }

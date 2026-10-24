@@ -60,6 +60,7 @@ function render() {
     $('setting-startup').checked = state.settings.startAtLogin;
     $('setting-side').value = state.settings.alertSide;
     $('setting-language').value = state.settings.language;
+    renderRemindAgain();
     $('data-path').textContent = state.dataPath;
     renderStorage();
     renderDriveBackup();
@@ -246,8 +247,20 @@ $('notes-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.k
 $('cancel-delete').addEventListener('click', () => $('confirm-dialog').close());
 $('confirm-delete').addEventListener('click', async () => { if (!pendingDelete) return; try { await api('delete' + pendingDelete.type, { id: pendingDelete.id }); pendingDelete = null; $('confirm-dialog').close(); await refresh(); toast(tr('تم الحذف.','Deleted.')); } catch (err) { toast(err.message); } });
 for (const id of ['preview-alert', 'settings-preview']) $(id).addEventListener('click', async () => { try { await api('preview'); toast(tr('ظهر التنبيه فوق شريط المهام.','The alert appeared above the taskbar.')); } catch (err) { toast(err.message); } });
-for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language']) $(id).addEventListener('change', async () => {
-  try { await api('settings', { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value }); await refresh(); toast(tr('حُفظت الإعدادات.','Settings saved.')); }
+// 'Remind me again every' row, built here (with tr()) so index.html and the i18n dictionary stay untouched.
+const remindAgainRow = document.createElement('label');
+remindAgainRow.className = 'setting-row';
+remindAgainRow.innerHTML = '<div><strong></strong><p></p></div><select id="setting-remind-again"><option value="0"></option><option value="2"></option><option value="5"></option><option value="15"></option></select>';
+$('setting-sound').closest('.setting-row').after(remindAgainRow);
+function renderRemindAgain() {
+  remindAgainRow.querySelector('strong').textContent = tr('كرّر الصوت كل', 'Remind me again every');
+  remindAgainRow.querySelector('p').textContent = tr('ما دام التنبيه دون رد، حتى 6 مرات.', 'While an alert is unanswered, up to 6 times.');
+  for (const option of $('setting-remind-again').options) option.textContent = { 0: tr('إيقاف', 'Off'), 2: tr('دقيقتان', '2 minutes'), 5: tr('5 دقائق', '5 minutes'), 15: tr('15 دقيقة', '15 minutes') }[option.value];
+  $('setting-remind-again').value = String(state.settings.remindAgain || 0);
+}
+function settingsPayload() { return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, remindAgain: Number($('setting-remind-again').value) }; }
+for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-remind-again']) $(id).addEventListener('change', async () => {
+  try { await api('settings', settingsPayload()); await refresh(); toast(tr('حُفظت الإعدادات.','Settings saved.')); }
   catch (err) { toast(err.message); } await refresh();
 });
 // Names the attachments a backup had to leave out because their files are missing, with the task or note each belongs to.

@@ -7,6 +7,8 @@ const { attachmentIds, validateAttachment } = require('./attachments');
 function initialState() {
   return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'ar' } };
 }
+// Minutes between repeated alert sounds; 0 is off. Data from before the setting has no value, meaning off.
+const REMIND_AGAIN = [0, 2, 5, 15];
 function title(value) {
   if (typeof value !== 'string' || !value.trim() || value.trim().length > 200) throw new Error('اكتب عنوانًا من 1 إلى 200 حرف.');
   return value.trim();
@@ -154,6 +156,7 @@ function validateState(data) {
   for (const key of ['sound', 'startAtLogin']) if (typeof data.settings[key] !== 'boolean') data.settings[key] = defaults[key];
   data.settings.alertSide = data.settings.alertSide === 'left' ? 'left' : 'right';
   data.settings.language = data.settings.language === 'en' ? 'en' : 'ar';
+  if (data.settings.remindAgain !== undefined && !REMIND_AGAIN.includes(data.settings.remindAgain)) data.settings.remindAgain = 0;
   return data;
 }
 // Antivirus scanners, the search indexer and sync clients briefly lock new files on Windows.
@@ -209,4 +212,4 @@ class Store {
     this.state = draft;
   }
 }
-module.exports = { initialState, saveTask, completeTask, skipOccurrence, snoozeTask, dueTasks, alertQueue, nextOccurrence, validateState, Store, writeDurable, renameWithRetry };
+module.exports = { REMIND_AGAIN, initialState, saveTask, completeTask, skipOccurrence, snoozeTask, dueTasks, alertQueue, nextOccurrence, validateState, Store, writeDurable, renameWithRetry };

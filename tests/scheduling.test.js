@@ -88,3 +88,27 @@ test('a day with the app closed brings back every missed reminder once, and the 
   assert.equal(s.tasks.filter(t => t.completedAt).length, 100, 'One history entry per handled reminder');
   assert.ok(s.tasks.filter(t => t.repeat === 'daily').every(t => Date.parse(t.dueAt) > next.getTime()));
 });
+
+test('an unanswered alert beeps again on the chosen interval, at most 6 times, and stops once handled', () => {
+  const { createRepeatBeep, MAX_REPEATS } = require('../src/repeat-beep');
+  const { validateState } = require('../src/core');
+  let now = 0, start = 0, beeps = [];
+  const update = createRepeatBeep(() => beeps.push((now - start) / 60000), () => now);
+  const phase = () => { start = now; beeps = []; };
+  const run = (minutes, id = 'a', interval = 2) => { for (let i = 0; i < minutes * 60; i++) { update(id, interval); now += 1000; } };
+  run(30);
+  assert.deepEqual(beeps, [2, 4, 6, 8, 10, 12], 'Every 2 minutes after the first sound, then silent');
+  assert.equal(MAX_REPEATS, 6);
+  phase(); update(null, 2); run(5);
+  assert.deepEqual(beeps, [2, 4], 'A completed or snoozed alert starts over for the next one');
+  phase(); run(5, 'b');
+  assert.deepEqual(beeps, [2, 4], 'The next reminder in the queue gets its own count');
+  phase(); run(20, 'c', 0);
+  assert.deepEqual(beeps, [], 'Off means no repeats');
+  phase(); run(3, 'c', 5); update('d', 5); run(6, 'd', 5);
+  assert.deepEqual(beeps, [5 + 3], 'Acting on the alert restarts the wait');
+  const state = { version: 1, tasks: [], notes: [], settings: { remindAgain: 7 } };
+  assert.equal(validateState(state).settings.remindAgain, 0, 'Bad values become Off');
+  assert.equal(validateState({ version: 1, tasks: [], notes: [], settings: { remindAgain: 15 } }).settings.remindAgain, 15);
+  assert.equal(validateState({ version: 1, tasks: [], notes: [] }).settings.remindAgain, undefined, 'Older data stays as it was and means Off');
+});
