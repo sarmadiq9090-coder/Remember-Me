@@ -18,6 +18,8 @@ const imagePreview = createPreviewService(nativeImage);
 let previousDue = new Set();
 const repeatBeep = createRepeatBeep(() => shell.beep());
 const icon = path.join(__dirname, '../assets/icon.png');
+// The tray shows a dotted variant while real reminders are waiting; trayWaiting avoids calling setImage every second.
+let trayWaiting = false;
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => showMain());
@@ -94,6 +96,8 @@ function scanNow() {
     repeatBeep(store.state.settings.sound && !testMode && tasks[0].id !== '__preview' ? tasks[0].id : null, store.state.settings.remindAgain || 0);
   } else { repeatBeep(null, 0); if (alertWindow) { alertWindow.destroy(); alertWindow = null; } }
   if (newlyDue) notifyViews();
+  const waiting = tasks.length > 0 && tasks[0].id !== '__preview';
+  if (tray && waiting !== trayWaiting) { trayWaiting = waiting; tray.setImage(nativeImage.createFromPath(waiting ? path.join(__dirname, '../assets/tray-waiting.png') : icon)); }
   if (tray) tray.setToolTip(tasks.length ? (language() === 'en' ? `Remember Me • ${tasks.length} reminders waiting` : `ذكرني • ${tasks.length} تذكير بانتظارك`) : nativeText('ذكرني • مهامك في وقتها', 'Remember Me • Your tasks on time'));
 }
 function setLogin(enabled) {
