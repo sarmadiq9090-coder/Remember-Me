@@ -15,18 +15,24 @@ class DriveBackup {
     this.onChange = onChange;
     this.clock = options.clock || (() => Date.now());
     this.exporter = options.exporter || exportBackup;
+    this.text = options.text || (ar => ar);
     this.running = null;
-    this.config = { folder: '', automatic: true, lastCopiedAt: null, lastLocalPath: '', lastDrivePath: '', pending: false, error: '', lastAttempt: 0, keep: 0 };
+    this.config = { folder: '', automatic: true, lastCopiedAt: null, lastLocalPath: '', lastDrivePath: '', pending: false, error: '', lastAttempt: 0, keep: 0, unavailableSince: null };
     if (fs.existsSync(this.file)) {
       try {
         const data = JSON.parse(fs.readFileSync(this.file, 'utf8'));
         if (typeof data.folder !== 'string' || (data.folder && !path.isAbsolute(data.folder))) throw new Error('invalid');
         Object.assign(this.config, data);
         if (!validKeep(this.config.keep)) this.config.keep = 0;
-      } catch { this.config.error = 'تعذّرت قراءة إعدادات النسخ إلى Drive. اختر مجلد المزامنة مجددًا.'; }
+      } catch { this.config.error = this.text('تعذّرت قراءة إعدادات النسخ إلى Drive. اختر مجلد المزامنة مجددًا.', 'Could not read the Drive backup settings. Choose the sync folder again.'); }
     }
   }
-  status() { return { ...this.config, busy: !!this.running, available: !!this.config.folder && fs.existsSync(this.config.folder) }; }
+  status() {
+    const available = !!this.config.folder && fs.existsSync(this.config.folder);
+    // Warn once the sync folder has been missing for over a day, e.g. Drive signed out or not running.
+    const stale = !available && !!this.config.unavailableSince && this.clock() - Date.parse(this.config.unavailableSince) > 86400000;
+    return { ...this.config, busy: !!this.running, available, stale };
+  }
   save() {
     fs.mkdirSync(this.directory, { recursive: true });
     fs.writeFileSync(this.file + '.tmp', JSON.stringify(this.config, null, 2), 'utf8');
@@ -34,12 +40,13 @@ class DriveBackup {
     this.onChange();
   }
   async configure(folder) {
-    if (this.running) throw new Error('انتظر اكتمال النسخة الحالية.');
-    if (typeof folder !== 'string' || !path.isAbsolute(folder) || !(await fsp.stat(folder)).isDirectory()) throw new Error('اختر مجلد Google Drive المتزامن.');
+    if (this.running) throw new Error(this.text('انتظر اكتمال النسخة الحالية.', 'Wait for the current backup to finish.'));
+    if (typeof folder !== 'string' || !path.isAbsolute(folder) || !(await fsp.stat(folder)).isDirectory()) throw new Error(this.text('اختر مجلد Google Drive المتزامن.', 'Choose the synced Google Drive folder.'));
     const root = path.resolve(folder), local = path.resolve(this.directory);
-    if (root === local || root.startsWith(local + path.sep)) throw new Error('اختر وجهة خارج مجلد بيانات وقت.');
+    if (root === local || root.startsWith(local + path.sep)) throw new Error(this.text('اختر وجهة خارج مجلد بيانات وقت.', 'Choose a destination outside the Remember Me data folder.'));
     this.config.folder = root;
     this.config.error = '';
+    this.config.unavailableSince = null;
     this.config.lastDrivePath = '';
     this.config.lastCopiedAt = null;
     this.save();
@@ -68,7 +75,7 @@ class DriveBackup {
   async copySnapshot(source) {
     const folder = this.config.folder;
     // Never create a missing Drive mount as a normal local folder.
-    if (!folder || !fs.existsSync(folder)) throw new Error('مجلد Google Drive غير متاح. افتح Google Drive وسجّل الدخول؛ النسخة المحلية محفوظة وستُعاد المحاولة.');
+    if (!folder || !fs.existsSync(folder)) throw new Error(this.text('مجلد Google Drive غير متاح. افتح Google Drive وسجّل الدخول؛ النسخة المحلية محفوظة وستُعاد المحاولة.', 'The Google Drive folder is unavailable. Open Google Drive and sign in; the local copy is saved and the backup will be retried.'));
     const destination = path.join(folder, path.basename(source));
     await fsp.mkdir(destination, { recursive: true });
     const files = path.join(source, 'attachments');
@@ -80,7 +87,7 @@ class DriveBackup {
   }
   async perform() {
     try {
-      if (!this.config.folder) throw new Error('اختر مجلدًا داخل Google Drive أولًا.');
+      if (!this.config.folder) throw new Error(this.text('اختر مجلدًا داخل Google Drive أولًا.', 'Choose a folder inside Google Drive first.'));
       this.config.lastAttempt = this.clock();
       if (!this.config.pending || !this.config.lastLocalPath || !fs.existsSync(path.join(this.config.lastLocalPath, 'data.json'))) {
         const parent = path.join(this.directory, 'backups');
@@ -98,7 +105,7 @@ class DriveBackup {
       await this.rotate().catch(() => {});
       return this.status();
     } catch (error) {
-      this.config.error = error.message || 'تعذّر نسخ الملفات إلى مجلد Google Drive.';
+      this.config.error = error.message || this.text('تعذّر نسخ الملفات إلى مجلد Google Drive.', 'Could not copy the files to the Google Drive folder.');
       this.save();
       throw error;
     }
@@ -109,7 +116,16 @@ class DriveBackup {
     this.onChange();
     return this.running;
   }
+  // Records when the sync folder went missing, so a long outage can be reported.
+  watchAvailability() {
+    if (!this.config.folder) return;
+    const available = fs.existsSync(this.config.folder);
+    if (available === !this.config.unavailableSince) return;
+    this.config.unavailableSince = available ? null : new Date(this.clock()).toISOString();
+    this.save();
+  }
   async tick() {
+    this.watchAvailability();
     if (!this.config.automatic || !this.config.folder || this.running) return;
     const now = this.clock();
     const due = this.config.pending || !this.config.lastCopiedAt || now - Date.parse(this.config.lastCopiedAt) >= 86400000;

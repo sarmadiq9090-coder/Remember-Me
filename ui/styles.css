@@ -102,3 +102,4 @@
 /* User text keeps its own reading order (dir=auto) but lines up with the interface. */
 [dir=ltr] :is(.task-name,.task-body,.note-card h3,.note-card p){text-align:left}
 [dir=rtl] :is(.task-name,.task-body,.note-card h3,.note-card p){text-align:right}
+.nav-item.needs-attention::after{content:'';width:8px;height:8px;border-radius:50%;background:#d9534f;margin-inline-start:auto}

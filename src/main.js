@@ -103,7 +103,7 @@ async function start() {
   session.defaultSession.setPermissionRequestHandler((contents, permission, callback) => callback(false));
   session.defaultSession.setPermissionCheckHandler(() => false);
   store = new Store(app.getPath('userData'));
-  driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, notifyViews);
+  driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, notifyViews, { text: nativeText });
   createMain();
   tray = new Tray(nativeImage.createFromPath(icon));
   rebuildTrayMenu();
@@ -167,7 +167,7 @@ async function start() {
           break;
         }
         case 'chooseDriveFolder': {
-          const result = await dialog.showOpenDialog(mainWindow, { title: 'اختر مجلدًا متزامنًا داخل Google Drive', properties: ['openDirectory', 'createDirectory'], defaultPath: driveBackup.status().folder || undefined });
+          const result = await dialog.showOpenDialog(mainWindow, { title: nativeText('اختر مجلدًا متزامنًا داخل Google Drive', 'Choose a synced folder inside Google Drive'), properties: ['openDirectory', 'createDirectory'], defaultPath: driveBackup.status().folder || undefined });
           if (!result.canceled) { await driveBackup.configure(result.filePaths[0]); value = driveBackup.status(); }
           break;
         }
@@ -189,9 +189,9 @@ async function start() {
         case 'driveHelp': await shell.openExternal('https://www.google.com/drive/download/'); break;
         case 'openDriveFolder': {
           const folder = driveBackup.status().folder;
-          if (!folder) throw new Error('اختر مجلد Google Drive أولًا.');
+          if (!folder) throw new Error(nativeText('اختر مجلد Google Drive أولًا.', 'Choose a Google Drive folder first.'));
           const error = await shell.openPath(folder);
-          if (error) throw new Error('مجلد Google Drive غير متاح حاليًا.');
+          if (error) throw new Error(nativeText('مجلد Google Drive غير متاح حاليًا.', 'The Google Drive folder is not available right now.'));
           break;
         }
         case 'settings': {

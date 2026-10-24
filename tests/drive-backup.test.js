@@ -64,3 +64,24 @@ test('only raster formats are eligible for inline image previews', () => {
   for (const name of ['a.PNG', 'صورة.jpg', 'a.jpeg', 'a.webp', 'a.gif', 'a.bmp', 'a.avif']) assert.equal(isImage({ name }), true);
   for (const name of ['a.svg', 'a.html', 'a.pdf', 'a.png.exe']) assert.equal(isImage({ name }), false);
 });
+test('a Drive folder missing for over a day is reported as stale until it returns', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-drive-stale-'));
+  const data = path.join(root, 'data'), sync = path.join(root, 'Drive');
+  fs.mkdirSync(sync); const store = new Store(data);
+  let now = Date.parse('2026-10-24T09:00:00Z');
+  const backup = new DriveBackup(data, () => store.state, () => {}, { clock: () => now, text: (ar, en) => en });
+  await backup.configure(sync);
+  backup.setAutomatic(false);
+  fs.renameSync(sync, sync + '.away');
+  await backup.tick();
+  assert.equal(backup.status().unavailableSince, '2026-10-24T09:00:00.000Z', 'Tracked even with automatic backup off');
+  now += 3600000; await backup.tick();
+  assert.equal(backup.status().stale, false);
+  now += 86400000; await backup.tick();
+  assert.equal(backup.status().stale, true);
+  assert.equal(new DriveBackup(data, () => store.state, () => {}, { clock: () => now }).status().stale, true, 'Survives a restart');
+  await assert.rejects(backup.run(), /unavailable/);
+  fs.renameSync(sync + '.away', sync);
+  await backup.tick();
+  assert.deepEqual([backup.status().stale, backup.status().unavailableSince], [false, null]);
+});

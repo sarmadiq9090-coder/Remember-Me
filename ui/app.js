@@ -32,6 +32,7 @@ function render() {
   const upcoming = active.filter(t => t.dueAt && Date.parse(t.dueAt) > todayEnd());
   for (const [key, value] of Object.entries({ today: today.length, all: active.length, upcoming: upcoming.length, notes: state.notes.length, completed: complete.length })) $('count-' + key).textContent = value;
   document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  document.querySelector('.nav-item[data-view="settings"]').classList.toggle('needs-attention', !!state.driveBackup?.stale);
   document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
   const names = views[view].map(([ar, en]) => tr(ar, en));
   $('breadcrumb').textContent = names[0];
@@ -140,9 +141,11 @@ function renderDriveBackup() {
   $('drive-now').disabled = !backup.folder || backup.busy;
   $('drive-now-label').textContent = backup.busy ? tr('جارٍ تجهيز ونسخ الملفات…','Preparing and copying files…') : backup.pending ? tr('إعادة محاولة النسخ','Retry backup') : tr('نسخ احتياطي الآن','Back up now');
   $('drive-open').hidden = !backup.folder;
-  $('drive-status').textContent = backup.error || (backup.busy ? 'جارٍ حفظ نسخة محلية ثم نسخها إلى مجلد Drive…' : backup.lastCopiedAt ? `آخر نسخة إلى مجلد المزامنة: ${dateLabel(backup.lastCopiedAt)}. تحقّق من أيقونة Google Drive لتأكيد اكتمال الرفع.` : 'ثبّت Google Drive وسجّل الدخول، ثم اختر مجلدًا داخله. يتولى Google Drive رفع النسخ عند توفر الاتصال.');
-  $('drive-status').classList.toggle('backup-error', !!backup.error);
-  $('drive-local').textContent = backup.lastLocalPath ? 'النسخة المحلية محفوظة أيضًا على جهازك.' : '';
+  const last = backup.lastCopiedAt ? dateLabel(backup.lastCopiedAt) : tr('لم تُنسخ بعد', 'never');
+  const stale = backup.stale ? tr(`مجلد Google Drive غير متاح منذ أكثر من يوم، ولم تصل نسخ جديدة إلى حسابك منذ ${last}. افتح Google Drive وسجّل الدخول.`, `The Google Drive folder has been unavailable for over a day; no new backups have reached your account since ${last}. Open Google Drive and sign in.`) : '';
+  $('drive-status').textContent = stale || backup.error || (backup.busy ? tr('جارٍ حفظ نسخة محلية ثم نسخها إلى مجلد Drive…', 'Saving a local copy, then copying it to the Drive folder…') : backup.lastCopiedAt ? tr(`آخر نسخة إلى مجلد المزامنة: ${last}. تحقّق من أيقونة Google Drive لتأكيد اكتمال الرفع.`, `Last copy to the sync folder: ${last}. Check the Google Drive icon to confirm the upload finished.`) : tr('ثبّت Google Drive وسجّل الدخول، ثم اختر مجلدًا داخله. يتولى Google Drive رفع النسخ عند توفر الاتصال.', 'Install Google Drive and sign in, then choose a folder inside it. Google Drive uploads the copies when you are online.'));
+  $('drive-status').classList.toggle('backup-error', !!(stale || backup.error));
+  $('drive-local').textContent = backup.lastLocalPath ? tr('النسخة المحلية محفوظة أيضًا على جهازك.', 'A local copy is also kept on your PC.') : '';
 }
 async function openFile(id) { try { await api('openAttachment', { id }); } catch (error) { toast(error.message); } }
 for (const type of ['task', 'note']) {
@@ -228,7 +231,7 @@ $('clean-orphans').addEventListener('click', async () => {
 $('open-data').addEventListener('click', async () => { try { await api('dataFolder'); } catch (err) { toast(err.message); } });
 async function driveAction(action, payload) { try { const value = await api(action, payload); await refresh(); return value; } catch (error) { toast(error.message); await refresh(); } }
 $('choose-drive-folder').addEventListener('click', () => driveAction('chooseDriveFolder'));
-$('drive-now').addEventListener('click', async () => { $('drive-now').disabled = true; if (await driveAction('driveBackupNow')) toast('حُفظت النسخة محليًا وفي مجلد Drive. يتولى Google Drive إكمال الرفع.'); });
+$('drive-now').addEventListener('click', async () => { $('drive-now').disabled = true; if (await driveAction('driveBackupNow')) toast(tr('حُفظت النسخة محليًا وفي مجلد Drive. يتولى Google Drive إكمال الرفع.', 'Saved locally and to the Drive folder. Google Drive finishes the upload.')); });
 $('drive-automatic').addEventListener('change', () => driveAction('driveAutomatic', { enabled: $('drive-automatic').checked }));
 $('drive-keep').addEventListener('change', () => driveAction('driveKeep', { keep: Number($('drive-keep').value) }));
 $('drive-install').addEventListener('click', () => driveAction('driveHelp'));
@@ -239,5 +242,8 @@ document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.key.toLowerCase() === 'k') { e.preventDefault(); $('search').focus(); }
 });
 window.waqt.onUpdate(refresh);
-refresh().then(() => { if (state?.recovered) toast(tr('استُعيدت بياناتك من النسخة الاحتياطية بعد تعذّر قراءة الملف الأصلي.','Your data was restored from backup after the original file could not be read.')); });
+refresh().then(() => {
+  if (state?.recovered) toast(tr('استُعيدت بياناتك من النسخة الاحتياطية بعد تعذّر قراءة الملف الأصلي.','Your data was restored from backup after the original file could not be read.'));
+  else if (state?.driveBackup?.stale) toast(tr('النسخ إلى Google Drive متوقف منذ أكثر من يوم. افتح الإعدادات للتفاصيل.', 'Backups to Google Drive have been stalled for over a day. Open Settings for details.'));
+});
 setInterval(() => { if (!document.querySelector('dialog[open]')) render(); }, 30000);
