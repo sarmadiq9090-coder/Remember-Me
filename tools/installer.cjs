@@ -14,7 +14,7 @@ build({
     appId: 'com.waqt.reminder', productName: 'ذكرني - Remember Me',
     executableName: 'Waqt',
     directories: { output: path.join(root, 'release/installer') },
-    compression: 'normal',
+    compression: 'maximum',
     win: { icon: path.join(root, 'assets/icon.ico'), signAndEditExecutable: false },
     nsis: {
       oneClick: false, perMachine: false, allowElevation: false,
