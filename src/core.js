@@ -20,6 +20,9 @@ function date(value) {
 // interval every N days, and monthly/yearly count from repeatFrom so the 31st never drifts.
 const REPEATS = ['none', 'daily', 'weekly', 'days', 'interval', 'monthly', 'yearly'];
 const RULE_FIELDS = ['repeatEvery', 'repeatDays', 'repeatFrom'];
+// Minutes before the due time for an optional, quieter early notification.
+const EARLY = [5, 10, 15, 30, 60, 1440];
+function early(value, dueAt) { return dueAt && EARLY.includes(value) ? value : 0; }
 function repeatRule(input, repeat, dueAt) {
   if (repeat === 'interval') return { repeatEvery: Number.isInteger(input.repeatEvery) ? Math.min(365, Math.max(2, input.repeatEvery)) : 2 };
   if (repeat === 'days') {
@@ -39,6 +42,7 @@ function taskInput(input) {
     priority: ['normal', 'medium', 'high'].includes(input.priority) ? input.priority : 'normal',
     category: ['personal', 'work', 'study'].includes(input.category) ? input.category : 'personal', dueAt, repeat, rule: repeat === 'none' ? {} : repeatRule(input, repeat, dueAt) };
 }
+function setEarly(task, minutes) { const value = early(minutes, task.dueAt); if (value) task.remindBefore = value; else delete task.remindBefore; }
 function saveTask(state, input, now = new Date()) {
   const { rule, ...fields } = taskInput(input);
   let task = input.id ? state.tasks.find(t => t.id === input.id) : null;
@@ -51,10 +55,12 @@ function saveTask(state, input, now = new Date()) {
     if ('repeatFrom' in rule && (changed || fields.repeat !== task.repeat)) rule.repeatFrom = fields.dueAt;
     Object.assign(task, fields, { updatedAt: now.toISOString() });
     applyRule(task, rule);
+    setEarly(task, input.remindBefore);
     if (changed) { task.scheduleAt = fields.dueAt; task.snoozedAt = null; }
   } else {
     if ('repeatFrom' in rule) rule.repeatFrom = fields.dueAt;
     task = { ...fields, ...rule, id: randomUUID(), scheduleAt: fields.dueAt, createdAt: now.toISOString(), updatedAt: now.toISOString(), completedAt: null, snoozedAt: null };
+    setEarly(task, input.remindBefore);
     state.tasks.push(task);
   }
   return task;
@@ -147,6 +153,10 @@ function dueTasks(state, now = new Date()) {
   return state.tasks.filter(t => !t.completedAt && !t.deletedAt && t.dueAt && Date.parse(t.dueAt) <= now.getTime())
     .sort((a, b) => Date.parse(a.dueAt) - Date.parse(b.dueAt));
 }
+// Open tasks whose early notification time has come but whose due time has not.
+function upcomingTasks(state, now = new Date()) {
+  return state.tasks.filter(t => !t.completedAt && !t.deletedAt && t.remindBefore && t.dueAt && Date.parse(t.dueAt) > now.getTime() && Date.parse(t.dueAt) - t.remindBefore * 60000 <= now.getTime());
+}
 function validateState(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.tasks) || !Array.isArray(data.notes)) throw new Error('ملف البيانات غير صالح.');
   data.attachments ??= [];
@@ -173,6 +183,7 @@ function validateState(data) {
     task.scheduleAt = date(task.scheduleAt); task.completedAt = date(task.completedAt);
     if (task.repeat !== 'none' && !task.scheduleAt) task.scheduleAt = task.dueAt;
     try { task.snoozedAt = date(task.snoozedAt); } catch { task.snoozedAt = null; }
+    if ('remindBefore' in task) setEarly(task, task.remindBefore);
   }
   for (const item of [...data.tasks, ...data.notes]) if ('deletedAt' in item) { try { item.deletedAt = date(item.deletedAt); } catch { item.deletedAt = null; } }
   for (const note of data.notes) {
@@ -241,4 +252,4 @@ class Store {
     this.state = draft;
   }
 }
-module.exports = { TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, nextOccurrence, validateState, Store };
+module.exports = { EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, nextOccurrence, validateState, Store };

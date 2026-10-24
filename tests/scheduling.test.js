@@ -146,3 +146,22 @@ test('repeat rules stay consistent when a task is edited, completed or loaded', 
   assert.ok(!('repeatFrom' in loaded.tasks[0]));
   assert.equal(loaded.tasks[1].repeatEvery, 2);
 });
+
+test('early notifications start at the chosen lead time and stop at the due time', () => {
+  const { upcomingTasks, validateState } = require('../src/core');
+  process.env.TZ = 'Asia/Baghdad';
+  const s = initialState();
+  const t = saveTask(s, { title: 'اجتماع', dueAt: '2026-10-24T10:00:00.000Z', remindBefore: 10 });
+  assert.equal(t.remindBefore, 10);
+  assert.equal(upcomingTasks(s, new Date('2026-10-24T09:49:59Z')).length, 0);
+  assert.equal(upcomingTasks(s, new Date('2026-10-24T09:50:00Z')).length, 1);
+  assert.equal(upcomingTasks(s, new Date('2026-10-24T10:00:00Z')).length, 0, 'At the due time the sticky alert takes over');
+  assert.ok(!('remindBefore' in saveTask(s, { title: 'بلا', dueAt: '2026-10-24T10:00:00.000Z', remindBefore: 7 })), 'Only offered lead times are kept');
+  assert.ok(!('remindBefore' in saveTask(s, { title: 'بلا موعد', remindBefore: 10 })), 'No due time, no early notification');
+  saveTask(s, { ...t, remindBefore: 0 });
+  assert.ok(!('remindBefore' in t));
+  const daily = saveTask(s, { title: 'يومي', dueAt: '2026-10-24T10:00:00.000Z', repeat: 'daily', remindBefore: 60 });
+  completeTask(s, daily.id, new Date('2026-10-24T10:05:00Z'));
+  assert.equal(upcomingTasks(s, new Date('2026-10-25T09:00:00Z')).map(x => x.title).join(), 'يومي', 'The next occurrence keeps its lead time');
+  assert.ok(!('remindBefore' in validateState({ ...initialState(), tasks: [{ ...t, remindBefore: 'soon' }] }).tasks[0]));
+});

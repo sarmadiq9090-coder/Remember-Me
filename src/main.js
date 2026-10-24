@@ -1,8 +1,8 @@
 'use strict';
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, Notification } = require('electron');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
-const { Store, saveTask, completeTask, undoComplete, snoozeTask, dueTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
+const { Store, saveTask, completeTask, undoComplete, snoozeTask, dueTasks, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
 const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
@@ -10,6 +10,8 @@ const { checkRequest, fromPage } = require('./ipc');
 const { alertBounds } = require('./placement');
 const { readBackup, restoreBackup } = require('./backups');
 const testMode = process.env.WAQT_TEST === '1';
+// Lets the desktop tests read early notifications without showing them.
+if (testMode) globalThis.waqtTest = { get early() { return earlyLog; } };
 app.setName('ذكرني');
 app.setPath('userData', testMode && process.env.WAQT_DATA_DIR ? process.env.WAQT_DATA_DIR : path.join(app.getPath('appData'), 'Waqt'));
 app.setAppUserModelId('com.waqt.reminder');
@@ -19,6 +21,23 @@ let previousDue = new Set();
 // The task just completed from the alert, which can be undone for a few seconds.
 let undoable = null;
 const UNDO_MS = 6000;
+// Early notifications already shown, by task and due time, so each occurrence is announced once.
+const announced = new Set();
+const earlyLog = [];
+function announceUpcoming() {
+  for (const task of upcomingTasks(store.state)) {
+    const key = task.id + ':' + task.dueAt;
+    if (announced.has(key)) continue;
+    announced.add(key);
+    const time = new Date(task.dueAt).toLocaleTimeString(language() === 'en' ? 'en-US' : 'ar-IQ', { hour: 'numeric', minute: '2-digit' });
+    const message = { title: nativeText(`قريبًا: ${task.title}`, `Coming up: ${task.title}`), body: nativeText(`الموعد عند ${time}`, `Due at ${time}`) };
+    if (testMode) { earlyLog.push(message); continue; }
+    if (!Notification.isSupported()) continue;
+    const notification = new Notification({ ...message, icon, silent: !store.state.settings.sound });
+    notification.on('click', showMain);
+    notification.show();
+  }
+}
 const icon = path.join(__dirname, '../assets/icon.png');
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
@@ -72,6 +91,7 @@ function activeAlerts() { const tasks = dueTasks(store.state); return tasks.leng
 // The scheduler must survive any single failure; an exception here would otherwise repeat every second.
 function scan() { try { scanNow(); } catch (error) { console.error('Reminder scan failed:', error); } }
 function scanNow() {
+  announceUpcoming();
   const tasks = activeAlerts();
   const current = new Set(tasks.map(t => t.id));
   const newlyDue = tasks.some(t => !previousDue.has(t.id));
