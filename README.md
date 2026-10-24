@@ -16,7 +16,7 @@
 Remember Me is an open-source desktop app for 64-bit Windows. It runs without an account or a permanent internet connection, keeps your data on your own device, and shows each reminder in a sticky window above the taskbar until you mark it done or snooze it. Missed reminders don't get lost in the notification center.
 
 <p align="center">
-  <img src="docs/screenshots/main-en.png" width="68%" alt="Remember Me main window: today's tasks and the next reminder">
+  <img src="docs/screenshots/main-en.png" width="68%" alt="Remember Me main window: today's tasks with tag filters and a checklist, and the next reminder">
   <img src="docs/screenshots/alert-en.png" width="23%" alt="Sticky reminder above the taskbar: an overdue task with Done, snooze choices and a queue of two">
 </p>
 
@@ -43,7 +43,7 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 - **Safe file handling:** programs, scripts, installers and shortcuts are revealed in File Explorer instead of being launched.
 - **Smart search (Ctrl+K):** searches tasks and notes, and matches Arabic text regardless of diacritics and common spelling variants.
 - **12 interface languages:** English (the default), العربية (a full right-to-left interface), Español, Français, Deutsch, Português (Brasil), Русский, 中文 (简体), 日本語, Türkçe, हिन्दी and Bahasa Indonesia, switchable in Settings. Dates, numbers and plurals follow the chosen language, and mixed-language text keeps its reading order. The translations other than English and Arabic are machine-assisted; corrections from native speakers are very welcome (see [Translations](#translations)).
-- **Tags and checklists:** tag tasks and filter or sort by tag or title, and break a task into steps you tick off from the list; a repeating task starts each occurrence with its steps unticked.
+- **Tags and checklists:** tag tasks, filter the list by tag and find tags in search, sort tasks by due time, priority, newest or title, and break a task into steps you tick off from the list; a repeating task starts each occurrence with its steps unticked.
 - **Local-first data:** atomic saves, an automatic `.bak` copy and automatic recovery if the data file is damaged.
 - **Backups:** export a full backup with all attachments and checksums, restore one from Settings after it's verified, or copy daily backups into a synced Google Drive folder.
 - **Themes and display options:** light, dark or follow Windows, six color palettes (Lavender, Ocean, Forest, Sunset, Graphite and High contrast), and the first day of the week (Saturday by default). Dates and times always use Western digits (0-9), in Arabic too.
@@ -63,13 +63,13 @@ The installer is built by GitHub Actions from the published source. It is not co
 Compare the file's fingerprint with `SHA256SUMS.txt` from the same release:
 
 ```powershell
-Get-FileHash .\Remember-Me-Setup-1.4.0-x64.exe -Algorithm SHA256
+Get-FileHash .\Remember-Me-Setup-1.5.0-x64.exe -Algorithm SHA256
 ```
 
 With the GitHub CLI you can also confirm the file was built by this repository's release workflow from the release tag:
 
 ```powershell
-gh attestation verify .\Remember-Me-Setup-1.4.0-x64.exe --repo sarmadiq9090-coder/Remember-Me --source-ref refs/tags/v1.4.0 --signer-workflow sarmadiq9090-coder/Remember-Me/.github/workflows/release.yml
+gh attestation verify .\Remember-Me-Setup-1.5.0-x64.exe --repo sarmadiq9090-coder/Remember-Me --source-ref refs/tags/v1.5.0 --signer-workflow sarmadiq9090-coder/Remember-Me/.github/workflows/release.yml
 ```
 
 ### Upgrading from v1.4.0 or earlier
@@ -92,6 +92,8 @@ v1.4.0 can't update itself: install the next version from Releases once by hand,
 - **New task:** a title, notes, a priority and an optional reminder time.
 - **Today:** tasks without a date, today's tasks and anything overdue. **Upcoming:** tasks due after today.
 - **Multiple reminders:** shown one after another, with no task skipped.
+- **Tags:** in the task editor, type up to ten tags separated by commas; tags you already use are suggested. Every tag in use becomes a filter button above the list, and search finds tags too. The menu next to the list title sorts by due time, priority, newest first or title.
+- **Checklists:** add up to 50 steps in the task editor (Enter adds the next one) and tick them from the task card.
 - **Recurring tasks:** missed occurrences roll forward to the next future one when you complete the task. Snoozing never changes the original repeat time. The skip button on a repeating task moves it to the next occurrence without logging it as done. When you change a repeating task's time, tick **Only this time** to move just this occurrence.
 - **Done and delete:** both show an **Undo** button for a few seconds. Deleted items go to **Trash**, where you can restore them or delete them for good; they're removed automatically after 30 days.
 - **Attachments:** while editing a task or note, choose **Add files**. Files are copied into Remember Me's data folder, so moving or deleting the original doesn't break the attachment. Removing an attachment from one item doesn't affect other items.
@@ -188,6 +190,9 @@ Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable
 - `tests/alert-format.test.js`: the alert's snooze presets, overdue age and due day, across daylight-saving changes.
 - `tests/theme.test.js`: every palette in light and dark meets WCAG contrast for text, buttons, focus rings and the logo; the stylesheets use only theme tokens; palette, note color and note style settings fall back safely.
 - `tests/pause.test.js`: pausing reminders from the tray, with a fake clock.
+- `tests/early-notices.test.js`: each "coming up" notice shows once per due time, none pile up after a pause, and clicked or old notices are let go.
+- `tests/structure.test.js`: every `require` and import, every script and stylesheet the pages load, and every fixed path the main process builds exists.
+- `tests/handlers.test.js`: every allowed IPC action has exactly one handler, and only actions that change nothing skip the rescan.
 - `tests/winget-manifest.test.js`: the winget manifests written from a release's `SHA256SUMS.txt`.
 - `tests/updates.test.js`: the update consent, background schedule, Check now, the ready banner, and installing after a safety backup.
 - `tests/data-folder.test.js` and `tests/login-item.test.js`: moving the old `Waqt` data folder, including locked and interrupted moves, and pointing start with Windows at the renamed executable.

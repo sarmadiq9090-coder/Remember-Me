@@ -13,12 +13,12 @@ const out = path.join(root, 'docs', 'screenshots');
 const SAMPLES = {
   en: {
     tasks: [
-      ['Join the team call', 'Agenda: release plan and next steps.', 'high', -2],
-      ['Send the project update', 'Include the new timeline.', 'high', 90],
-      ['Water the plants', '', 'normal', 240, 'daily'],
-      ['Pay the electricity bill', '', 'medium', 60 * 24],
-      ['Weekly planning', 'Review last week and pick three goals.', 'normal', 60 * 24 * 3, 'weekly'],
-      ['Book a dentist appointment', '', 'normal', null],
+      ['Join the team call', '', 'high', -20, 'none', ['work'], ['Share the agenda', 'Review the release plan', 'Agree on next steps']],
+      ['Pay the electricity bill', '', 'medium', -2, 'none', ['home']],
+      ['Send the project update', 'Include the new timeline.', 'high', 90, 'none', ['work']],
+      ['Water the plants', '', 'normal', 240, 'daily', ['home']],
+      ['Weekly planning', 'Review last week and pick three goals.', 'normal', 60 * 24 * 3, 'weekly', ['work', 'planning']],
+      ['Book a dentist appointment', '', 'normal', null, 'none', ['health']],
       ['Morning walk', '', 'normal', 'done'],
     ],
     notes: [
@@ -30,12 +30,12 @@ const SAMPLES = {
   },
   ar: {
     tasks: [
-      ['الانضمام إلى اجتماع الفريق', 'جدول الأعمال: خطة الإصدار والخطوات التالية.', 'high', -2],
-      ['إرسال تحديث المشروع', 'أضف الجدول الزمني الجديد.', 'high', 90],
-      ['سقي النباتات', '', 'normal', 240, 'daily'],
-      ['دفع فاتورة الكهرباء', '', 'medium', 60 * 24],
-      ['التخطيط الأسبوعي', 'راجع الأسبوع الماضي واختر ثلاثة أهداف.', 'normal', 60 * 24 * 3, 'weekly'],
-      ['حجز موعد عند طبيب الأسنان', '', 'normal', null],
+      ['الانضمام إلى اجتماع الفريق', '', 'high', -20, 'none', ['عمل'], ['مشاركة جدول الأعمال', 'مراجعة خطة الإصدار', 'الاتفاق على الخطوات التالية']],
+      ['دفع فاتورة الكهرباء', '', 'medium', -2, 'none', ['المنزل']],
+      ['إرسال تحديث المشروع', 'أضف الجدول الزمني الجديد.', 'high', 90, 'none', ['عمل']],
+      ['سقي النباتات', '', 'normal', 240, 'daily', ['المنزل']],
+      ['التخطيط الأسبوعي', 'راجع الأسبوع الماضي واختر ثلاثة أهداف.', 'normal', 60 * 24 * 3, 'weekly', ['عمل', 'تخطيط']],
+      ['حجز موعد عند طبيب الأسنان', '', 'normal', null, 'none', ['صحة']],
       ['المشي الصباحي', '', 'normal', 'done'],
     ],
     notes: [
@@ -47,13 +47,15 @@ const SAMPLES = {
   },
 };
 
-// data.json for one language: times are relative to now, so "today" is always today.
+// data.json for one language: times are relative to now, so "today" is always today. Two tasks are
+// overdue, so the alert shows its queue.
 function sampleData(language) {
   const now = Date.now(), iso = ms => new Date(ms).toISOString();
-  const tasks = SAMPLES[language].tasks.map(([title, body, priority, minutes, repeat = 'none'], i) => {
+  const tasks = SAMPLES[language].tasks.map(([title, body, priority, minutes, repeat = 'none', tags = [], steps = []], i) => {
     const done = minutes === 'done', due = typeof minutes === 'number' ? iso(now + minutes * 60000) : null;
     return { id: `sample-task-${i}`, title, body, priority, category: 'personal', dueAt: due, scheduleAt: due, repeat,
       ...(repeat !== 'none' ? { repeatFrom: due } : {}), snoozedAt: null, completedAt: done ? iso(now - 3 * 3600000) : null,
+      ...(tags.length ? { tags } : {}), ...(steps.length ? { checklist: steps.map((text, n) => ({ id: `sample-step-${i}-${n}`, text, done: n === 0 })) } : {}),
       attachments: [], createdAt: iso(now - 86400000), updatedAt: iso(now - 3600000) };
   });
   const notes = SAMPLES[language].notes.map(([title, body, color, style], i) => ({ id: `sample-note-${i}`, title, body, color, style, attachments: [],

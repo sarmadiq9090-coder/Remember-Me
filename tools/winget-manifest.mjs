@@ -62,7 +62,7 @@ PackageUrl: ${REPO}
 License: MIT
 LicenseUrl: ${REPO}/blob/main/LICENSE
 ShortDescription: Tasks, notes and reminders for Windows, with alerts that stay on screen until you deal with them.
-Description: Remember Me is an offline-first task, note and reminder app with Arabic and English interfaces. Each reminder stays in a window above the taskbar until you mark it done or snooze it, and your data stays on your PC.
+Description: Remember Me is an offline-first task, note and reminder app in 12 interface languages, including Arabic with a right-to-left layout. Each reminder stays in a window above the taskbar until you mark it done or snooze it, and your data stays on your PC.
 Moniker: remember-me
 Tags:
 - arabic
