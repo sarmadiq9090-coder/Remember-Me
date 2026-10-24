@@ -79,6 +79,18 @@ function completeTask(state, id, now = new Date(), { expectedDueAt } = {}) {
   } else { task.completedAt = now.toISOString(); task.updatedAt = now.toISOString(); }
   return true;
 }
+// Moves a repeating task to its next occurrence without recording a completion.
+// Returns false when expectedDueAt shows the occurrence was already handled.
+function skipOccurrence(state, id, expectedDueAt, now = new Date()) {
+  const task = state.tasks.find(t => t.id === id && !t.completedAt);
+  if (!task || task.repeat === 'none' || !task.scheduleAt) throw new Error('يمكن تخطي المهام المتكررة النشطة فقط.');
+  if (stale(task, expectedDueAt)) return false;
+  task.dueAt = nextOccurrence(task.scheduleAt, task.repeat, now);
+  task.scheduleAt = task.dueAt;
+  task.snoozedAt = null;
+  task.updatedAt = now.toISOString();
+  return true;
+}
 // Returns false when expectedDueAt shows the reminder was already handled.
 function snoozeTask(state, id, until, now = new Date(), { expectedDueAt } = {}) {
   const task = state.tasks.find(t => t.id === id && !t.completedAt);
@@ -193,4 +205,4 @@ class Store {
     this.state = draft;
   }
 }
-module.exports = { initialState, saveTask, completeTask, snoozeTask, dueTasks, alertQueue, nextOccurrence, validateState, Store, writeDurable, renameWithRetry };
+module.exports = { initialState, saveTask, completeTask, skipOccurrence, snoozeTask, dueTasks, alertQueue, nextOccurrence, validateState, Store, writeDurable, renameWithRetry };

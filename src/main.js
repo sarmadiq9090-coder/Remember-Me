@@ -2,7 +2,7 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session } = require('electron');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
-const { Store, saveTask, completeTask, snoozeTask, dueTasks, alertQueue } = require('./core');
+const { Store, saveTask, completeTask, skipOccurrence, snoozeTask, dueTasks, alertQueue } = require('./core');
 const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
@@ -125,6 +125,10 @@ async function start() {
           if (payload.id === '__preview') preview = null;
           // value is false when the reminder was already handled (a double click or another window).
           else value = store.change(s => completeTask(s, payload.id, new Date(), { expectedDueAt: payload.expectedDueAt }));
+          break;
+        case 'skip':
+          if (payload.id === '__preview') throw new Error(nativeText('المعاينة لا تتكرر.', 'The preview does not repeat.'));
+          value = store.change(s => skipOccurrence(s, payload.id, payload.expectedDueAt, new Date()));
           break;
         case 'snooze':
           if (payload.id === '__preview') { if (!payload.until || Date.parse(payload.until) <= Date.now()) throw new Error('اختر وقتًا لاحقًا.'); preview = null; }

@@ -220,3 +220,22 @@ test('the preview alert shows only on its own and never comes back after a real 
   completeTask(s, real.id, now);
   assert.deepEqual(alertQueue(s, queue.preview, now).alerts, [], 'After Done the alert closes; the preview does not appear late');
 });
+test('skipping an occurrence moves a repeating task on without recording a completion', () => {
+  const { skipOccurrence } = require('../src/core');
+  const s = initialState(), now = new Date(2026, 9, 23, 8);
+  const t = saveTask(s, { title: 'daily', dueAt: new Date(2026, 9, 23, 9).toISOString(), repeat: 'daily' });
+  const seen = t.dueAt;
+  assert.equal(skipOccurrence(s, t.id, seen, now), true);
+  assert.equal(t.dueAt, new Date(2026, 9, 24, 9).toISOString());
+  assert.equal(t.scheduleAt, t.dueAt);
+  assert.equal(s.tasks.filter(x => x.completedAt).length, 0, 'No completed copy');
+  assert.equal(skipOccurrence(s, t.id, seen, now), false, 'A stale expected time is a no-op');
+  assert.equal(t.dueAt, new Date(2026, 9, 24, 9).toISOString());
+  snoozeTask(s, t.id, new Date(2026, 9, 24, 11).toISOString(), new Date(2026, 9, 24, 9));
+  assert.equal(skipOccurrence(s, t.id, t.dueAt, new Date(2026, 9, 24, 9, 1)), true);
+  assert.deepEqual([t.dueAt, t.snoozedAt], [new Date(2026, 9, 25, 9).toISOString(), null], 'A snoozed occurrence skips to the series time');
+  const once = saveTask(s, { title: 'once', dueAt: new Date(2026, 9, 23, 9).toISOString() });
+  assert.throws(() => skipOccurrence(s, once.id, once.dueAt, now), /المتكررة/);
+  completeTask(s, once.id, now);
+  assert.throws(() => skipOccurrence(s, once.id, undefined, now), /المتكررة/);
+});

@@ -42,3 +42,10 @@ test('Done and snooze may carry the due time the user saw, and nothing else in i
     assert.throws(() => checkRequest('snooze', { id: 'a', expectedDueAt }, { text: (ar, en) => en }), /Invalid time/);
   }
 });
+
+test('skip is allowed from the alert, needs an ID and validates the expected time', () => {
+  assert.ok(ALERT_ACTIONS.has('skip'));
+  assert.doesNotThrow(() => checkRequest('skip', { id: 'a', expectedDueAt: '2026-10-23T09:00:00.000Z' }, { fromAlert: true }));
+  assert.throws(() => checkRequest('skip', {}, { fromAlert: true }), /معرّف/);
+  assert.throws(() => checkRequest('skip', { id: 'a', expectedDueAt: 'later' }), /موعد/);
+});
