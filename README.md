@@ -55,9 +55,9 @@ With the GitHub CLI you can also confirm the file was built from this repository
 gh attestation verify .\Remember-Me-Setup-1.4.0-x64.exe --repo sarmadiq9090-coder/Remember-Me
 ```
 
-### Why "Waqt"?
+### Upgrading from v1.4.0 or earlier
 
-"Waqt" (Arabic for *time*) was the project's original internal name. It remains in `Waqt.exe`, the `%APPDATA%\Waqt` data folder and the `com.waqt.reminder` app ID on purpose: renaming them would detach existing data, start-with-Windows entries and shortcuts from earlier versions. Any future rename will migrate data automatically.
+Older versions stored their data in `%APPDATA%\Waqt`. The first time a newer version starts, it moves that folder to `%APPDATA%\Remember Me` automatically. If the folder can't be moved, Remember Me copies it, checks the copy and keeps the original as `%APPDATA%\Waqt.migrated-<date>`. It never deletes the old folder.
 
 ## Usage
 
@@ -82,7 +82,7 @@ Alerts can't appear while the PC is off or asleep, or while the app isn't runnin
 
 ## Data and backups
 
-Everything is stored locally in `%APPDATA%\Waqt\data.json`, with the previous version kept in `data.json.bak`. Settings shows the exact path and a button to open it. Saves are atomic. If the main file is ever damaged, Remember Me restores the backup automatically and keeps the damaged file for inspection.
+Everything is stored locally in `%APPDATA%\Remember Me\data.json`, with the previous version kept in `data.json.bak`. Settings shows the exact path and a button to open it. Saves are atomic. If the main file is ever damaged, Remember Me restores the backup automatically and keeps the damaged file for inspection.
 
 **Export backup** creates a new folder with `data.json`, an `attachments` folder containing every file linked to your tasks and notes (including completed tasks), and `backup.json` with a SHA-256 checksum for each file.
 
@@ -109,7 +109,7 @@ Updating from an earlier version keeps your tasks, notes and settings automatica
 
 1. In Settings, choose **Install Google Drive and sign in** to get [Google Drive for desktop](https://www.google.com/drive/download/), then sign in.
 2. Create a folder inside Google Drive, for example **Remember Me Backups**. In Remember Me, choose **Choose Google Drive folder** and select that synced folder.
-3. Choose **Back up now**. A full local copy is saved in `%APPDATA%\Waqt\backups`, then copied with all images and attachments into the Drive folder.
+3. Choose **Back up now**. A full local copy is saved in `%APPDATA%\Remember Me\backups`, then copied with all images and attachments into the Drive folder.
 4. Google Drive uploads it to your account. Check the Drive icon or the Drive website to confirm the upload finished.
 
 **Automatic daily backup** creates a copy every 24 hours while the app is running. If the Drive folder is unavailable, the local copy is kept and the copy to Drive is retried every 15 minutes. If the folder stays unavailable for more than a day, for example because Drive is signed out, Settings shows a warning.
@@ -136,6 +136,7 @@ Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable
 - `tests/scheduling.test.js`: repeats across daylight-saving time, time-zone changes and the clock moving backwards; 20 reminders in the same minute; a full day of missed reminders among thousands of tasks.
 - `tests/ipc.test.js`: only the app's own pages are accepted, the alert window gets a limited set of actions, and payloads are validated.
 - `tests/search.test.js`: Arabic-aware search matching.
+- `tests/data-folder.test.js` and `tests/login-item.test.js`: moving the old `Waqt` data folder, including locked and interrupted moves, and pointing start with Windows at the renamed executable.
 - `tests/attachments.test.js`, `tests/backups.test.js` and `tests/drive-backup.test.js`: copying, export, checksums, restore, rotation, migration, validation and Drive-folder recovery.
 - **Desktop tests (Playwright):** `tests/desktop-smoke.cjs`, `tests/attachments-desktop.cjs` and `tests/photos-drive-desktop.cjs` drive the real Windows app with temporary data. They need Playwright (and JSZip for attachments), or the `WAQT_PLAYWRIGHT` and `WAQT_JSZIP` paths.
 
