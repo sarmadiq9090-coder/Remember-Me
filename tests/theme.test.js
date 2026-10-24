@@ -144,7 +144,9 @@ test('note colors and styles validate, with cream and plain as fallbacks', () =>
 });
 
 test('the note editor offers every color and style', () => {
-  const app = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
+  // The main window's scripts, however they are split into files.
+  const appDir = path.join(__dirname, '../ui/main');
+  const app = fs.readdirSync(appDir, { recursive: true }).map(String).filter(name => name.endsWith('.js')).map(name => fs.readFileSync(path.join(appDir, name), 'utf8')).join('\n');
   const listed = name => [...(app.match(new RegExp(`const ${name} = \\[(.*)\\];`)) || ['', ''])[1].matchAll(/\['(\w+)'/g)].map(m => m[1]);
   assert.deepEqual(listed('NOTE_COLORS'), NOTE_COLORS);
   assert.deepEqual(listed('NOTE_STYLES'), NOTE_STYLES);
