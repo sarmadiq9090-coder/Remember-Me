@@ -187,7 +187,7 @@ $('task-due').closest('label').after(onlyOnce);
 function toggleOnlyOnce() { onlyOnce.hidden = !(editingSeries && $('task-reminder').checked && $('task-repeat').value === originalTaskRepeat); }
 $('task-repeat').addEventListener('change', toggleOnlyOnce);
 // Week order follows the interface: Saturday first in Arabic, Sunday first in English.
-function weekOrder() { const chosen = state?.settings?.weekStart; const start = [0, 1, 6].includes(chosen) ? chosen : uiLanguage === 'en' ? 0 : 6; return Array.from({ length: 7 }, (_, i) => (start + i) % 7); }
+function weekOrder() { const chosen = state?.settings?.weekStart; const start = [0, 1, 6].includes(chosen) ? chosen : 6; return Array.from({ length: 7 }, (_, i) => (start + i) % 7); }
 function weekdayName(day, style = 'short') { return new Date(2026, 9, 25 + day).toLocaleDateString(locale(), { weekday: style }); }
 let repeatDays = [];
 function renderRepeatDays() {
@@ -373,7 +373,7 @@ function renderRemindAgain() {
   $('setting-remind-again').value = String(state.settings.remindAgain || 0);
 }
 function settingsPayload() {
-  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: $('setting-week').value === 'auto' ? 'auto' : Number($('setting-week').value), theme: $('setting-theme').value, remindAgain: Number($('setting-remind-again').value) };
+  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: Number($('setting-week').value), theme: $('setting-theme').value, remindAgain: Number($('setting-remind-again').value) };
 }
 for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-week', 'setting-theme', 'setting-remind-again']) $(id).addEventListener('change', async () => {
   try { await api('settings', settingsPayload()); await refresh(); toast(tr('حُفظت الإعدادات.','Settings saved.')); }

@@ -260,7 +260,7 @@ async function start() {
         case 'settings': {
           const old = store.state.settings;
           const settings = { sound: !!payload.sound, startAtLogin: !!payload.startAtLogin, alertSide: payload.alertSide === 'left' ? 'left' : 'right', language: payload.language === 'en' ? 'en' : 'ar',
-            weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 'auto', theme: ['light', 'dark'].includes(payload.theme) ? payload.theme : 'system',
+            weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 6, theme: ['light', 'dark'].includes(payload.theme) ? payload.theme : 'system',
             remindAgain: REMIND_AGAIN.includes(payload.remindAgain) ? payload.remindAgain : 0 };
           if (old.startAtLogin !== settings.startAtLogin) setLogin(settings.startAtLogin);
           try { store.change(s => { s.settings = settings; }); }

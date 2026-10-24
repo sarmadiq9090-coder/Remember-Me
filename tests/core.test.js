@@ -171,12 +171,14 @@ test('deleted items wait 30 days in the trash, out of every list and alert, and 
   assert.equal(loaded.tasks[0].deletedAt, null, 'A malformed deletion date restores the task rather than hiding it');
   assert.throws(() => trashItem(s, 'settings', 'x'));
 });
-test('the first weekday setting defaults to the previous behaviour and rejects unknown values', () => {
+test('the week starts on Saturday unless Sunday or Monday was chosen', () => {
   const { validateState } = require('../src/core');
   const base = initialState();
-  assert.equal(base.settings.weekStart, 'auto');
+  assert.equal(base.settings.weekStart, 6);
   assert.equal(validateState({ ...base, settings: { ...base.settings, weekStart: 1 } }).settings.weekStart, 1);
-  assert.equal(validateState({ ...base, settings: { ...base.settings, weekStart: 3 } }).settings.weekStart, 'auto');
+  assert.equal(validateState({ ...base, settings: { ...base.settings, weekStart: 0 } }).settings.weekStart, 0);
+  for (const weekStart of [3, 'auto', '6', null]) assert.equal(validateState({ ...base, settings: { ...base.settings, weekStart } }).settings.weekStart, 6, String(weekStart));
+  assert.equal(validateState({ ...base, settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'en' } }).settings.weekStart, 6, 'v1.4.0 data has no weekStart and gets Saturday');
 });
 test('data saved with the removed Hijri date and digit style options still loads, without those fields', () => {
   const { validateState } = require('../src/core');
