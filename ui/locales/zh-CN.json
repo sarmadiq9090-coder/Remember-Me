@@ -391,6 +391,8 @@
   "This item will be removed from the trash for good. This cannot be undone.": "此项目将从回收站中永久删除，无法撤销。",
   "This reminder is no longer active.": "此提醒已失效。",
   "This step no longer exists.": "此步骤已不存在。",
+  "This item is no longer in the trash.": "此项目已不在回收站中。",
+  "The safety backup took too long.": "安全备份耗时过长。",
   "This task no longer exists.": "此任务已不存在。",
   "Time for a short break ☕": "该休息一下了 ☕",
   "Today": "今天",

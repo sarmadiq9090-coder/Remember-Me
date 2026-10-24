@@ -76,3 +76,8 @@ test('new installs start in English, saved languages are kept and unknown ones f
   assert.equal(validateState({ ...structuredClone(v140), settings: older }).settings.language, 'ar', 'Settings from before the language option were Arabic');
   assert.equal(validateState({ ...structuredClone(v140), settings: 'broken' }).settings.language, 'en');
 });
+test('errors thrown by the updater safety backup are collected and translated', () => {
+  const key = 'The safety backup took too long.';
+  assert.ok(collectKeys().includes(key));
+  for (const { code } of LOCALES) assert.ok(key in loadLocale(code), code);
+});
