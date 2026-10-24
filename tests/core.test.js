@@ -208,3 +208,15 @@ test('saving an editor opened before a snooze or Done in the alert keeps the new
   saveTask(s, { ...moved, dueAt: at(23, 12).toISOString(), timeEdited: true }, at(23, 9, 2));
   assert.equal(moved.scheduleAt, at(23, 12).toISOString());
 });
+test('the preview alert shows only on its own and never comes back after a real reminder', () => {
+  const { alertQueue } = require('../src/core');
+  const s = initialState(), now = new Date('2026-10-23T10:00:00Z');
+  const preview = { id: '__preview', title: 'preview', dueAt: now.toISOString() };
+  assert.deepEqual(alertQueue(s, preview, now), { alerts: [preview], preview }, 'With no real reminder the preview shows as before');
+  assert.deepEqual(alertQueue(s, null, now), { alerts: [], preview: null });
+  const real = saveTask(s, { title: 'real', dueAt: '2026-10-23T09:00:00Z' });
+  const queue = alertQueue(s, preview, now);
+  assert.deepEqual([queue.alerts.map(t => t.id), queue.preview], [[real.id], null], 'A real reminder replaces the preview and clears it');
+  completeTask(s, real.id, now);
+  assert.deepEqual(alertQueue(s, queue.preview, now).alerts, [], 'After Done the alert closes; the preview does not appear late');
+});

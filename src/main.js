@@ -2,7 +2,7 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session } = require('electron');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
-const { Store, saveTask, completeTask, snoozeTask, dueTasks } = require('./core');
+const { Store, saveTask, completeTask, snoozeTask, dueTasks, alertQueue } = require('./core');
 const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
@@ -67,7 +67,7 @@ function rebuildTrayMenu() {
     } }
   ]));
 }
-function activeAlerts() { const tasks = dueTasks(store.state); return tasks.length ? tasks : (preview ? [preview] : []); }
+function activeAlerts() { const queue = alertQueue(store.state, preview); preview = queue.preview; return queue.alerts; }
 // The scheduler must survive any single failure; an exception here would otherwise repeat every second.
 function scan() { try { scanNow(); } catch (error) { console.error('Reminder scan failed:', error); } }
 function scanNow() {
@@ -203,7 +203,9 @@ async function start() {
           catch (err) { if (old.startAtLogin !== settings.startAtLogin) setLogin(old.startAtLogin); throw err; }
           rebuildTrayMenu(); placeAlert(); break;
         }
-        case 'preview': preview = { id: '__preview', title: nativeText('حان وقت استراحة صغيرة ☕', 'Time for a short break ☕'), body: nativeText('هذا تنبيه تجريبي. يبقى ظاهرًا حتى تختار «تم» أو «ذكّرني لاحقًا». التأجيل هنا يغلق المعاينة فقط.', 'This is a preview alert. It stays visible until you choose Done or Snooze. Snoozing here only closes the preview.'), dueAt: new Date().toISOString(), priority: 'normal', category: 'personal' }; break;
+        case 'preview':
+          if (dueTasks(store.state).length) throw new Error(nativeText('يظهر الآن تذكير حقيقي. جرّب المعاينة بعد إنهائه.', 'A real reminder is showing now. Try the preview after you finish it.'));
+          preview = { id: '__preview', title: nativeText('حان وقت استراحة صغيرة ☕', 'Time for a short break ☕'), body: nativeText('هذا تنبيه تجريبي. يبقى ظاهرًا حتى تختار «تم» أو «ذكّرني لاحقًا». التأجيل هنا يغلق المعاينة فقط.', 'This is a preview alert. It stays visible until you choose Done or Snooze. Snoozing here only closes the preview.'), dueAt: new Date().toISOString(), priority: 'normal', category: 'personal' }; break;
         case 'export': {
           const result = await dialog.showOpenDialog(mainWindow, { title: nativeText('اختر مكان حفظ النسخة الاحتياطية مع المرفقات', 'Choose where to save the backup with attachments'), properties: ['openDirectory', 'createDirectory'] });
           if (result.canceled) break;

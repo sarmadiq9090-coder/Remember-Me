@@ -95,6 +95,12 @@ function dueTasks(state, now = new Date()) {
   return state.tasks.filter(t => !t.completedAt && t.dueAt && Date.parse(t.dueAt) <= now.getTime())
     .sort((a, b) => Date.parse(a.dueAt) - Date.parse(b.dueAt));
 }
+// The preview alert only shows while no real reminder is due. A real reminder drops it for good,
+// so it never appears later, out of context, after the real one is done.
+function alertQueue(state, preview, now = new Date()) {
+  const due = dueTasks(state, now);
+  return due.length ? { alerts: due, preview: null } : { alerts: preview ? [preview] : [], preview };
+}
 function validateState(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.tasks) || !Array.isArray(data.notes)) throw new Error('ملف البيانات غير صالح.');
   data.attachments ??= [];
@@ -187,4 +193,4 @@ class Store {
     this.state = draft;
   }
 }
-module.exports = { initialState, saveTask, completeTask, snoozeTask, dueTasks, nextOccurrence, validateState, Store, writeDurable, renameWithRetry };
+module.exports = { initialState, saveTask, completeTask, snoozeTask, dueTasks, alertQueue, nextOccurrence, validateState, Store, writeDurable, renameWithRetry };
