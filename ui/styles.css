@@ -61,7 +61,7 @@
 .attachment-remove{width:26px;height:26px}.attachment-remove svg{width:13px;height:13px}
 .file-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
 .file-chip{min-width:0;max-width:170px;gap:5px;border:1px solid #e7deef;background:#f8f4fc;color:#9b81b0;border-radius:5px;padding:4px 7px;font-size:10px}
-.file-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.file-chip svg{width:12px;height:12px}
+.file-chip bdi{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.file-chip svg{width:12px;height:12px}
 .note-edit-target{flex:1}.note-edit-target:focus-visible,.task-edit-target:focus-visible{outline:2px solid #b69bda;outline-offset:5px;border-radius:5px}
 #task-file-count,#note-file-count{display:inline-block;direction:ltr;unicode-bidi:isolate}
 
@@ -99,3 +99,6 @@
 @media(max-width:1050px){[dir=ltr] main{margin-left:210px}}
 [dir=ltr] .brand{font-size:21px;letter-spacing:-.3px;padding:0 8px}
 [dir=ltr] .stat small{left:auto;right:15px}
+/* User text keeps its own reading order (dir=auto) but lines up with the interface. */
+[dir=ltr] :is(.task-name,.task-body,.note-card h3,.note-card p){text-align:left}
+[dir=rtl] :is(.task-name,.task-body,.note-card h3,.note-card p){text-align:right}
