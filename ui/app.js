@@ -33,6 +33,7 @@ function render() {
   for (const [key, value] of Object.entries({ today: today.length, all: active.length, upcoming: upcoming.length, notes: state.notes.length, completed: complete.length })) $('count-' + key).textContent = value;
   document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   document.querySelector('.nav-item[data-view="settings"]').classList.toggle('needs-attention', !!state.driveBackup?.stale);
+  renderUpdateNotice();
   document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
   const names = views[view].map(([ar, en]) => tr(ar, en));
   $('breadcrumb').textContent = names[0];
@@ -63,6 +64,7 @@ function render() {
     $('data-path').textContent = state.dataPath;
     renderStorage();
     renderDriveBackup();
+    renderUpdatesCard();
   } else {
     let tasks = view === 'today' ? today : view === 'upcoming' ? upcoming : view === 'completed' ? complete : active;
     if (filter === 'high') tasks = tasks.filter(t => t.priority === 'high');
@@ -146,6 +148,32 @@ function renderDriveBackup() {
   $('drive-status').textContent = stale || backup.error || (backup.busy ? tr('جارٍ حفظ نسخة محلية ثم نسخها إلى مجلد Drive…', 'Saving a local copy, then copying it to the Drive folder…') : backup.lastCopiedAt ? tr(`آخر نسخة إلى مجلد المزامنة: ${last}. تحقّق من أيقونة Google Drive لتأكيد اكتمال الرفع.`, `Last copy to the sync folder: ${last}. Check the Google Drive icon to confirm the upload finished.`) : tr('ثبّت Google Drive وسجّل الدخول، ثم اختر مجلدًا داخله. يتولى Google Drive رفع النسخ عند توفر الاتصال.', 'Install Google Drive and sign in, then choose a folder inside it. Google Drive uploads the copies when you are online.'));
   $('drive-status').classList.toggle('backup-error', !!(stale || backup.error));
   $('drive-local').textContent = backup.lastLocalPath ? tr('النسخة المحلية محفوظة أيضًا على جهازك.', 'A local copy is also kept on your PC.') : '';
+}
+// Rebuilds a block only when its content changes, so focus and clicks are not lost on refresh.
+function setMarkup(el, html) { if (el.dataset.markup !== html) { el.dataset.markup = html; el.innerHTML = html; hydrateIcons(el); } }
+function renderUpdateNotice() {
+  const updates = state.updates, notice = $('update-notice');
+  if (updates?.banner) setMarkup(notice, `<span data-icon="download"></span><p>${esc(tr(`الإصدار ${updates.next} جاهز. أعد التشغيل للتحديث`, `Version ${updates.next} is ready. Restart to update`))}</p><button class="primary" data-update="installUpdate">${tr('إعادة التشغيل الآن', 'Restart now')}</button><button class="text-button" data-update="dismissUpdate">${tr('لاحقًا', 'Later')}</button>`);
+  else if (state.settings.autoUpdate === null) setMarkup(notice, `<span data-icon="info"></span><p>${tr('يمكن لذكرني التحقق من GitHub بحثًا عن إصدارات جديدة وتثبيتها عند إعادة التشغيل. لا يُرسَل أي شيء آخر.', 'Remember Me can check GitHub for new versions and install them when you restart. Nothing else is sent.')}</p><button class="primary" data-update="allow">${tr('سماح', 'Allow')}</button><button class="text-button" data-update="decline">${tr('ليس الآن', 'Not now')}</button>`);
+  notice.hidden = !updates?.banner && state.settings.autoUpdate !== null;
+}
+function updateStatus(updates) {
+  const next = updates.next, checked = updates.checkedAt ? dateLabel(updates.checkedAt) : '';
+  switch (updates.state) {
+    case 'checking': return tr('جارٍ التحقق من وجود إصدار جديد…', 'Checking for a new version…');
+    case 'downloading': return tr(`جارٍ تنزيل الإصدار ${next}… ${updates.percent}%`, `Downloading version ${next}… ${updates.percent}%`);
+    case 'ready': return tr(`الإصدار ${next} جاهز ويُثبَّت عند إعادة التشغيل.`, `Version ${next} is ready and installs when you restart.`);
+    case 'installing': return tr('جارٍ حفظ نسخة أمان من بياناتك ثم تثبيت التحديث…', 'Saving a safety copy of your data, then installing the update…');
+    case 'latest': return tr(`لديك أحدث إصدار (${updates.version}). آخر تحقق: ${checked}`, `You have the latest version (${updates.version}). Last checked: ${checked}`);
+    case 'error': return tr('تعذّر التحقق من التحديثات. تأكد من اتصالك بالإنترنت.', "Couldn't check for updates. Check your internet connection.");
+    case 'unavailable': return tr('التحديثات تعمل في النسخة المثبّتة فقط.', 'Updates work in the installed app only.');
+    default: return tr(`الإصدار الحالي ${updates.version}.`, `Current version ${updates.version}.`);
+  }
+}
+function renderUpdatesCard() {
+  const updates = state.updates, busy = ['checking', 'downloading', 'installing'].includes(updates.state);
+  setMarkup($('updates-card'), `<h2>${tr('التحديثات', 'Updates')}</h2><label class="setting-row"><div><strong>${tr('التحقق من التحديثات تلقائيًا', 'Check for updates automatically')}</strong><p>${tr('يتحقق من GitHub مرة يوميًا وينزّل الإصدار الجديد في الخلفية. لا يُرسَل أي شيء آخر.', 'Checks GitHub once a day and downloads new versions in the background. Nothing else is sent.')}</p></div><input class="switch" id="setting-updates" type="checkbox"></label><div class="setting-row"><p id="update-status">${esc(updateStatus(updates))}</p><button class="soft-button" data-update="checkUpdates"${busy ? ' disabled' : ''}>${tr('التحقق الآن', 'Check now')}</button></div>`);
+  $('setting-updates').checked = state.settings.autoUpdate === true;
 }
 async function openFile(id) { try { await api('openAttachment', { id }); } catch (error) { toast(error.message); } }
 for (const type of ['task', 'note']) {
@@ -231,6 +259,22 @@ $('clean-orphans').addEventListener('click', async () => {
 $('open-data').addEventListener('click', async () => { try { await api('dataFolder'); } catch (err) { toast(err.message); } });
 async function driveAction(action, payload) { try { const value = await api(action, payload); await refresh(); return value; } catch (error) { toast(error.message); await refresh(); } }
 $('choose-drive-folder').addEventListener('click', () => driveAction('chooseDriveFolder'));
+document.addEventListener('click', async e => {
+  const button = e.target.closest('[data-update]');
+  if (!button) return;
+  const action = button.dataset.update;
+  button.disabled = true;
+  try {
+    if (action === 'allow' || action === 'decline') await api('updateConsent', { enabled: action === 'allow' });
+    else await api(action);
+  } catch (error) { toast(error.message); }
+  finally { button.disabled = false; await refresh(); }
+});
+document.addEventListener('change', async e => {
+  if (e.target.id !== 'setting-updates') return;
+  try { await api('updateConsent', { enabled: e.target.checked }); toast(tr('حُفظت الإعدادات.', 'Settings saved.')); } catch (error) { toast(error.message); }
+  await refresh();
+});
 $('drive-now').addEventListener('click', async () => { $('drive-now').disabled = true; if (await driveAction('driveBackupNow')) toast(tr('حُفظت النسخة محليًا وفي مجلد Drive. يتولى Google Drive إكمال الرفع.', 'Saved locally and to the Drive folder. Google Drive finishes the upload.')); });
 $('drive-automatic').addEventListener('change', () => driveAction('driveAutomatic', { enabled: $('drive-automatic').checked }));
 $('drive-keep').addEventListener('change', () => driveAction('driveKeep', { keep: Number($('drive-keep').value) }));

@@ -103,3 +103,7 @@
 [dir=ltr] :is(.task-name,.task-body,.note-card h3,.note-card p){text-align:left}
 [dir=rtl] :is(.task-name,.task-body,.note-card h3,.note-card p){text-align:right}
 .nav-item.needs-attention::after{content:'';width:8px;height:8px;border-radius:50%;background:#d9534f;margin-inline-start:auto}
+.update-notice{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e7dff2;border-radius:12px;padding:14px 18px;margin-bottom:22px;color:#8b71b7}
+.update-notice p{flex:1;font-size:12px;line-height:1.9;color:#7d6f91}
+.update-notice .primary{font-size:12px;padding:9px 16px}
+#update-status{font-size:12px;line-height:2;color:#8b799c;margin:0}
