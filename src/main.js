@@ -8,9 +8,13 @@ const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
 const { checkRequest, fromPage } = require('./ipc');
 const { readBackup, restoreBackup } = require('./backups');
+const { migrateDataFolder } = require('./data-folder');
 const testMode = process.env.WAQT_TEST === '1';
 app.setName('Remember Me');
-app.setPath('userData', testMode && process.env.WAQT_DATA_DIR ? process.env.WAQT_DATA_DIR : path.join(app.getPath('appData'), 'Waqt'));
+// Runs before anything (including the single-instance lock) creates files in the data folder.
+const dataFolder = testMode && process.env.WAQT_DATA_DIR ? { folder: process.env.WAQT_DATA_DIR, migrated: 'none' } : migrateDataFolder(app.getPath('appData'));
+if (dataFolder.error) console.error('Could not move the data folder; using the old one:', dataFolder.error);
+app.setPath('userData', dataFolder.folder);
 // The ID predates the Remember Me name. Keep it: it names the start-with-Windows entry and taskbar
 // group of v1.4.0, and the installer's appId must stay the same for upgrades and updates.
 app.setAppUserModelId('com.waqt.reminder');
