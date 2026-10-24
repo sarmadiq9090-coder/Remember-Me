@@ -93,8 +93,8 @@
 [dir=ltr] input[type=datetime-local]{text-align:left}
 [dir=ltr] .brand{font-size:21px;letter-spacing:-.3px}
 /* User text keeps its own reading order (dir=auto) but lines up with the interface. */
-[dir=ltr] :is(.task-name,.task-body,.note-card h3,.note-card p){text-align:left}
-[dir=rtl] :is(.task-name,.task-body,.note-card h3,.note-card p){text-align:right}
+[dir=ltr] :is(.task-name,.task-body,.note-card h3,.note-card p,#alert-title,#alert-note,.note-preview strong,.note-preview p,.step-list span){text-align:left}
+[dir=rtl] :is(.task-name,.task-body,.note-card h3,.note-card p,#alert-title,#alert-note,.note-preview strong,.note-preview p,.step-list span){text-align:right}
 .nav-item.needs-attention::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--danger);margin-inline-start:auto}
 .repeat-days{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.repeat-days button{border:1px solid var(--border);border-radius:8px;padding:6px 10px;background:var(--field);font-size:12px}.repeat-days button[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
 .toast-action{margin-inline-start:10px;color:inherit;font-weight:700;text-decoration:underline}
