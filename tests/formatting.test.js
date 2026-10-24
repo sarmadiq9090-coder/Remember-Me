@@ -6,16 +6,16 @@ const vm = require('node:vm');
 
 // Loads the browser scripts that format dates, the way index.html and alert.html do.
 function loadUi(language) {
-  const context = vm.createContext({ document: { querySelectorAll: () => [], documentElement: { dataset: {} } } });
-  for (const file of ['i18n.js', 'shared.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../ui', file), 'utf8'), context, { filename: file });
-  vm.runInContext(`uiLanguage = ${JSON.stringify(language)};`, context);
+  const context = vm.createContext({ document: { querySelectorAll: () => [], addEventListener: () => {}, documentElement: { dataset: {} } } });
+  for (const file of ['translate.js', 'i18n.js', 'shared.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../ui', file), 'utf8'), context, { filename: file });
+  vm.runInContext(`uiLanguage = ${JSON.stringify(language)}; uiLocale = findLocale(uiLanguage);`, context);
   return code => vm.runInContext(code, context);
 }
 // Arabic-Indic (U+0660-U+0669) and Extended Arabic-Indic (U+06F0-U+06F9) digits.
 const easternDigits = /[٠-٩۰-۹]/;
 
-test('dates, times and counts use Western digits in Arabic as well as English', () => {
-  for (const language of ['ar', 'en']) {
+test('dates, times and counts use Western digits in every interface language', () => {
+  for (const language of require('../ui/translate').LOCALES.map(l => l.code)) {
     const run = loadUi(language);
     const labels = run(`[
       timeLabel(new Date(2026, 9, 24, 21, 5)), dateLabel(new Date(2027, 1, 14, 21, 5).toISOString()), dateLabel(new Date().toISOString()),

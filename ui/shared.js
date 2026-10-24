@@ -10,6 +10,8 @@ const icons = {
   search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
   bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
   arrowLeft: '<path d="M20 12H4m6-6-6 6 6 6"/>',
+  chevronBack: '<path d="m15 6-6 6 6 6"/>',
+  chevronForward: '<path d="m9 6 6 6-6 6"/>',
   list: '<path d="M9 6h12M9 12h12M9 18h12M3 6h.1M3 12h.1M3 18h.1"/>',
   sort: '<path d="M4 6h16M7 12h10M10 18h4"/>',
   flag: '<path d="M4 22V3m0 1c5-5 10 5 16 0v11c-6 5-11-5-16 0"/>',
@@ -30,17 +32,37 @@ const icons = {
   external: '<path d="M14 4h6v6m0-6-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
   copy: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
 };
-function icon(name) { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.note}</svg>`; }
+function icon(name) { return `<svg class="icon-${name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.note}</svg>`; }
 function hydrateIcons(root = document) { root.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon); }); }
 function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 // Locale for every date, time and number. Digits are always Western (0-9), in Arabic too
 // (ar-IQ would otherwise use Arabic-Indic digits), so labels keep their width and layout.
-function locale() { return (uiLanguage === 'en' ? 'en-US' : 'ar-IQ') + '-u-nu-latn'; }
+function locale() { return uiLocale.intl + '-u-nu-latn'; }
 function num(value) { return String(value); }
+// Required fields and date inputs report problems in the app's language, not the system's.
+document.addEventListener('invalid', e => {
+  const field = e.target;
+  field.setCustomValidity(field.validity.valueMissing ? tr('Please fill in this field.') : field.validity.badInput || field.validity.typeMismatch ? tr('Please enter a valid value.') : '');
+}, true);
+document.addEventListener('input', e => e.target.setCustomValidity?.(''), true);
+// Week order for the repeat-day picker and labels: Saturday first unless the user chose another day.
+function weekOrder(weekStart) { const start = [0, 1, 6].includes(weekStart) ? weekStart : 6; return Array.from({ length: 7 }, (_, i) => (start + i) % 7); }
+function weekdayName(day, style = 'short') { return new Date(2026, 9, 25 + day).toLocaleDateString(locale(), { weekday: style }); }
+// A short description of a task's repeat rule, such as "Sun – Thu" or "Every 3 days".
+function repeatLabel(t, weekStart) {
+  if (t.repeat === 'days') {
+    const days = weekOrder(weekStart).filter(d => (t.repeatDays || []).includes(d)), order = weekOrder(weekStart);
+    const contiguous = days.length >= 3 && days.length < 7 && days.every((d, i) => !i || order.indexOf(d) === order.indexOf(days[i - 1]) + 1);
+    if (days.length === 7) return tr("Daily");
+    return contiguous ? `${weekdayName(days[0])} – ${weekdayName(days.at(-1))}` : days.map(d => weekdayName(d)).join(tr(", "));
+  }
+  if (t.repeat === 'interval') { const n = t.repeatEvery; return tr('Every {count} days', { count: n }); }
+  return { daily: tr("Daily"), weekly: tr("Weekly"), monthly: tr("Monthly"), yearly: tr("Yearly") }[t.repeat] || '';
+}
 function localDateValue(date) { const d = new Date(date); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }
 function isToday(value) { return value && new Date(value).toDateString() === new Date().toDateString(); }
 function timeLabel(value) { return new Date(value).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }); }
-function dateLabel(value) { if (!value) return ''; const d = new Date(value); return `${isToday(value) ? tr('اليوم', 'Today') : d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' })}${tr('، ', ', ')}${timeLabel(value)}`; }
+function dateLabel(value) { if (!value) return ''; const d = new Date(value); return `${isToday(value) ? tr("Today") : d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' })}${tr(", ")}${timeLabel(value)}`; }
 // Interface palettes (ui/theme.css). The preload carries the saved one, so the first paint already uses it.
 const PALETTES = ['lavender', 'ocean', 'forest', 'sunset', 'graphite', 'contrast'];
 function applyPalette(palette) { document.documentElement.dataset.palette = PALETTES.includes(palette) ? palette : 'lavender'; }
@@ -62,7 +84,7 @@ function fileSize(bytes) { return bytes < 1024 ? `${bytes} B` : bytes < 1048576 
 function fileBadge(name) { const ext = name.includes('.') ? name.split('.').pop().toUpperCase() : 'FILE'; return ext.slice(0, 5); }
 function isImageFile(record) { return /\.(png|jpe?g|webp|gif|bmp|ico|avif)$/i.test(record.name); }
 function photoMarkup(record) {
-  return `<button type="button" class="inline-photo" data-file-id="${esc(record.id)}" title="${tr('فتح', 'Open')} ${esc(record.name)}"><img data-preview-id="${esc(record.id)}" alt="${esc(record.name)}" decoding="async"><span class="photo-placeholder">${tr('جارٍ تحميل الصورة…', 'Loading image…')}</span><span class="photo-caption"><bdi>${esc(record.name)}</bdi></span></button>`;
+  return `<button type="button" class="inline-photo" data-file-id="${esc(record.id)}" title="${tr("Open")} ${esc(record.name)}"><img data-preview-id="${esc(record.id)}" alt="${esc(record.name)}" decoding="async"><span class="photo-placeholder">${tr("Loading image…")}</span><span class="photo-caption"><bdi>${esc(record.name)}</bdi></span></button>`;
 }
 const previewCache = new Map();
 let previewObserver;
@@ -80,7 +102,7 @@ async function loadPreview(img) {
   const source = await entry.promise;
   if (!img.isConnected) return;
   const container = img.closest('.inline-photo');
-  const failed = () => { container.classList.add('photo-failed'); container.querySelector('.photo-placeholder').textContent = tr('المعاينة غير متاحة • اضغط لفتح الملف', 'Preview unavailable • click to open'); };
+  const failed = () => { container.classList.add('photo-failed'); container.querySelector('.photo-placeholder').textContent = tr("Preview unavailable • click to open"); };
   if (!source) { failed(); return; }
   img.addEventListener('load', () => container.classList.add('photo-loaded'), { once: true });
   img.addEventListener('error', failed, { once: true });
@@ -95,7 +117,7 @@ function hydratePreviews(root = document) {
 }
 function fileMarkup(record, removable = false) {
   const kind = /\.(xlsx?|xlsm|csv)$/i.test(record.name) ? 'excel' : /\.pdf$/i.test(record.name) ? 'pdf' : 'other';
-  const row = `<div class="attachment-item"><button type="button" class="attachment-open" data-file-id="${esc(record.id)}" title="${tr('فتح', 'Open')} ${esc(record.name)}"><span class="file-badge ${kind}">${esc(fileBadge(record.name))}</span><span class="attachment-name"><bdi>${esc(record.name)}</bdi><small dir="ltr">${fileSize(record.size)}</small></span>${icon('arrowLeft')}</button>${removable ? `<button type="button" class="attachment-remove icon-button" data-remove-file="${esc(record.id)}" aria-label="${tr('إزالة', 'Remove')} ${esc(record.name)}" title="${tr('إزالة المرفق', 'Remove attachment')}">${icon('x')}</button>` : ''}</div>`;
+  const row = `<div class="attachment-item"><button type="button" class="attachment-open" data-file-id="${esc(record.id)}" title="${tr("Open")} ${esc(record.name)}"><span class="file-badge ${kind}">${esc(fileBadge(record.name))}</span><span class="attachment-name"><bdi>${esc(record.name)}</bdi><small dir="ltr">${fileSize(record.size)}</small></span>${icon('arrowLeft')}</button>${removable ? `<button type="button" class="attachment-remove icon-button" data-remove-file="${esc(record.id)}" aria-label="${tr("Remove")} ${esc(record.name)}" title="${tr("Remove attachment")}">${icon('x')}</button>` : ''}</div>`;
   return isImageFile(record) ? `<div class="image-attachment">${photoMarkup(record)}${row}</div>` : row;
 }
 hydrateIcons();

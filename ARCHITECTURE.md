@@ -46,12 +46,14 @@ The preload script exposes these functions to the pages:
 - `window.waqt.call(action, payload)` invokes the single `waqt:action` IPC channel and resolves to
   `{ ok: true, value }` or `{ ok: false, error }` (the error text is already in the UI language);
 - `window.waqt.onUpdate(callback)` fires when the main process sends `waqt:update` after a change;
-- `window.waqt.onOpenEditor(callback)` fires on `waqt:open-editor`, the tray's "New task";
 - `window.waqt.onShow(callback)` fires on `waqt:show` with a section name (only `'about'`), the
   tray's "About Remember Me".
 
-Main sends the last two once the page has loaded, so they also work when the tray recreates the
-window.
+Main sends it once the page has loaded, so it also works when the tray recreates the window.
+
+The tray's "New task" and the alert's "Open task" leave an open request (`'new'` or a task ID)
+that the next `state` read returns as `openTask`; the main window then opens that editor. This also
+works for a window that is still being created.
 
 ## IPC actions and validation
 
@@ -68,8 +70,8 @@ Every request goes through one `ipcMain.handle('waqt:action')` handler, which:
 
 | Group | Actions |
 |---|---|
-| Read | `state`, `alerts`, `language`, `undoable`, `storage` |
-| Tasks | `saveTask`, `complete`, `skip`, `snooze`, `undoComplete`, `reopen` |
+| Read | `state`, `alerts`, `language`, `locale`, `undoable`, `storage` |
+| Tasks | `saveTask`, `complete`, `skip`, `snooze`, `undoComplete`, `reopen`, `toggleStep` |
 | Trash | `deleteTask`, `restoreTask`, `purgeTask`, `deleteNote`, `restoreNote`, `purgeNote`, `emptyTrash` |
 | Notes | `saveNote` |
 | Attachments | `attachFiles`, `openAttachment`, `imagePreview`, `cleanOrphans` |
@@ -78,8 +80,9 @@ Every request goes through one `ipcMain.handle('waqt:action')` handler, which:
 | About | `openLink`, `copyDiagnostics`, `openLogs` |
 | App | `settings`, `preview`, `dataFolder`, `open` |
 
-The alert window may only use `alerts`, `language`, `complete`, `skip`, `undoComplete`, `undoable`,
-`snooze`, `open`, `openAttachment` and `imagePreview`. It can open or preview only attachments of a
+The alert window may only use `alerts`, `language`, `locale`, `complete`, `skip`, `undoComplete`,
+`undoable`, `snooze`, `open` (optionally with the shown task's `id`), `openAttachment` and
+`imagePreview`. It can open or preview only attachments of a
 reminder it is currently showing.
 
 `complete`, `skip` and `snooze` carry the `expectedDueAt` the user saw. When the task has moved on
@@ -124,6 +127,9 @@ all data. The shape (`version` is always `1`):
                               // count from; only a new time or repeat mode moves it. Absent before v1.5
                               // for other modes (then the current occurrence's time is used)
     remindBefore?: 5|10|15|30|60|1440,  // minutes, for the early notification
+    tags?: [string],          // up to 10 short labels
+    checklist?: [{ id, text, done }],  // up to 50 steps
+    snoozeCount?: 1-999,      // snoozes of the current occurrence; reset when it is done, skipped or moved
     snoozedAt: ISO|null, completedAt: ISO|null, deletedAt?: ISO|null,
     sourceId?: id,            // on completed copies of a repeating task
     attachments: [attachmentId], createdAt, updatedAt
@@ -133,7 +139,7 @@ all data. The shape (`version` is always `1`):
            attachments, createdAt, updatedAt, deletedAt? }],
   attachments: [{ id, name, size, addedAt }],
   settings: {
-    sound: true, startAtLogin: false, alertSide: 'right'|'left', language: 'ar'|'en',
+    sound: true, startAtLogin: false, alertSide: 'right'|'left', language: 'en'|'ar'|'es'|…,  // a code from LOCALES in ui/translate.js; new installs use 'en'
     weekStart: 6|0|1, theme: 'system'|'light'|'dark',
     palette: 'lavender'|'ocean'|'forest'|'sunset'|'graphite'|'contrast',  // ui/theme.css
     autoUpdate: null|true|false,  // consent to background update checks; null means not asked yet
@@ -158,6 +164,24 @@ it, checks the copy, and renames the old folder to `Waqt.migrated-<time>`. An em
 by a development build, say) is set aside as `Remember Me.unused-<time>` first. The old data is never
 deleted. If anything fails the old folder is used as it is, and the move is retried on the next
 start. `drive-backup.json` paths that pointed into the old folder are rewritten to the new one.
+
+## Interface languages
+
+Source text is English: pages and scripts hold English strings, and each English string is the key
+into `ui/locales/<code>.json` (a `key@context` suffix separates identical English words with different
+translations). `ui/translate.js` lists the languages (`LOCALES`: code, own name, direction, Intl and
+Chromium locale) and formats messages, including plural forms through `Intl.PluralRules` and
+`{name}` placeholders. Missing keys fall back to English.
+
+- The main process reads the locale files and serves them to the windows through the `locale`
+  action, since the pages have no file access. `tr()` in `src/main.js` translates the tray, dialogs
+  and errors; modules throw English errors (`UserError` in `src/errors.js` carries a key and values).
+- In the pages, `setLanguage()` in `ui/i18n.js` translates static text and attributes on each switch
+  and sets `lang` and `dir`; user content sits in `translate="no"` containers. Scripts call `tr()`.
+- Dates and numbers always use Western digits (`-u-nu-latn`). CSS uses logical properties, so the
+  layout mirrors for right-to-left languages.
+- `tools/i18n-keys.cjs` collects every key from the code; `tests/i18n.test.js` checks that each
+  locale has every key with the same placeholders and plural forms.
 
 ## Scheduler
 
@@ -278,8 +302,8 @@ which Chromium keeps bounded. Backups never include them.
 - `pnpm run package` (`tools/package.mjs`) runs `@electron/packager` into `release/v<version>/`,
   producing `Remember Me.exe`. It bundles only `package.json`, `LICENSE`, `src/`, `ui/` and
   `assets/`, plus the runtime dependencies (electron-updater and what it needs) copied in as one flat
-  `node_modules` folder, since pnpm links packages instead of nesting them. It keeps only the Arabic
-  and English Chromium locales and writes `resources/app-update.yml` for the updater. Finally it
+  `node_modules` folder, since pnpm links packages instead of nesting them. It keeps only the Chromium
+  locales of the interface languages and writes `resources/app-update.yml` for the updater. Finally it
   sets Electron fuses on the exe and reads them back: no running as Node.js, no `NODE_OPTIONS`, no
   `--inspect`, app code only from the checked `app.asar`. `WAQT_DESKTOP_TEST_BUILD=1` keeps
   `--inspect` allowed, because Playwright attaches through it.

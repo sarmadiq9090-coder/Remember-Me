@@ -15,9 +15,9 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 - **Pause reminders** from the notification area. [#16]
 - **Dark mode.** [#7]
 - **Verified backups** with restore from Settings. [#5]
-- **TODO:** the interface in 12 languages.
-- **TODO:** the redesigned alert window.
-- **TODO:** color themes and note pickers.
+- **12 interface languages,** with English as the new default and a full right-to-left layout in Arabic. [#36]
+- **A redesigned alert:** one reminder at a time with its status at a glance, smart snooze choices on the 1–6 keys, **Snooze all** and **Open task**. [#36]
+- **Color themes:** six palettes in light and dark, plus note paper colors and styles. [#35]
 
 ### Added
 
@@ -44,8 +44,14 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 - A local log in the data folder's `logs` folder, to attach to a problem report. It never records task or note titles, text or file names. [#15]
 - The installer shows the privacy notice and the license, in English or Arabic, and the uninstaller says your data folder is kept. [#14]
 - Release installers come with `SHA256SUMS.txt` and GitHub build provenance, so you can check a download. [#3]
-- **TODO:** 12 interface languages.
-- **TODO:** the redesigned alert window.
+- The interface in 12 languages: English, العربية, Español, Français, Deutsch, Português (Brasil), Русский, 中文 (简体), 日本語, Türkçe, हिन्दी and Bahasa Indonesia, each listed in its own name. New installs start in English and existing installs keep Arabic. The tray menu, dialogs and error messages follow the chosen language, text missing in a language falls back to English, and the layout mirrors for right-to-left. The translations beyond English and Arabic are machine-assisted and were reviewed by native-level reviewers. [#36]
+- The redesigned alert window [#36]:
+  - chips for how long a reminder is overdue, its priority, its repeat and how many times it was snoozed, with the next occurrence under **Done** for repeating tasks;
+  - **Remind me again** with 10 min, 1 hour, This evening (until 17:00), Tomorrow 9 AM, Next week and **Pick a time…**, on the 1–6 keys; **S** skips a repeat;
+  - a *1 of N* counter with previous and next when several reminders wait, and **Snooze all** for an hour;
+  - **Open task** opens that task's editor in the main window;
+  - a gentle nudge after three snoozes of the same occurrence;
+  - screen-reader support (an alert dialog that announces each reminder) and keyboard use: Enter is Done, the arrows move through the queue, and Escape never dismisses it. Shortcuts act only after you interact with the alert, so typing in another window can't complete or snooze a reminder that just appeared.
 - **Settings → Appearance:** six color palettes (Lavender, Ocean, Forest, Sunset, Graphite and High contrast), each in light and dark, picked from preview cards and applied at once to the main window and the alert. [#35]
 - Notes come in ten paper colors, picked from swatches, and three styles: plain card, sticky note or lined paper. The editor shows a live preview. [#35]
 - The logo inside the app follows the chosen palette and light or dark mode (issue #18). [#35]
@@ -59,7 +65,7 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 - Dates, times and numbers always use Western digits (0-9), in the Arabic interface too. [#9]
 - The alert sits next to the taskbar wherever it is (bottom, top, left or right), on scaled and secondary displays, and moves when displays change. [#7]
 - Sharper icons at every size, with a simpler bell at small sizes and dedicated notification-area images. [#22]
-- A smaller installer: it bundles only the app's own files and the Arabic and English Chromium language files. [#3]
+- A smaller installer: it bundles only the app's own files and the Chromium language files of its interface languages. [#3]
 - A data file with an out-of-range value is corrected when it loads instead of being treated as damaged. [#2]
 - The executable's file properties name Sarmad as the publisher and include the copyright. [#23]
 
@@ -126,3 +132,4 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 [#23]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/23
 [#25]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/25
 [#35]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/35
+[#36]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/36

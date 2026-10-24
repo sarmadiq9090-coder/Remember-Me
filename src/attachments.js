@@ -1,4 +1,5 @@
 'use strict';
+const { UserError } = require('./errors');
 const fs = require('node:fs');
 const fsp = fs.promises;
 const path = require('node:path');
@@ -8,13 +9,13 @@ const MAX_ATTACHMENTS = 20;
 const BACKUP_INFO = 'backup.json';
 const idPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 function attachmentIds(value = []) {
-  if (!Array.isArray(value) || value.length > MAX_ATTACHMENTS || value.some(id => typeof id !== 'string' || !idPattern.test(id))) throw new Error('المرفقات غير صالحة. يمكنك إضافة 20 ملفًا لكل عنصر.');
+  if (!Array.isArray(value) || value.length > MAX_ATTACHMENTS || value.some(id => typeof id !== 'string' || !idPattern.test(id))) throw new Error('Invalid attachments. You can add up to 20 files per item.');
   return [...new Set(value)];
 }
 function validateAttachment(record) {
   // Windows forbids control characters in file names, so the pattern has to match them.
   // eslint-disable-next-line no-control-regex
-  if (!record || !idPattern.test(record.id) || typeof record.name !== 'string' || !record.name || record.name.length > 255 || /[<>:"/\\|?*\x00-\x1f]/.test(record.name) || record.name === '.' || record.name === '..' || /[. ]$/.test(record.name) || !Number.isSafeInteger(record.size) || record.size < 0 || record.size > MAX_FILE_SIZE) throw new Error('بيانات المرفق غير صالحة.');
+  if (!record || !idPattern.test(record.id) || typeof record.name !== 'string' || !record.name || record.name.length > 255 || /[<>:"/\\|?*\x00-\x1f]/.test(record.name) || record.name === '.' || record.name === '..' || /[. ]$/.test(record.name) || !Number.isSafeInteger(record.size) || record.size < 0 || record.size > MAX_FILE_SIZE) throw new Error('Invalid attachment data.');
   return record;
 }
 // Files Windows would run or install (directly, through an interpreter, or by mounting) are shown
@@ -38,13 +39,13 @@ function attachmentPath(directory, record) {
   return path.join(directory, 'attachments', record.id, record.name);
 }
 async function importFiles(directory, files) {
-  if (!Array.isArray(files) || files.length > MAX_ATTACHMENTS) throw new Error('اختر حتى 20 ملفًا في المرة الواحدة.');
+  if (!Array.isArray(files) || files.length > MAX_ATTACHMENTS) throw new Error('Choose up to 20 files at a time.');
   const selected = [];
   // Validate the entire selection before copying, so an error never partially attaches files.
   for (const file of files) {
     const stat = await fsp.stat(file);
-    if (!stat.isFile()) throw new Error('اختر ملفات فقط.');
-    if (stat.size > MAX_FILE_SIZE) throw new Error(`الملف «${path.basename(file)}» أكبر من 50 ميغابايت.`);
+    if (!stat.isFile()) throw new Error('Choose files only.');
+    if (stat.size > MAX_FILE_SIZE) throw new UserError('The file "{name}" is larger than 50 MB.', { name: path.basename(file) });
     selected.push({ source: file, record: validateAttachment({ id: randomUUID(), name: path.basename(file), size: stat.size, addedAt: new Date().toISOString() }) });
   }
   const copied = [];
@@ -55,7 +56,7 @@ async function importFiles(directory, files) {
       copied.push(record);
       await fsp.copyFile(source, target, fs.constants.COPYFILE_EXCL);
       const actual = await fsp.stat(target);
-      if (actual.size !== record.size) throw new Error(`تغيّر الملف «${record.name}» أثناء النسخ. حاول مجددًا.`);
+      if (actual.size !== record.size) throw new UserError('The file "{name}" changed while it was being copied. Try again.', { name: record.name });
     }
     return copied;
   } catch (error) {
@@ -65,11 +66,11 @@ async function importFiles(directory, files) {
 }
 function resolveAttachment(state, directory, id) {
   const record = state.attachments.find(a => a.id === id);
-  if (!record) throw new Error('المرفق غير موجود.');
+  if (!record) throw new Error('The attachment does not exist.');
   const file = attachmentPath(directory, record);
   let stat;
-  try { stat = fs.lstatSync(file); } catch { throw new Error(`ملف «${record.name}» غير موجود في مجلد بيانات ذكرني. استعده من نسختك الاحتياطية.`); }
-  if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('مسار المرفق غير صالح.');
+  try { stat = fs.lstatSync(file); } catch { throw new UserError('The file "{name}" is missing from the Remember Me data folder. Restore it from your backup.', { name: record.name }); }
+  if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('Invalid attachment path.');
   return { file, record };
 }
 async function hashFile(file) {

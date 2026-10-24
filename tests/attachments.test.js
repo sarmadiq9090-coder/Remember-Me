@@ -59,7 +59,7 @@ test('multi-selection validates all files before copying and missing files are r
   const [record] = await importFiles(root, [source]);
   const state = initialState(); state.attachments.push(record);
   fs.unlinkSync(attachmentPath(root, record));
-  assert.throws(() => resolveAttachment(state, root, record.id), /غير موجود/);
+  assert.throws(() => resolveAttachment(state, root, record.id), /missing/);
 });
 test('programs, scripts, installers and disk images are revealed instead of opened, whatever their case or double extension', () => {
   const { opensAsProgram } = require('../src/attachments');
@@ -117,7 +117,7 @@ test('a missing attachment file is skipped and reported, while invalid paths sti
   linkedStore.change(s => { s.attachments.push(target); saveTask(s, { title: 'link', attachments: [target.id] }); });
   fs.rmSync(path.dirname(attachmentPath(linked, target)), { recursive: true });
   fs.mkdirSync(attachmentPath(linked, target), { recursive: true }); // a folder where the file should be
-  await assert.rejects(exportBackup(linkedStore.state, linked, root), /غير صالح/);
+  await assert.rejects(exportBackup(linkedStore.state, linked, root), /Invalid/);
   const bad = { ...linkedStore.state, attachments: [{ ...target, name: '../escape.pdf' }] };
-  await assert.rejects(exportBackup(bad, linked, root), /غير صالحة/);
+  await assert.rejects(exportBackup(bad, linked, root), /Invalid/);
 });

@@ -112,7 +112,7 @@ function pdf() {
     await app.evaluate(({ shell }) => { shell.openPath = async () => 'No association'; });
     await page.locator('[data-view="notes"]').click();
     await page.locator('.note-card [data-file-id]').click();
-    await page.locator('#toast').filter({ hasText: 'تعذّر فتح الملف' }).waitFor();
+    await page.locator('#toast').filter({ hasText: 'could not be opened' }).waitFor();
     const forbidden = await page.evaluate(() => window.waqt.call('openAttachment', { id: '../outside' }));
     assert.equal(forbidden.ok, false);
     assert.deepEqual(errors, []);

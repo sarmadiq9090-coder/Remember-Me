@@ -234,7 +234,7 @@ test('skip and only-this-time follow every repeat mode, and skip ignores trashed
   skipOccurrence(s, water.id, water.dueAt, new Date(2026, 9, 1, 6));
   assert.equal(new Date(water.dueAt).getDate(), 4);
   trashItem(s, 'tasks', water.id, new Date(2026, 9, 2));
-  assert.throws(() => skipOccurrence(s, water.id, undefined, new Date(2026, 9, 2)), /المتكررة/, 'A trashed task cannot be skipped');
+  assert.throws(() => skipOccurrence(s, water.id, undefined, new Date(2026, 9, 2)), /repeating/, 'A trashed task cannot be skipped');
 
   // Moving one monthly occurrence keeps the series on its day and its monthly count.
   const bill = saveTask(s, { title: 'bill', dueAt: new Date(2027, 0, 31, 9).toISOString(), repeat: 'monthly' });

@@ -18,7 +18,6 @@ class DriveBackup {
     this.onChange = onChange;
     this.clock = options.clock || (() => Date.now());
     this.exporter = options.exporter || exportBackup;
-    this.text = options.text || (ar => ar);
     this.log = options.log || silent;
     this.running = null;
     this.config = { folder: '', automatic: true, lastCopiedAt: null, lastLocalPath: '', lastDrivePath: '', pending: false, error: '', lastAttempt: 0, keep: 0, unavailableSince: null, skipped: [], snapshotAt: null, snapshotHash: '' };
@@ -29,7 +28,7 @@ class DriveBackup {
         Object.assign(this.config, data);
         if (!validKeep(this.config.keep)) this.config.keep = 0;
         if (!Array.isArray(this.config.skipped)) this.config.skipped = [];
-      } catch { this.config.error = this.text('تعذّرت قراءة إعدادات النسخ إلى Drive. اختر مجلد المزامنة مجددًا.', 'Could not read the Drive backup settings. Choose the sync folder again.'); }
+      } catch { this.config.error = 'Could not read the Drive backup settings. Choose the sync folder again.'; }
     }
   }
   status() {
@@ -45,10 +44,10 @@ class DriveBackup {
     this.onChange();
   }
   async configure(folder) {
-    if (this.running) throw new Error(this.text('انتظر اكتمال النسخة الحالية.', 'Wait for the current backup to finish.'));
-    if (typeof folder !== 'string' || !path.isAbsolute(folder) || !(await fsp.stat(folder)).isDirectory()) throw new Error(this.text('اختر مجلد Google Drive المتزامن.', 'Choose the synced Google Drive folder.'));
+    if (this.running) throw new Error('Wait for the current backup to finish.');
+    if (typeof folder !== 'string' || !path.isAbsolute(folder) || !(await fsp.stat(folder)).isDirectory()) throw new Error('Choose the synced Google Drive folder.');
     const root = path.resolve(folder), local = path.resolve(this.directory);
-    if (root === local || root.startsWith(local + path.sep)) throw new Error(this.text('اختر وجهة خارج مجلد بيانات ذكرني.', 'Choose a destination outside the Remember Me data folder.'));
+    if (root === local || root.startsWith(local + path.sep)) throw new Error('Choose a destination outside the Remember Me data folder.');
     this.config.folder = root;
     this.config.error = '';
     this.config.unavailableSince = null;
@@ -80,7 +79,7 @@ class DriveBackup {
   async copySnapshot(source) {
     const folder = this.config.folder;
     // Never create a missing Drive mount as a normal local folder.
-    if (!folder || !fs.existsSync(folder)) throw new Error(this.text('مجلد Google Drive غير متاح. افتح Google Drive وسجّل الدخول؛ النسخة المحلية محفوظة وستُعاد المحاولة.', 'The Google Drive folder is unavailable. Open Google Drive and sign in; the local copy is saved and the backup will be retried.'));
+    if (!folder || !fs.existsSync(folder)) throw new Error('The Google Drive folder is unavailable. Open Google Drive and sign in; the local copy is saved and the backup will be retried.');
     const destination = path.join(folder, path.basename(source));
     await fsp.mkdir(destination, { recursive: true });
     const files = path.join(source, 'attachments');
@@ -92,7 +91,7 @@ class DriveBackup {
   }
   async perform() {
     try {
-      if (!this.config.folder) throw new Error(this.text('اختر مجلدًا داخل Google Drive أولًا.', 'Choose a folder inside Google Drive first.'));
+      if (!this.config.folder) throw new Error('Choose a folder inside Google Drive first.');
       this.config.lastAttempt = this.clock();
       // A snapshot left pending by a failed copy is reused only while it still matches the data and
       // is under a day old; otherwise a retry days later would upload old data under a new date.
@@ -123,7 +122,9 @@ class DriveBackup {
       return this.status();
     } catch (error) {
       this.log.warn('drive-backup-failed', error);
-      this.config.error = error.message || this.text('تعذّر نسخ الملفات إلى مجلد Google Drive.', 'Could not copy the files to the Google Drive folder.');
+      this.config.error = error.message || 'Could not copy the files to the Google Drive folder.';
+      // The key and values let the settings page show a saved error in the current language.
+      this.config.errorKey = error.key || null; this.config.errorParams = error.params || null;
       // Report the backup's own failure, not a later one while recording it.
       try { this.save(); } catch { /* the in-memory status still shows the error */ }
       throw error;

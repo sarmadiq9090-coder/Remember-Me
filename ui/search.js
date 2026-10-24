@@ -17,12 +17,12 @@
     return value.replace(/\s+/g, ' ').trim();
   }
   const cache = new WeakMap();
-  // True when every word of the query appears in the item's title or body.
+  // True when every word of the query appears in the item's title, body or tags.
   function matchesSearch(item, query) {
     const words = normalizeSearch(query).split(' ').filter(Boolean);
     if (!words.length) return true;
     let text = cache.get(item);
-    if (text === undefined) { text = normalizeSearch(item.title + ' ' + (item.body || '')); cache.set(item, text); }
+    if (text === undefined) { text = normalizeSearch([item.title, item.body || '', ...(item.tags || [])].join(' ')); cache.set(item, text); }
     return words.every(word => text.includes(word));
   }
   if (typeof module === 'object' && module.exports) module.exports = { normalizeSearch, matchesSearch };

@@ -1,12 +1,24 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"><title>ذكرني • حان الموعد</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="alert.css"><link rel="stylesheet" href="theme.css"></head><body class="alert-body">
-<div class="alert-shell"><div class="alert-header"><div class="alert-brand"><span class="alert-brand-mark" data-brand-mark aria-hidden="true"></span><strong>ذكرني</strong><span>تذكير لك</span></div><span class="alert-pulse">حان الموعد</span></div>
-<div id="alert-undo" class="alert-undo" role="status" hidden><span id="alert-undo-text"></span><button type="button" id="alert-undo-button">تراجع</button></div>
-<div class="alert-content"><p id="alert-all-done" class="alert-all-done" hidden>أحسنت! لا تذكيرات أخرى الآن.</p><div class="bell-orbit"><span data-icon="bell"></span><i></i></div><p class="alert-eyebrow" id="alert-queue">مساحة صغيرة لشيء مهم</p><h1 id="alert-title" dir="auto"></h1><p id="alert-note" dir="auto"></p><div class="alert-time"><span data-icon="clock"></span><span id="alert-time"></span></div>
-<div id="alert-files" class="alert-files" hidden></div><button class="primary alert-done" id="alert-complete"><span data-icon="check"></span> تم، أنجزتها</button>
-<div class="snooze-heading"><span></span><p>أو ذكّرني لاحقًا</p><span></span></div>
-<div class="snooze-options"><button data-minutes="5">5 دقائق</button><button data-minutes="15">15 دقيقة</button><button data-minutes="60">ساعة</button><button data-minutes="1440">24 ساعة</button></div>
-<form id="snooze-form"><label for="snooze-until">اختر موعدًا آخر</label><div class="custom-snooze"><input type="datetime-local" id="snooze-until" required aria-label="موعد التذكير الجديد"><button type="submit" title="تأجيل للموعد المحدد" aria-label="تأجيل للموعد المحدد"><span data-icon="arrowLeft"></span></button></div></form>
-<p id="alert-error" role="alert"></p><p class="alert-persistence"><span data-icon="shield"></span> سأبقى هنا حتى تنجزها أو تختار وقتًا آخر.</p></div>
-<button class="alert-open" id="alert-open">فتح ذكرني <span data-icon="arrowLeft"></span></button></div><script src="i18n.js"></script><script src="shared.js"></script><script src="alert.js"></script></body></html>
-
-
+<!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"><title>Remember Me • Reminder</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="alert.css"><link rel="stylesheet" href="theme.css"></head><body class="alert-body">
+<div class="alert-shell" id="alert-shell" role="alertdialog" aria-labelledby="alert-title" aria-describedby="alert-time alert-note">
+<header class="alert-header"><span class="alert-brand-mark" data-brand-mark aria-hidden="true"></span><strong>Remember Me</strong>
+<div class="alert-queue" id="alert-queue" hidden><button type="button" id="alert-prev" title="Previous reminder" aria-label="Previous reminder"><span data-icon="chevronBack"></span></button><span id="alert-position" translate="no"></span><button type="button" id="alert-next" title="Next reminder@queue" aria-label="Next reminder@queue"><span data-icon="chevronForward"></span></button></div></header>
+<div id="alert-undo" class="alert-undo" role="status" hidden><span id="alert-undo-text" translate="no"></span><button type="button" id="alert-undo-button">Undo</button></div>
+<main class="alert-content">
+<p id="alert-all-done" class="alert-all-done" hidden>Well done! No more reminders right now.</p>
+<div class="alert-chips" id="alert-chips" translate="no"></div>
+<h1 id="alert-title" translate="no" dir="auto"></h1>
+<p class="alert-when" id="alert-time" translate="no"></p>
+<p class="alert-note" id="alert-note" translate="no" dir="auto" hidden></p>
+<div id="alert-files" class="alert-files" translate="no" hidden></div>
+<p class="alert-nudge" id="alert-nudge" translate="no" hidden></p>
+<button class="primary alert-done" id="alert-complete" title="I will stay here until you complete it or choose another time."><span class="alert-done-label"><span data-icon="check"></span> <span>Done</span></span><small id="alert-next-time" translate="no" hidden></small></button>
+<p class="alert-label">Remind me again</p>
+<div class="snooze-grid" id="snooze-grid" translate="no"></div>
+<form id="snooze-form" class="custom-snooze" hidden><input type="datetime-local" id="snooze-until" required aria-label="New reminder time"><button type="submit" title="Snooze until the chosen time" aria-label="Snooze until the chosen time"><span data-icon="arrowLeft"></span></button></form>
+<button type="button" class="text-button alert-skip" id="alert-skip" hidden>Skip this time <kbd>S</kbd></button>
+<p id="alert-error" role="alert"></p>
+</main>
+<footer class="alert-footer"><button type="button" id="alert-snooze-all" translate="no" hidden></button><button type="button" id="alert-open">Open task</button></footer>
+</div>
+<div id="alert-live" class="visually-hidden" aria-live="polite" translate="no"></div>
+<script src="translate.js"></script><script src="i18n.js"></script><script src="shared.js"></script><script src="alert-format.js"></script><script src="alert.js"></script></body></html>
