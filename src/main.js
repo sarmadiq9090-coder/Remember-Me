@@ -79,6 +79,14 @@ function createMain(visible = !process.argv.includes('--background')) {
   win.on('closed', () => { if (mainWindow === win) mainWindow = null; });
   win.once('ready-to-show', () => { if (visible) win.show(); });
 }
+// Asks the main window to open a new task editor, once its page has loaded if the window is new.
+function openTaskEditor() {
+  showMain();
+  const contents = mainWindow?.webContents;
+  if (!contents) return;
+  if (contents.isLoading()) contents.once('did-finish-load', () => contents.send('waqt:open-editor'));
+  else contents.send('waqt:open-editor');
+}
 function showMain() {
   if (!mainWindow) { if (!quitting) createMain(true); return; }
   if (mainWindow.isMinimized()) mainWindow.restore();
@@ -100,7 +108,7 @@ function rebuildTrayMenu() {
   if (!tray) return;
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: nativeText('فتح ذكرني', 'Open Remember Me'), click: showMain },
-    { label: nativeText('مهمة جديدة', 'New task'), click: () => { showMain(); mainWindow.webContents.send('waqt:update'); mainWindow.webContents.executeJavaScript('window.openTaskEditor?.()'); } },
+    { label: nativeText('مهمة جديدة', 'New task'), click: openTaskEditor },
     { type: 'separator' },
     { label: nativeText('خروج وإيقاف التذكيرات', 'Exit and stop reminders'), click: async () => {
       const { response } = await dialog.showMessageBox(mainWindow, { type: 'question', title: nativeText('إغلاق ذكرني', 'Close Remember Me'), message: nativeText('ستتوقف التذكيرات حتى تفتح البرنامج مجددًا.', 'Reminders will stop until you open the app again.'), buttons: [nativeText('البقاء في الخلفية', 'Keep running'), nativeText('خروج', 'Exit')], defaultId: 0, cancelId: 0 });

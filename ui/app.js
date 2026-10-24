@@ -179,7 +179,8 @@ function openTaskEditor(task) {
   toggleReminder();
   $('task-dialog').showModal(); $('task-title').focus();
 }
-window.openTaskEditor = openTaskEditor;
+// The tray's "New task" item.
+window.waqt.onOpenEditor(() => { if (!document.querySelector('dialog[open]')) openTaskEditor(); });
 // 'Only this time' moves one occurrence of a repeating task and keeps the series at its usual time.
 let editingSeries = null;
 const onlyOnce = document.createElement('label');
