@@ -2,7 +2,7 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, Notification, nativeTheme } = require('electron');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
-const { REMIND_AGAIN, Store, saveTask, completeTask, skipOccurrence, undoComplete, snoozeTask, dueTasks, alertQueue, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
+const { REMIND_AGAIN, PALETTES, noteLook, Store, saveTask, completeTask, skipOccurrence, undoComplete, snoozeTask, dueTasks, alertQueue, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
 const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
@@ -13,6 +13,7 @@ const { createRepeatBeep } = require('./repeat-beep');
 const { Updates, configure: configureUpdater } = require('./updates');
 const { migrateDataFolder } = require('./data-folder');
 const { setLoginItem, refreshLoginItem } = require('./login-item');
+const { windowColors } = require('./themes');
 const testMode = process.env.WAQT_TEST === '1';
 // Lets the desktop tests read early notifications without showing them.
 if (testMode) globalThis.waqtTest = { get early() { return earlyLog; } };
@@ -56,11 +57,13 @@ else {
   app.on('second-instance', () => showMain());
   app.whenReady().then(start).catch(error => { dialog.showErrorBox(nativeText('تعذّر تشغيل ذكرني', 'Remember Me could not start'), error.message); app.quit(); });
 }
-// Window backgrounds match ui/dark.css so opening a window never flashes the other theme.
-function background(light, dark) { return nativeTheme.shouldUseDarkColors ? dark : light; }
+// Window backgrounds match the page's palette and mode (ui/theme.css), so opening a window never flashes another theme.
+function background(kind) { return windowColors(store.state.settings.palette, nativeTheme.shouldUseDarkColors)[kind]; }
+// The page applies the palette from its URL before the first paint; later changes arrive with waqt:update.
+function pageOptions() { return { query: { palette: store.state.settings.palette } }; }
 function applyTheme() {
   nativeTheme.themeSource = store.state.settings.theme;
-  for (const [win, light, dark] of [[mainWindow, '#f7f8fa', '#181d27'], [alertWindow, '#ffffff', '#15171e']]) if (win && !win.isDestroyed()) win.setBackgroundColor(background(light, dark));
+  for (const [win, kind] of [[mainWindow, 'main'], [alertWindow, 'alert']]) if (win && !win.isDestroyed()) win.setBackgroundColor(background(kind));
 }
 function options() { return { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }; }
 function secure(win) {
@@ -69,10 +72,10 @@ function secure(win) {
 }
 function createMain(visible = !process.argv.includes('--background')) {
   const win = mainWindow = new BrowserWindow({ width: 1250, height: 850, minWidth: 900, minHeight: 650,
-    title: nativeText('ذكرني • مساحة ليومك', 'Remember Me • Your day'), icon, show: false, backgroundColor: background('#f7f8fa', '#181d27'), autoHideMenuBar: true, webPreferences: options() });
+    title: nativeText('ذكرني • مساحة ليومك', 'Remember Me • Your day'), icon, show: false, backgroundColor: background('main'), autoHideMenuBar: true, webPreferences: options() });
   win.setMenu(null);
   secure(win);
-  win.loadFile(path.join(__dirname, '../ui/index.html'));
+  win.loadFile(path.join(__dirname, '../ui/index.html'), pageOptions());
   win.on('session-end', () => { quitting = true; });
   win.on('close', e => { if (!quitting) { e.preventDefault(); win.hide(); } });
   // A page-initiated window.close() destroys the window without a cancelable close; rebuild it on demand.
@@ -120,11 +123,11 @@ function scanNow() {
   if (tasks.length) {
     if (!alertWindow || alertWindow.isDestroyed()) {
       alertWindow = new BrowserWindow({ width: 410, height: 570, frame: false, resizable: false, minimizable: false,
-        maximizable: false, skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: background('#ffffff', '#15171e'), icon, webPreferences: options() });
+        maximizable: false, skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: background('alert'), icon, webPreferences: options() });
       secure(alertWindow);
       alertWindow.setAlwaysOnTop(true, 'pop-up-menu');
       placeAlert();
-      alertWindow.loadFile(path.join(__dirname, '../ui/alert.html'));
+      alertWindow.loadFile(path.join(__dirname, '../ui/alert.html'), pageOptions());
       alertWindow.once('ready-to-show', () => { if (alertWindow && activeAlerts().length) alertWindow.showInactive(); });
       alertWindow.on('session-end', () => { quitting = true; });
       alertWindow.on('close', event => { if (!quitting && activeAlerts().length) event.preventDefault(); });
@@ -183,7 +186,7 @@ async function start() {
       switch (action) {
         case 'state': value = { ...store.state, dataPath: app.getPath('userData'), packaged: app.isPackaged, recovered: store.recovered, driveBackup: driveBackup.status(), updates: updates.status() }; break;
         case 'alerts': value = activeAlerts().map(t => ({ ...t, files: (t.attachments || []).map(id => store.state.attachments.find(a => a.id === id)).filter(Boolean) })); break;
-        case 'language': value = { language: language() }; break;
+        case 'language': value = { language: language(), palette: store.state.settings.palette }; break;
         case 'saveTask': store.change(s => saveTask(s, payload)); break;
         case 'complete':
           if (payload.id === '__preview') preview = null;
@@ -217,7 +220,7 @@ async function start() {
           if (!title || title.length > 200) throw new Error('أضف عنوانًا للملاحظة، حتى 200 حرف.');
           let note = s.notes.find(n => n.id === payload.id);
           if (!note) { note = { id: randomUUID(), createdAt: new Date().toISOString() }; s.notes.push(note); }
-          Object.assign(note, { title, body: String(payload.body || '').slice(0, 50000), attachments: attachmentIds(payload.attachments ?? note.attachments ?? []), color: ['cream', 'green', 'blue', 'pink'].includes(payload.color) ? payload.color : 'cream', updatedAt: new Date().toISOString() });
+          Object.assign(note, { title, body: String(payload.body || '').slice(0, 50000), attachments: attachmentIds(payload.attachments ?? note.attachments ?? []), ...noteLook(payload), updatedAt: new Date().toISOString() });
         }); break;
         case 'deleteNote': store.change(s => trashItem(s, 'notes', payload.id)); break;
         case 'restoreNote': store.change(s => restoreItem(s, 'notes', payload.id)); break;
@@ -281,7 +284,7 @@ async function start() {
         case 'settings': {
           const old = store.state.settings;
           const settings = { sound: !!payload.sound, startAtLogin: !!payload.startAtLogin, alertSide: payload.alertSide === 'left' ? 'left' : 'right', language: payload.language === 'en' ? 'en' : 'ar',
-            weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 6, theme: ['light', 'dark'].includes(payload.theme) ? payload.theme : 'system',
+            weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 6, theme: ['light', 'dark'].includes(payload.theme) ? payload.theme : 'system', palette: PALETTES.includes(payload.palette) ? payload.palette : 'lavender',
             remindAgain: REMIND_AGAIN.includes(payload.remindAgain) ? payload.remindAgain : 0 };
           if (old.startAtLogin !== settings.startAtLogin) setLogin(settings.startAtLogin);
           try { store.change(s => { s.settings = { ...s.settings, ...settings }; }); }

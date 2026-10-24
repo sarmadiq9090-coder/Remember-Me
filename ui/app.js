@@ -29,7 +29,10 @@ async function refresh() {
     // Deleted items only appear in the trash view; every other view works on the rest.
     trash = [...state.tasks.filter(t => t.deletedAt).map(item => ({ kind: 'Task', item })), ...state.notes.filter(n => n.deletedAt).map(item => ({ kind: 'Note', item }))].sort((a, b) => Date.parse(b.item.deletedAt) - Date.parse(a.item.deletedAt));
     state.tasks = state.tasks.filter(t => !t.deletedAt); state.notes = state.notes.filter(n => !n.deletedAt);
-    setLanguage(state.settings.language); render();
+    setLanguage(state.settings.language);
+    // While a palette choice is being saved, an older refresh must not switch the page back.
+    if (!appearanceSaving) applyPalette(state.settings.palette);
+    render();
   } catch (e) { toast(e.message); }
 }
 function todayEnd() { const d = new Date(); d.setHours(23, 59, 59, 999); return d.getTime(); }
@@ -84,7 +87,7 @@ function render() {
     $('setting-side').value = state.settings.alertSide;
     $('setting-language').value = state.settings.language;
     renderRemindAgain();
-    $('setting-theme').value = state.settings.theme;
+    renderAppearance();
     $('setting-week').value = String(state.settings.weekStart);
     $('data-path').textContent = state.dataPath;
     renderStorage();
@@ -401,11 +404,36 @@ function renderRemindAgain() {
   $('setting-remind-again').value = String(state.settings.remindAgain || 0);
 }
 function settingsPayload() {
-  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: Number($('setting-week').value), theme: $('setting-theme').value, remindAgain: Number($('setting-remind-again').value) };
+  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: Number($('setting-week').value), theme: checked('theme-mode', state.settings.theme), palette: checked('palette', state.settings.palette), remindAgain: Number($('setting-remind-again').value) };
 }
-for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-week', 'setting-theme', 'setting-remind-again']) $(id).addEventListener('change', async () => {
+for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-week', 'setting-remind-again']) $(id).addEventListener('change', async () => {
   try { await api('settings', settingsPayload()); await refresh(); toast(tr('حُفظت الإعدادات.','Settings saved.')); }
   catch (err) { toast(err.message); } await refresh();
+});
+// The value of a radio group in the page, or the saved one before the group is built.
+function checked(name, saved) { return document.querySelector(`input[name="${name}"]:checked`)?.value ?? saved; }
+// Settings → Appearance: mode and palette as radio groups (arrow keys move between options), built here with tr().
+// Each preview card carries data-palette, so it shows that palette's real colors in the current mode.
+const PALETTE_NAMES = [['lavender', 'لافندر', 'Lavender'], ['ocean', 'محيط', 'Ocean'], ['forest', 'غابة', 'Forest'], ['sunset', 'غروب', 'Sunset'], ['graphite', 'رمادي', 'Graphite'], ['contrast', 'تباين عالٍ', 'High contrast']];
+const MODE_NAMES = [['system', 'حسب ويندوز', 'Same as Windows'], ['light', 'فاتح', 'Light'], ['dark', 'داكن', 'Dark']];
+const paletteMock = '<span class="mock-side"><i class="mock-logo"></i><i class="mock-nav on"></i><i class="mock-nav"></i><i class="mock-nav"></i></span><span class="mock-page"><i class="mock-hero"></i><span class="mock-row"><i class="mock-check"></i><i class="mock-line"></i></span><span class="mock-row"><i class="mock-check"></i><i class="mock-line short"></i></span><i class="mock-button"></i></span>';
+let appearanceLanguage, appearanceSaving = 0;
+function renderAppearance() {
+  const card = $('appearance-card');
+  if (appearanceLanguage !== uiLanguage) {
+    appearanceLanguage = uiLanguage;
+    card.innerHTML = `<h2>${tr('المظهر', 'Appearance')}</h2><div class="setting-row"><div><strong id="mode-label">${tr('الوضع', 'Mode')}</strong><p>${tr('فاتح أو داكن، أو حسب إعداد ويندوز.', 'Light or dark, or the same as Windows.')}</p></div><div class="segmented" role="radiogroup" aria-labelledby="mode-label">${MODE_NAMES.map(([value, ar, en]) => `<label><input type="radio" name="theme-mode" value="${value}"><span>${tr(ar, en)}</span></label>`).join('')}</div></div>`
+      + `<div class="palette-picker"><strong id="palette-label">${tr('الألوان', 'Colors')}</strong><div class="palette-grid" role="radiogroup" aria-labelledby="palette-label">${PALETTE_NAMES.map(([id, ar, en]) => `<label class="palette-card"><input type="radio" name="palette" value="${id}"><span class="palette-mock" data-palette="${id}" aria-hidden="true">${paletteMock}</span><span class="palette-name">${tr(ar, en)}</span><span class="palette-tick" aria-hidden="true">${icon('check')}</span></label>`).join('')}</div></div>`;
+  }
+  if (appearanceSaving) return;
+  for (const [name, value] of [['theme-mode', state.settings.theme], ['palette', state.settings.palette]]) card.querySelector(`input[name="${name}"][value="${value}"]`).checked = true;
+}
+$('appearance-card').addEventListener('change', async e => {
+  // The palette shows at once; main then updates the alert window and the window backgrounds.
+  if (e.target.name === 'palette') applyPalette(e.target.value);
+  appearanceSaving++;
+  try { await api('settings', settingsPayload()); } catch (err) { toast(err.message); } finally { appearanceSaving--; }
+  await refresh();
 });
 // Names the attachments a backup had to leave out because their files are missing, with the task or note each belongs to.
 function skippedText(skipped = []) {

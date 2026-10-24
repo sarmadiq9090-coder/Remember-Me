@@ -109,3 +109,37 @@
 .update-notice p{flex:1;font-size:12px;line-height:1.9;color:var(--ink-2)}
 .update-notice .primary{font-size:12px;padding:9px 16px}
 #update-status{font-size:12px;line-height:2;color:var(--muted);margin:0}
+
+/* Settings → Appearance: mode switch and palette preview cards. The radio inputs stay in the page for the keyboard and screen readers. */
+:is(.segmented,.palette-card,.swatch,.style-tile) input{position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
+.segmented{display:inline-flex;flex-shrink:0;gap:2px;padding:3px;border:1px solid var(--border-strong);border-radius:10px;background:var(--surface-2)}
+.segmented label{position:relative}
+.segmented span{display:block;padding:7px 13px;border-radius:7px;font-size:12px;color:var(--ink-2);cursor:pointer;white-space:nowrap}
+.segmented label:hover span{background:var(--hover)}
+.segmented input:checked+span{background:var(--accent);color:var(--on-accent);font-weight:600}
+.segmented input:focus-visible+span{outline:3px solid var(--focus);outline-offset:2px}
+.palette-picker{padding-top:20px;border-top:1px solid var(--border)}
+.palette-picker>strong{display:block;font-size:13px;font-weight:500;margin-bottom:14px}
+.palette-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.palette-card{position:relative;display:flex;flex-direction:column;gap:8px;padding:8px 8px 10px;border:1px solid var(--border);border-radius:12px;background:var(--surface);cursor:pointer}
+.palette-card:hover{border-color:var(--border-strong)}
+.palette-card:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.palette-card:has(input:focus-visible){outline:3px solid var(--focus);outline-offset:3px}
+.palette-name{font-size:12px;font-weight:600;padding:0 2px}
+.palette-tick{position:absolute;top:-8px;inset-inline-end:-8px;display:none;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--on-accent);box-shadow:0 0 0 3px var(--surface)}
+.palette-tick svg{width:14px;height:14px;stroke-width:2.6}
+.palette-card:has(input:checked) .palette-tick{display:flex}
+.palette-mock{display:flex;height:88px;overflow:hidden;border:1px solid var(--border);border-radius:8px;background:var(--bg)}
+.palette-mock i{display:block;border-radius:3px}
+.mock-side{display:flex;flex-direction:column;gap:5px;width:32%;padding:8px 6px;background:var(--surface);border-inline-end:1px solid var(--border)}
+.mock-logo{width:14px;height:14px;margin-bottom:3px;background:var(--accent)}
+.mock-nav{height:7px;background:var(--hover)}
+.mock-nav.on{background:var(--accent-soft-2);box-shadow:inset 3px 0 var(--accent-ink)}
+.mock-page{display:flex;flex:1;flex-direction:column;gap:5px;padding:8px;min-width:0}
+.mock-hero{height:20px;background:var(--hero-bg)}
+.mock-row{display:flex;align-items:center;gap:5px;padding:3px 4px;border:1px solid var(--border);border-radius:4px;background:var(--surface)}
+.mock-check{flex-shrink:0;width:7px;height:7px;border:1.5px solid var(--success)}
+.mock-line{flex:1;height:4px;background:var(--ink)}
+.mock-line.short{flex:.55;background:var(--muted)}
+.mock-button{width:40%;height:10px;margin-top:auto;background:var(--accent)}
+@media(max-width:1050px){.palette-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
