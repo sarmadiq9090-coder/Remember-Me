@@ -5,7 +5,7 @@ const path = require('node:path');
 const { attachmentIds, validateAttachment } = require('./attachments');
 
 function initialState() {
-  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'ar', digits: 'auto', weekStart: 'auto', hijri: false } };
+  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'ar', digits: 'auto', weekStart: 'auto', hijri: false, theme: 'system' } };
 }
 function title(value) {
   if (typeof value !== 'string' || !value.trim() || value.trim().length > 200) throw new Error('اكتب عنوانًا من 1 إلى 200 حرف.');
@@ -196,6 +196,7 @@ function validateState(data) {
   data.settings = { ...defaults, ...saved };
   for (const key of ['sound', 'startAtLogin', 'hijri']) if (typeof data.settings[key] !== 'boolean') data.settings[key] = defaults[key];
   if (!['auto', 'arab', 'latn'].includes(data.settings.digits)) data.settings.digits = 'auto';
+  if (!['system', 'light', 'dark'].includes(data.settings.theme)) data.settings.theme = 'system';
   if (!['auto', 0, 1, 6].includes(data.settings.weekStart)) data.settings.weekStart = 'auto';
   data.settings.alertSide = data.settings.alertSide === 'left' ? 'left' : 'right';
   data.settings.language = data.settings.language === 'en' ? 'en' : 'ar';

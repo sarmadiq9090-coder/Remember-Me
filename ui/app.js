@@ -81,6 +81,7 @@ function render() {
     $('setting-side').value = state.settings.alertSide;
     $('setting-language').value = state.settings.language;
     $('setting-digits').value = state.settings.digits;
+    $('setting-theme').value = state.settings.theme;
     $('setting-week').value = String(state.settings.weekStart);
     $('setting-hijri').checked = state.settings.hijri;
     $('data-path').textContent = state.dataPath;
@@ -292,8 +293,8 @@ $('trash-list').addEventListener('click', async e => {
 });
 $('empty-trash').addEventListener('click', () => askPurge('emptyTrash'));
 for (const id of ['preview-alert', 'settings-preview']) $(id).addEventListener('click', async () => { try { await api('preview'); toast(tr('ظهر التنبيه فوق شريط المهام.','The alert appeared above the taskbar.')); } catch (err) { toast(err.message); } });
-for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-digits', 'setting-week', 'setting-hijri']) $(id).addEventListener('change', async () => {
-  try { await api('settings', { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, digits: $('setting-digits').value, weekStart: $('setting-week').value === 'auto' ? 'auto' : Number($('setting-week').value), hijri: $('setting-hijri').checked }); await refresh(); toast(tr('حُفظت الإعدادات.','Settings saved.')); }
+for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-digits', 'setting-week', 'setting-hijri', 'setting-theme']) $(id).addEventListener('change', async () => {
+  try { await api('settings', { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, digits: $('setting-digits').value, weekStart: $('setting-week').value === 'auto' ? 'auto' : Number($('setting-week').value), hijri: $('setting-hijri').checked, theme: $('setting-theme').value }); await refresh(); toast(tr('حُفظت الإعدادات.','Settings saved.')); }
   catch (err) { toast(err.message); } await refresh();
 });
 $('export-data').addEventListener('click', async () => { $('export-data').disabled = true; try { if (await api('export')) toast(tr('حُفظ مجلد النسخة الاحتياطية مع جميع المرفقات.', 'The backup folder was saved with all attachments.')); } catch (err) { toast(err.message); } finally { $('export-data').disabled = false; } });

@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, Notification } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, Notification, nativeTheme } = require('electron');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { Store, saveTask, completeTask, undoComplete, snoozeTask, dueTasks, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
@@ -44,6 +44,12 @@ else {
   app.on('second-instance', () => showMain());
   app.whenReady().then(start).catch(error => { dialog.showErrorBox('تعذّر تشغيل ذكرني', error.message); app.quit(); });
 }
+// Window backgrounds match ui/dark.css so opening a window never flashes the other theme.
+function background(light, dark) { return nativeTheme.shouldUseDarkColors ? dark : light; }
+function applyTheme() {
+  nativeTheme.themeSource = store.state.settings.theme;
+  for (const [win, light, dark] of [[mainWindow, '#f7f8fa', '#181d27'], [alertWindow, '#ffffff', '#15171e']]) if (win && !win.isDestroyed()) win.setBackgroundColor(background(light, dark));
+}
 function options() { return { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }; }
 function secure(win) {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -51,7 +57,7 @@ function secure(win) {
 }
 function createMain(visible = !process.argv.includes('--background')) {
   const win = mainWindow = new BrowserWindow({ width: 1250, height: 850, minWidth: 900, minHeight: 650,
-    title: 'ذكرني • مساحة ليومك', icon, show: false, backgroundColor: '#f7f8fa', autoHideMenuBar: true, webPreferences: options() });
+    title: 'ذكرني • مساحة ليومك', icon, show: false, backgroundColor: background('#f7f8fa', '#181d27'), autoHideMenuBar: true, webPreferences: options() });
   win.setMenu(null);
   secure(win);
   win.loadFile(path.join(__dirname, '../ui/index.html'));
@@ -101,7 +107,7 @@ function scanNow() {
   if (tasks.length) {
     if (!alertWindow || alertWindow.isDestroyed()) {
       alertWindow = new BrowserWindow({ width: 410, height: 570, frame: false, resizable: false, minimizable: false,
-        maximizable: false, skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: '#ffffff', icon, webPreferences: options() });
+        maximizable: false, skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: background('#ffffff', '#15171e'), icon, webPreferences: options() });
       secure(alertWindow);
       alertWindow.setAlwaysOnTop(true, 'pop-up-menu');
       placeAlert();
@@ -130,6 +136,8 @@ async function start() {
   session.defaultSession.setPermissionRequestHandler((contents, permission, callback) => callback(false));
   session.defaultSession.setPermissionCheckHandler(() => false);
   store = new Store(app.getPath('userData'));
+  nativeTheme.themeSource = store.state.settings.theme;
+  nativeTheme.on('updated', applyTheme);
   driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, notifyViews, { text: nativeText });
   createMain();
   tray = new Tray(nativeImage.createFromPath(icon));
@@ -239,11 +247,11 @@ async function start() {
         case 'settings': {
           const old = store.state.settings;
           const settings = { sound: !!payload.sound, startAtLogin: !!payload.startAtLogin, alertSide: payload.alertSide === 'left' ? 'left' : 'right', language: payload.language === 'en' ? 'en' : 'ar',
-            digits: ['arab', 'latn'].includes(payload.digits) ? payload.digits : 'auto', weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 'auto', hijri: !!payload.hijri };
+            digits: ['arab', 'latn'].includes(payload.digits) ? payload.digits : 'auto', weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 'auto', hijri: !!payload.hijri, theme: ['light', 'dark'].includes(payload.theme) ? payload.theme : 'system' };
           if (old.startAtLogin !== settings.startAtLogin) setLogin(settings.startAtLogin);
           try { store.change(s => { s.settings = settings; }); }
           catch (err) { if (old.startAtLogin !== settings.startAtLogin) setLogin(old.startAtLogin); throw err; }
-          rebuildTrayMenu(); placeAlert(); break;
+          rebuildTrayMenu(); placeAlert(); applyTheme(); break;
         }
         case 'preview': preview = { id: '__preview', title: nativeText('حان وقت استراحة صغيرة ☕', 'Time for a short break ☕'), body: nativeText('هذا تنبيه تجريبي. يبقى ظاهرًا حتى تختار «تم» أو «ذكّرني لاحقًا». التأجيل هنا يغلق المعاينة فقط.', 'This is a preview alert. It stays visible until you choose Done or Snooze. Snoozing here only closes the preview.'), dueAt: new Date().toISOString(), priority: 'normal', category: 'personal' }; break;
         case 'export': {
