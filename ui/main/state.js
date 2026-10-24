@@ -44,7 +44,7 @@ async function refresh() {
       const task = state.openTask === 'new' ? null : state.tasks.find(t => t.id === state.openTask);
       if (state.openTask === 'new' || (task && !task.completedAt)) openTaskEditor(task || undefined);
     }
-  } catch (e) { toast(e.message); }
+  } catch (e) { toast(e.message); } finally { showPage(); }
 }
 function todayEnd() { const d = new Date(); d.setHours(23, 59, 59, 999); return d.getTime(); }
 function todayTasks() { return state.tasks.filter(t => !t.completedAt && (!t.dueAt || Date.parse(t.dueAt) <= todayEnd())); }

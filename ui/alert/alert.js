@@ -18,7 +18,7 @@ async function refreshAlert() {
     const kept = tasks.findIndex(t => t.id === shownId);
     index = kept >= 0 ? kept : Math.min(index, tasks.length - 1);
     render();
-  } catch (e) { $('alert-error').textContent = e.message; }
+  } catch (e) { $('alert-error').textContent = e.message; } finally { showPage(); }
 }
 function whenText(iso, now) { return tr('{day}, {time}', dueWhen(iso, now, locale())); }
 // Renders the shown reminder. Labels are rebuilt each time so they follow the language and the clock.

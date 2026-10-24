@@ -71,6 +71,12 @@ function dateLabel(value) { if (!value) return ''; const d = new Date(value); re
 const PALETTES = ['lavender', 'ocean', 'forest', 'sunset', 'graphite', 'contrast'];
 function applyPalette(palette) { document.documentElement.dataset.palette = PALETTES.includes(palette) ? palette : 'lavender'; }
 applyPalette(globalThis.waqt?.palette);
+// The saved language's code and direction from the preload, so the page is mirrored from its first paint.
+// The body stays hidden (styles.css) until the page has been translated and filled in (showPage()), so
+// it never shows its English source text; if that fails, it appears after 2 seconds anyway.
+if (globalThis.waqt?.language) Object.assign(document.documentElement, { lang: globalThis.waqt.language, dir: globalThis.waqt.dir });
+function showPage() { document.documentElement.dataset.ready = ''; }
+if (typeof setTimeout === 'function') setTimeout(showPage, 2000);
 // The app icon drawn with the --mark-* theme tokens, so it matches every palette and mode (issue #18).
 // Same artwork as assets/icon.svg; small marks use the simplified glyph of assets/icon-small.svg.
 // The Windows icon files stay fixed purple. Any element with data-brand-mark ("small" for the glyph) gets one.
