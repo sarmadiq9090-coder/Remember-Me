@@ -56,7 +56,7 @@ function render() {
   } else {
     let tasks = view === 'today' ? today : view === 'upcoming' ? upcoming : view === 'completed' ? complete : active;
     if (filter === 'high') tasks = tasks.filter(t => t.priority === 'high');
-    if (query) tasks = tasks.filter(t => (t.title + ' ' + t.body).toLowerCase().includes(query));
+    if (query) tasks = tasks.filter(t => matchesSearch(t, query));
     const rank = { high: 0, medium: 1, normal: 2 };
     tasks = [...tasks].sort((a, b) => $('sort').value === 'priority' ? rank[a.priority] - rank[b.priority] : $('sort').value === 'newest' ? Date.parse(b.createdAt) - Date.parse(a.createdAt) : (Date.parse(a.dueAt) || Infinity) - (Date.parse(b.dueAt) || Infinity));
     $('list-title').innerHTML = `${names[3]} <span id="list-count">${tasks.length}</span>`;
@@ -83,7 +83,7 @@ function taskCard(t) {
     ${t.priority !== 'normal' ? `<span class="priority ${t.priority}">${t.priority === 'high' ? tr('أولوية عالية','High priority') : tr('متوسطة','Medium')}</span>` : ''}<div class="task-actions">${!t.completedAt ? `<button class="icon-button" data-action="edit" title="${tr('تعديل المهمة','Edit task')}" aria-label="${tr('تعديل المهمة','Edit task')}">${icon('edit')}</button>` : ''}<button class="icon-button" data-action="delete" title="${tr('حذف المهمة','Delete task')}" aria-label="${tr('حذف المهمة','Delete task')}">${icon('trash')}</button></div></article>`;
 }
 function renderNotes() {
-  const notes = state.notes.filter(n => (n.title + ' ' + n.body).toLowerCase().includes(query)).sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+  const notes = state.notes.filter(n => matchesSearch(n, query)).sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
   $('notes-list').innerHTML = notes.map(n => `<article class="note-card ${esc(n.color)}" data-id="${esc(n.id)}"><div class="note-edit-target" tabindex="0" role="button" aria-label="${tr('تعديل','Edit')} ${esc(n.title)}"><h3 dir="auto">${esc(n.title)}</h3><p dir="auto">${esc(n.body)}</p></div>${n.attachments?.length ? `<div class="file-chips">${attachmentChips(n.attachments)}</div>` : ''}<footer><span>${new Date(n.updatedAt).toLocaleDateString(uiLanguage === 'en' ? 'en-US' : 'ar-IQ', { day: 'numeric', month: 'long' })}</span><button class="icon-button" data-action="delete" aria-label="${tr('حذف الملاحظة','Delete note')}">${icon('trash')}</button></footer></article>`).join('');
   $('notes-empty').hidden = !!notes.length;
   $('notes-empty').querySelector('h3').textContent = query ? tr('لا توجد ملاحظات مطابقة','No matching notes') : tr('أفكارك تستحق مكانًا','Your ideas deserve a place');
