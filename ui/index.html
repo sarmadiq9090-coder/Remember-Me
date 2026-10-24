@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>Remember Me • Your day</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="theme.css">
+  <title>Remember Me • Your day</title><link rel="stylesheet" href="styles/styles.css"><link rel="stylesheet" href="styles/theme.css">
 </head>
 <body>
   <aside class="sidebar">
@@ -69,7 +69,7 @@
   <dialog id="note-dialog"><form id="note-form"><div class="dialog-heading"><div><span class="eyebrow">Don't let the idea slip away</span><h2 id="note-dialog-title">New note</h2></div><button type="button" class="icon-button close-dialog" aria-label="Close"><span data-icon="x"></span></button></div><input type="hidden" id="note-id"><label class="field">Note title<input id="note-title" dir="auto" maxlength="200" required placeholder="An idea worth keeping…"></label><label class="field">Note<textarea id="note-body" dir="auto" rows="9" maxlength="50000" placeholder="Write freely…"></textarea></label><section class="attachment-section"><div class="attachment-heading"><span>Attachments <small id="note-file-count">0 / 20</small></span><button type="button" class="soft-button" id="note-attach"><span data-icon="paperclip"></span> Add files</button></div><p class="attachment-hint">Attach a PDF, Excel sheet, or any file to your note. We keep an independent copy up to 50 MB.</p><div id="note-files" translate="no" class="attachment-list"></div></section><div class="note-look" id="note-look"></div><p class="form-error" id="note-error" role="alert"></p><div class="dialog-footer"><button type="button" class="text-button close-dialog">Cancel</button><button type="submit" class="primary">Save note <span data-icon="check"></span></button></div></form></dialog>
   <dialog id="confirm-dialog" class="small-dialog"><h2 id="confirm-title">Delete permanently?</h2><p id="confirm-text">This item will be removed from the trash for good. This cannot be undone.</p><div class="dialog-footer"><button class="text-button" id="cancel-delete">Cancel</button><button class="danger-button" id="confirm-delete">Delete</button></div></dialog>
   <div id="toast" class="toast" role="status" hidden></div>
-  <script src="translate.js"></script><script src="i18n.js"></script><script src="shared.js"></script><script src="search.js"></script><script src="app.js"></script>
+  <script src="lib/translate.js"></script><script src="lib/i18n.js"></script><script src="lib/shared.js"></script><script src="lib/search.js"></script><script src="app.js"></script>
 </body></html>
 
 

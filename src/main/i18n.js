@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
-const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale, translate } = require('../../ui/translate');
+const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale, translate } = require('../../ui/lib/translate');
 
 // The main process's interface text (tray, dialogs, notifications, errors), in the saved language.
 function createI18n(savedLanguage) {

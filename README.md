@@ -192,7 +192,7 @@ Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable
 English is the source language. The pages and scripts contain English text; each translation lives in `ui/locales/<code>.json` and maps the English text (the key) to the translation, and any missing entry falls back to English. Messages with a count use plural forms (`zero`, `one`, `two`, `few`, `many`, `other`, as defined by the language), and `{name}` placeholders must be kept.
 
 - **Fix a translation:** edit the language's JSON file and open a pull request. Native speakers are especially welcome to review the machine-assisted languages.
-- **Add a language:** add an entry to `LOCALES` in `ui/translate.js` (code, its own name, `ltr` or `rtl`, the `Intl` locale, the Chromium `.pak` name and the first day of the week), then copy `ui/locales/en.json` to `ui/locales/<code>.json` and translate the values. The packaged app keeps Chromium's built-in strings for every language listed there.
+- **Add a language:** add an entry to `LOCALES` in `ui/lib/translate.js` (code, its own name, `ltr` or `rtl`, the `Intl` locale, the Chromium `.pak` name and the first day of the week), then copy `ui/locales/en.json` to `ui/locales/<code>.json` and translate the values. The packaged app keeps Chromium's built-in strings for every language listed there.
 - **Check:** `node tools/i18n-keys.cjs` lists the keys each language is missing, and `pnpm test` fails if English is incomplete, Arabic is incomplete, or a translation drops a placeholder.
 
 ### Releasing

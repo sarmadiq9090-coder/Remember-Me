@@ -1,7 +1,7 @@
 'use strict';
 const { dueTasks } = require('../../core/tasks');
 const { nextOccurrence } = require('../../core/repeat');
-const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale } = require('../../../ui/translate');
+const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale } = require('../../../ui/lib/translate');
 
 module.exports = ctx => ({
   state: { readOnly: true, run: () => ({ ...ctx.store.state, dataPath: ctx.app.getPath('userData'), packaged: ctx.app.isPackaged, recovered: ctx.store.recovered, driveBackup: ctx.driveBackup.status(), updates: ctx.updates.status(), openTask: ctx.takeOpenRequest() }) },
