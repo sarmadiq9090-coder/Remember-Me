@@ -2,7 +2,7 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session } = require('electron');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
-const { Store, saveTask, completeTask, snoozeTask, dueTasks } = require('./core');
+const { Store, saveTask, completeTask, undoComplete, snoozeTask, dueTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('./core');
 const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
@@ -15,6 +15,9 @@ app.setAppUserModelId('com.waqt.reminder');
 let mainWindow, alertWindow, tray, store, quitting = false, interval, preview = null, driveBackup, backupInterval;
 const imagePreview = createPreviewService(nativeImage);
 let previousDue = new Set();
+// The task just completed from the alert, which can be undone for a few seconds.
+let undoable = null;
+const UNDO_MS = 6000;
 const icon = path.join(__dirname, '../assets/icon.png');
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
@@ -89,9 +92,13 @@ function scanNow() {
       alertWindow.on('closed', () => { alertWindow = null; });
     } else if (!alertWindow.isVisible()) alertWindow.showInactive();
     if (newlyDue && store.state.settings.sound && !testMode) shell.beep();
-  } else if (alertWindow) { alertWindow.destroy(); alertWindow = null; }
+  } else if (alertWindow && !(undoable && undoable.until > Date.now())) { alertWindow.destroy(); alertWindow = null; }
   if (newlyDue) notifyViews();
   if (tray) tray.setToolTip(tasks.length ? (language() === 'en' ? `Remember Me • ${tasks.length} reminders waiting` : `ذكرني • ${tasks.length} تذكير بانتظارك`) : nativeText('ذكرني • مهامك في وقتها', 'Remember Me • Your tasks on time'));
+}
+function purgeExpiredTrash() {
+  const limit = Date.now() - TRASH_DAYS * 86400000;
+  if ([...store.state.tasks, ...store.state.notes].some(i => i.deletedAt && Date.parse(i.deletedAt) <= limit)) store.change(s => purgeTrash(s));
 }
 function setLogin(enabled) {
   if (testMode) return;
@@ -123,14 +130,26 @@ async function start() {
         case 'saveTask': store.change(s => saveTask(s, payload)); break;
         case 'complete':
           if (payload.id === '__preview') preview = null;
-          else store.change(s => completeTask(s, payload.id));
+          else {
+            const done = store.change(s => completeTask(s, payload.id));
+            value = done;
+            if (done && fromAlert) undoable = { ...done, title: store.state.tasks.find(t => t.id === done.id)?.title || '', until: Date.now() + UNDO_MS };
+          }
           break;
+        case 'undoComplete':
+          if (fromAlert && (!undoable || undoable.id !== payload.id || undoable.copyId !== payload.copyId)) throw new Error(nativeText('انتهت مهلة التراجع.', 'It is too late to undo.'));
+          store.change(s => undoComplete(s, payload.id, String(payload.copyId || '')));
+          undoable = null;
+          break;
+        case 'undoable': value = undoable && undoable.until > Date.now() ? undoable : null; break;
         case 'snooze':
           if (payload.id === '__preview') { if (!payload.until || Date.parse(payload.until) <= Date.now()) throw new Error('اختر وقتًا لاحقًا.'); preview = null; }
           else store.change(s => snoozeTask(s, payload.id, payload.until));
           break;
         case 'reopen': store.change(s => { const t = s.tasks.find(t => t.id === payload.id); if (t) { t.completedAt = null; t.dueAt = null; t.scheduleAt = null; t.repeat = 'none'; t.snoozedAt = null; } }); break;
-        case 'deleteTask': store.change(s => { s.tasks = s.tasks.filter(t => t.id !== payload.id); }); break;
+        case 'deleteTask': store.change(s => trashItem(s, 'tasks', payload.id)); break;
+        case 'restoreTask': store.change(s => restoreItem(s, 'tasks', payload.id)); break;
+        case 'purgeTask': store.change(s => purgeItem(s, 'tasks', payload.id)); break;
         case 'saveNote': store.change(s => {
           const title = String(payload.title || '').trim();
           if (!title || title.length > 200) throw new Error('أضف عنوانًا للملاحظة، حتى 200 حرف.');
@@ -138,7 +157,10 @@ async function start() {
           if (!note) { note = { id: randomUUID(), createdAt: new Date().toISOString() }; s.notes.push(note); }
           Object.assign(note, { title, body: String(payload.body || '').slice(0, 50000), attachments: attachmentIds(payload.attachments ?? note.attachments ?? []), color: ['cream', 'green', 'blue', 'pink'].includes(payload.color) ? payload.color : 'cream', updatedAt: new Date().toISOString() });
         }); break;
-        case 'deleteNote': store.change(s => { s.notes = s.notes.filter(n => n.id !== payload.id); }); break;
+        case 'deleteNote': store.change(s => trashItem(s, 'notes', payload.id)); break;
+        case 'restoreNote': store.change(s => restoreItem(s, 'notes', payload.id)); break;
+        case 'purgeNote': store.change(s => purgeItem(s, 'notes', payload.id)); break;
+        case 'emptyTrash': store.change(s => purgeTrash(s, new Date(), true)); break;
         case 'attachFiles': {
           const remaining = Math.min(MAX_ATTACHMENTS, Math.max(0, Number(payload?.remaining) || 0));
           if (!remaining) throw new Error('وصلت إلى الحد الأقصى: 20 مرفقًا.');
@@ -246,12 +268,13 @@ A safety copy of your current data is saved in the backups folder first.`),
         case 'open': showMain(); break;
         default: throw new Error('إجراء غير معروف.');
       }
-      if (!['state', 'alerts', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder'].includes(action)) { scan(); notifyViews(); }
+      if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder'].includes(action)) { scan(); notifyViews(); }
       return { ok: true, value };
     } catch (error) { return { ok: false, error: error.message }; }
   });
   interval = setInterval(scan, 1000);
-  backupInterval = setInterval(() => driveBackup.tick(), 60000);
+  purgeExpiredTrash();
+  backupInterval = setInterval(() => { driveBackup.tick(); try { purgeExpiredTrash(); } catch (error) { console.error('Trash purge failed:', error); } }, 60000);
   if (!testMode) driveBackup.tick();
   powerMonitor.on('resume', scan);
   powerMonitor.on('unlock-screen', scan);

@@ -26,3 +26,5 @@
 .has-photos .alert-time{margin:6px 0 10px}
 .alert-brand-mark{width:31px;height:31px;object-fit:contain}
 .alert-brand strong{font-size:17px}
+.alert-undo{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 21px;padding:8px 12px;border-radius:9px;background:#eef8f2;color:#2f6b4c;font-size:12px}.alert-undo span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.alert-undo button{color:#2f6b4c;font-weight:700;text-decoration:underline}
+.all-done .alert-content>*:not(#alert-all-done){display:none!important}.alert-all-done{margin:auto;padding:60px 10px;text-align:center;font-size:17px;font-weight:600;color:#5e4c8c}

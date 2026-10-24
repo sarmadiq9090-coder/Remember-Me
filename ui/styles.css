@@ -104,3 +104,4 @@
 [dir=rtl] :is(.task-name,.task-body,.note-card h3,.note-card p){text-align:right}
 .nav-item.needs-attention::after{content:'';width:8px;height:8px;border-radius:50%;background:#d9534f;margin-inline-start:auto}
 .repeat-days{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.repeat-days button{border:1px solid var(--border);border-radius:8px;padding:6px 10px;background:#fff;font-size:12px}.repeat-days button[aria-pressed=true]{background:var(--purple-light);border-color:#ac93e4;color:var(--purple);font-weight:600}
+.toast-action{margin-inline-start:10px;color:inherit;font-weight:700;text-decoration:underline}

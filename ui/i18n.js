@@ -34,10 +34,10 @@ const english = new Map(Object.entries({
   'إلغاء': 'Cancel', 'حفظ المهمة': 'Save task', 'لا تدع الفكرة تفوتك': "Don't let the idea slip away", 'ملاحظة جديدة': 'New note', 'عنوان الملاحظة': 'Note title', 'فكرة تستحق الاحتفاظ بها…': 'An idea worth keeping…',
   'الملاحظة': 'Note', 'اكتب بحرية…': 'Write freely…', 'أرفق PDF أو Excel أو أي ملف بجانب ملاحظتك. نحفظ نسخة مستقلة حتى 50 ميغابايت للملف.': 'Attach a PDF, Excel sheet, or any file to your note. We keep an independent copy up to 50 MB.',
   'لون الملاحظة': 'Note color', 'كريمي': 'Cream', 'أخضر هادئ': 'Soft green', 'أزرق': 'Blue', 'وردي': 'Pink', 'حفظ الملاحظة': 'Save note',
-  'حذف هذا العنصر؟': 'Delete this item?', 'سيُحذف من قائمتك. لا يمكن التراجع عن الحذف.': 'It will be removed from your list. This cannot be undone.', 'حذف': 'Delete',
+  'حذف نهائيًا؟': 'Delete permanently?', 'سيُحذف هذا العنصر من المحذوفات نهائيًا. لا يمكن التراجع عن ذلك.': 'This item will be removed from the trash for good. This cannot be undone.', 'المحذوفات': 'Trash', 'العناصر المحذوفة': 'Deleted items', 'إفراغ المحذوفات': 'Empty trash', 'لا شيء في المحذوفات': 'Nothing in the trash', 'ما تحذفه من مهام وملاحظات يبقى هنا 30 يومًا، ويمكنك استعادته.': 'Tasks and notes you delete stay here for 30 days and can be restored.', 'حذف': 'Delete',
   'تذكير لك': 'A reminder for you', 'حان الموعد': 'It is time', 'مساحة صغيرة لشيء مهم': 'A small space for something important', 'تم، أنجزتها': 'Done, completed',
   'أو ذكّرني لاحقًا': 'Or remind me later', '5 دقائق': '5 minutes', '15 دقيقة': '15 minutes', 'ساعة': '1 hour', '24 ساعة': '24 hours', 'اختر موعدًا آخر': 'Choose another time',
-  'سأبقى هنا حتى تنجزها أو تختار وقتًا آخر.': 'I will stay here until you complete it or choose another time.', 'فتح ذكرني': 'Open Remember Me'
+  'سأبقى هنا حتى تنجزها أو تختار وقتًا آخر.': 'I will stay here until you complete it or choose another time.', 'فتح ذكرني': 'Open Remember Me', 'تراجع': 'Undo', 'أحسنت! لا تذكيرات أخرى الآن.': 'Well done! No more reminders right now.'
 }));
 function tr(ar, en) { return uiLanguage === 'en' ? en : ar; }
 function setLanguage(language) {

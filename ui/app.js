@@ -1,4 +1,4 @@
-let state, view = 'today', filter = 'all', query = '', pendingDelete, toastTimer;
+let state, trash = [], view = 'today', filter = 'all', query = '', pendingDelete, toastTimer;
 let taskAttachments = [], noteAttachments = [];
 let originalTaskDue = null, originalTaskDueValue = '';
 const $ = id => document.getElementById(id);
@@ -8,10 +8,28 @@ const views = {
   all: [['كل المهام','All tasks'], ['كل ما يشغل بالك','Everything on your mind'], ['مكان واحد لمهامك، من الفكرة حتى الإنجاز.','One place for your tasks, from idea to completion.'], ['كل المهام','All tasks']],
   completed: [['المكتملة','Completed'], ['خطوات تستحق التقدير','Steps worth celebrating'], ['هذه الأشياء الصغيرة صنعت فرقًا في يومك.','These small things made a difference in your day.'], ['المهام المكتملة','Completed tasks']],
   notes: [['ملاحظاتي','My notes'], ['أفكارك، في مكانها','Your ideas, in their place'], ['اكتب فكرة، احتفظ بتفصيل، أو أفرغ ما يدور في بالك.','Write an idea, keep a detail, or clear your mind.'], ['','']],
+  trash: [['المحذوفات','Trash'], ['ما حذفته مؤخرًا','Recently deleted'], ['تبقى العناصر المحذوفة هنا 30 يومًا، ثم تُحذف نهائيًا.','Deleted items stay here for 30 days, then are removed for good.'], ['','']],
   settings: [['الإعدادات','Settings'], ['ذكرني، على طريقتك','Remember Me, your way'], ['تفاصيل بسيطة تجعل مساحتك أقرب إليك.','Small details that make the space feel yours.'], ['','']],
 };
-function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 4500); }
-async function refresh() { try { state = await api('state'); setLanguage(state.settings.language); render(); } catch (e) { toast(e.message); } }
+// An optional undo callback adds an Undo button and keeps the message up a little longer.
+function toast(message, undo) {
+  const el = $('toast'); el.textContent = message;
+  if (undo) {
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'toast-action'; button.textContent = tr('تراجع', 'Undo');
+    button.addEventListener('click', async () => { el.hidden = true; try { await undo(); await refresh(); } catch (e) { toast(e.message); } }, { once: true });
+    el.append(' ', button);
+  }
+  el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, undo ? 7000 : 4500);
+}
+async function refresh() {
+  try {
+    state = await api('state');
+    // Deleted items only appear in the trash view; every other view works on the rest.
+    trash = [...state.tasks.filter(t => t.deletedAt).map(item => ({ kind: 'Task', item })), ...state.notes.filter(n => n.deletedAt).map(item => ({ kind: 'Note', item }))].sort((a, b) => Date.parse(b.item.deletedAt) - Date.parse(a.item.deletedAt));
+    state.tasks = state.tasks.filter(t => !t.deletedAt); state.notes = state.notes.filter(n => !n.deletedAt);
+    setLanguage(state.settings.language); render();
+  } catch (e) { toast(e.message); }
+}
 function todayEnd() { const d = new Date(); d.setHours(23, 59, 59, 999); return d.getTime(); }
 function todayTasks() { return state.tasks.filter(t => !t.completedAt && (!t.dueAt || Date.parse(t.dueAt) <= todayEnd())); }
 function setView(next) {
@@ -30,7 +48,7 @@ function render() {
   const active = state.tasks.filter(t => !t.completedAt), today = todayTasks();
   const complete = state.tasks.filter(t => t.completedAt);
   const upcoming = active.filter(t => t.dueAt && Date.parse(t.dueAt) > todayEnd());
-  for (const [key, value] of Object.entries({ today: today.length, all: active.length, upcoming: upcoming.length, notes: state.notes.length, completed: complete.length })) $('count-' + key).textContent = value;
+  for (const [key, value] of Object.entries({ today: today.length, all: active.length, upcoming: upcoming.length, notes: state.notes.length, completed: complete.length, trash: trash.length })) $('count-' + key).textContent = value;
   document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   document.querySelector('.nav-item[data-view="settings"]').classList.toggle('needs-attention', !!state.driveBackup?.stale);
   document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
@@ -40,10 +58,11 @@ function render() {
   $('page-description').textContent = names[2];
   $('date-label').textContent = new Date().toLocaleDateString(uiLanguage === 'en' ? 'en-US' : 'ar-IQ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   $('dashboard').hidden = view !== 'today';
-  $('tasks-section').hidden = ['notes', 'settings'].includes(view);
+  $('tasks-section').hidden = ['notes', 'settings', 'trash'].includes(view);
+  $('trash-section').hidden = view !== 'trash';
   $('notes-section').hidden = view !== 'notes';
   $('settings-section').hidden = view !== 'settings';
-  $('page-add').hidden = view === 'settings' || view === 'completed';
+  $('page-add').hidden = ['settings', 'completed', 'trash'].includes(view);
   $('page-add-label').textContent = view === 'notes' ? tr('ملاحظة جديدة','New note') : tr('إضافة مهمة','Add task');
   $('stat-active').textContent = today.length;
   const doneToday = complete.filter(t => isToday(t.completedAt)).length;
@@ -55,6 +74,7 @@ function render() {
   $('hero-title').textContent = doneToday ? (uiLanguage === 'en' ? `You completed ${doneToday} ${doneToday === 1 ? 'task. A beautiful start!' : 'tasks. Keep going at your pace.'}` : `أنجزت ${doneToday} ${doneToday === 1 ? 'مهمة. بداية جميلة!' : 'مهام. واصل على مهلك.'}`) : tr('كل شيء يبدأ بخطوة.','Everything starts with one step.');
   $('hero-description').textContent = today.length ? (uiLanguage === 'en' ? `You have ${today.length} ${today.length === 1 ? 'task' : 'tasks'} waiting. Choose one and begin there.` : `لديك ${today.length} ${today.length === 1 ? 'مهمة بانتظارك' : 'مهام بانتظارك'}. اختر واحدة، وابدأ من هناك.`) : tr('أضف ما يشغلك، وحدّد وقته. نحن هنا لنذكّرك.','Add what matters and set its time. We will remind you.');
   if (view === 'notes') renderNotes();
+  else if (view === 'trash') renderTrash();
   else if (view === 'settings') {
     $('setting-sound').checked = state.settings.sound;
     $('setting-startup').checked = state.settings.startAtLogin;
@@ -147,7 +167,27 @@ function openNoteEditor(note) {
   noteAttachments = [...(note?.attachments || [])]; renderEditorFiles('note');
   $('note-dialog').showModal(); $('note-title').focus();
 }
-function askDelete(type, id) { pendingDelete = { type, id }; $('confirm-dialog').showModal(); }
+function askPurge(action, id) {
+  pendingDelete = { action, id };
+  $('confirm-title').textContent = action === 'emptyTrash' ? tr('إفراغ المحذوفات؟', 'Empty the trash?') : tr('حذف نهائيًا؟', 'Delete permanently?');
+  $('confirm-text').textContent = action === 'emptyTrash' ? (uiLanguage === 'en' ? `${trash.length} items will be removed for good. This cannot be undone.` : `ستُحذف ${trash.length} من العناصر نهائيًا. لا يمكن التراجع عن ذلك.`) : tr('سيُحذف هذا العنصر من المحذوفات نهائيًا. لا يمكن التراجع عن ذلك.', 'This item will be removed from the trash for good. This cannot be undone.');
+  $('confirm-dialog').showModal();
+}
+async function moveToTrash(kind, id) {
+  try { await api('delete' + kind, { id }); await refresh(); toast(kind === 'Task' ? tr('نُقلت المهمة إلى المحذوفات.', 'Task moved to the trash.') : tr('نُقلت الملاحظة إلى المحذوفات.', 'Note moved to the trash.'), () => api('restore' + kind, { id })); }
+  catch (err) { toast(err.message); }
+}
+function renderTrash() {
+  const items = trash.filter(({ item }) => matchesSearch(item, query));
+  $('trash-count').textContent = items.length;
+  $('empty-trash').hidden = !trash.length;
+  $('trash-list').innerHTML = items.map(({ kind, item }) => {
+    const left = Math.max(1, 30 - Math.floor((Date.now() - Date.parse(item.deletedAt)) / 86400000));
+    const when = uiLanguage === 'en' ? `${kind === 'Task' ? 'Task' : 'Note'} • deleted ${dateLabel(item.deletedAt)} • removed in ${left} days` : `${kind === 'Task' ? 'مهمة' : 'ملاحظة'} • حُذفت ${dateLabel(item.deletedAt)} • تُحذف نهائيًا بعد ${left} يومًا`;
+    return `<article class="task-row" data-kind="${kind}" data-id="${esc(item.id)}"><div class="task-info"><div class="task-name" dir="auto">${esc(item.title)}</div><div class="task-meta"><span>${icon('trash')}${esc(when)}</span></div></div><div class="task-actions"><button class="soft-button" data-trash="restore">${icon('undo')} ${tr('استعادة', 'Restore')}</button><button class="icon-button" data-trash="purge" title="${tr('حذف نهائيًا', 'Delete permanently')}" aria-label="${tr('حذف نهائيًا', 'Delete permanently')} ${esc(item.title)}">${icon('x')}</button></div></article>`;
+  }).join('');
+  $('trash-empty').hidden = !!items.length;
+}
 function renderEditorFiles(type) {
   const ids = type === 'task' ? taskAttachments : noteAttachments;
   $(type + '-files').innerHTML = ids.map(id => state.attachments.find(a => a.id === id)).filter(Boolean).map(a => fileMarkup(a, true)).join('');
@@ -227,8 +267,8 @@ $('task-list').addEventListener('click', async e => {
   const button = e.target.closest('[data-action]'), row = e.target.closest('[data-id]'); if (!button || !row) return;
   const id = row.dataset.id, action = button.dataset.action;
   if (action === 'edit') return openTaskEditor(state.tasks.find(t => t.id === id));
-  if (action === 'delete') return askDelete('Task', id);
-  try { await api(action, { id }); await refresh(); toast(action === 'complete' ? tr('تمت المهمة. أحسنت، كل خطوة تُحسب!','Task completed. Well done—every step counts!') : tr('أُعيدت المهمة دون موعد. افتحها لتعيين تذكير جديد.','Task reopened without a due date. Open it to set a reminder.')); } catch (err) { toast(err.message); }
+  if (action === 'delete') return moveToTrash('Task', id);
+  try { const done = await api(action, { id }); await refresh(); toast(action === 'complete' ? tr('تمت المهمة. أحسنت، كل خطوة تُحسب!','Task completed. Well done—every step counts!') : tr('أُعيدت المهمة دون موعد. افتحها لتعيين تذكير جديد.','Task reopened without a due date. Open it to set a reminder.'), action === 'complete' && done ? () => api('undoComplete', done) : undefined); } catch (err) { toast(err.message); }
 });
 $('task-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('task-edit-target')) { e.preventDefault(); e.target.click(); } });
 $('note-form').addEventListener('submit', async e => {
@@ -236,10 +276,17 @@ $('note-form').addEventListener('submit', async e => {
   try { await api('saveNote', { id: $('note-id').value || undefined, title: $('note-title').value, body: $('note-body').value, color: $('note-color').value, attachments: noteAttachments }); $('note-dialog').close(); await refresh(); toast(tr('حُفظت ملاحظتك.','Note saved.')); }
   catch (err) { $('note-error').textContent = err.message; } finally { e.submitter.disabled = false; }
 });
-$('notes-list').addEventListener('click', e => { const file = e.target.closest('[data-file-id]'); if (file) return openFile(file.dataset.fileId); const card = e.target.closest('[data-id]'); if (!card) return; if (e.target.closest('[data-action="delete"]')) return askDelete('Note', card.dataset.id); openNoteEditor(state.notes.find(n => n.id === card.dataset.id)); });
+$('notes-list').addEventListener('click', e => { const file = e.target.closest('[data-file-id]'); if (file) return openFile(file.dataset.fileId); const card = e.target.closest('[data-id]'); if (!card) return; if (e.target.closest('[data-action="delete"]')) return moveToTrash('Note', card.dataset.id); openNoteEditor(state.notes.find(n => n.id === card.dataset.id)); });
 $('notes-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('note-edit-target')) { e.preventDefault(); e.target.click(); } });
 $('cancel-delete').addEventListener('click', () => $('confirm-dialog').close());
-$('confirm-delete').addEventListener('click', async () => { if (!pendingDelete) return; try { await api('delete' + pendingDelete.type, { id: pendingDelete.id }); pendingDelete = null; $('confirm-dialog').close(); await refresh(); toast(tr('تم الحذف.','Deleted.')); } catch (err) { toast(err.message); } });
+$('confirm-delete').addEventListener('click', async () => { if (!pendingDelete) return; try { await api(pendingDelete.action, pendingDelete.id ? { id: pendingDelete.id } : undefined); pendingDelete = null; $('confirm-dialog').close(); await refresh(); toast(tr('حُذف نهائيًا.', 'Deleted permanently.')); } catch (err) { toast(err.message); } });
+$('trash-list').addEventListener('click', async e => {
+  const button = e.target.closest('[data-trash]'), row = e.target.closest('[data-id]'); if (!button || !row) return;
+  const { kind, id } = row.dataset;
+  if (button.dataset.trash === 'purge') return askPurge('purge' + kind, id);
+  try { await api('restore' + kind, { id }); await refresh(); toast(kind === 'Task' ? tr('استُعيدت المهمة.', 'Task restored.') : tr('استُعيدت الملاحظة.', 'Note restored.')); } catch (err) { toast(err.message); }
+});
+$('empty-trash').addEventListener('click', () => askPurge('emptyTrash'));
 for (const id of ['preview-alert', 'settings-preview']) $(id).addEventListener('click', async () => { try { await api('preview'); toast(tr('ظهر التنبيه فوق شريط المهام.','The alert appeared above the taskbar.')); } catch (err) { toast(err.message); } });
 for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language']) $(id).addEventListener('change', async () => {
   try { await api('settings', { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value }); await refresh(); toast(tr('حُفظت الإعدادات.','Settings saved.')); }
