@@ -1,4 +1,4 @@
-/* Every color is a theme token from ui/theme.css. */
+/* Every color is a theme token from ui/styles/theme.css. */
 .alert-body{background:var(--surface);height:100vh;overflow:hidden}
 .alert-shell{height:100vh;border:1px solid var(--border);border-top:4px solid var(--accent);display:flex;flex-direction:column}
 .alert-shell.overdue{border-top-color:var(--danger)}

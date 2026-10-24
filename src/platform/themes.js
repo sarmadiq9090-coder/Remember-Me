@@ -1,8 +1,8 @@
 'use strict';
-// Reads the palette tokens from ui/theme.css, so window backgrounds and tests use the colors the pages use.
+// Reads the palette tokens from ui/styles/theme.css, so window backgrounds and tests use the colors the pages use.
 const fs = require('node:fs');
 const path = require('node:path');
-const FILE = path.join(__dirname, '../../ui/theme.css');
+const FILE = path.join(__dirname, '../../ui/styles/theme.css');
 
 // { palette: { light: { token: value }, dark: { ... } } } for every rule that names [data-palette=...].
 // attribute 'data-paper' reads the note papers instead; a bare [attribute] rule is listed under '*'.

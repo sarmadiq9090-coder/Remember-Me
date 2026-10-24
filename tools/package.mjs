@@ -15,8 +15,8 @@ const FuseState = { DISABLE: 48, ENABLE: 49 };
 const bundled = ['/package.json', '/LICENSE', '/src', '/ui', '/assets'];
 const ignore = file => !!file && !bundled.some(entry => file === entry || file.startsWith(entry + '/'));
 // Chromium's own strings (date pickers, context menus) are kept for every interface language in
-// ui/translate.js, so the list cannot drift from the app's; other system languages use en-US.
-const locales = new Set(require('../ui/translate.js').LOCALES.map(l => l.chromium + '.pak'));
+// ui/lib/translate.js, so the list cannot drift from the app's; other system languages use en-US.
+const locales = new Set(require('../ui/lib/translate.js').LOCALES.map(l => l.chromium + '.pak'));
 async function pruneLocales({ buildPath }) {
   const folder = path.join(buildPath, 'locales');
   for (const name of await fs.readdir(folder)) if (!locales.has(name)) await fs.rm(path.join(folder, name));

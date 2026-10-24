@@ -2,15 +2,15 @@
 const { randomUUID } = require('node:crypto');
 const { attachmentIds, validateAttachment } = require('./records');
 const { nextOccurrence } = require('./repeat');
-const { LOCALES, DEFAULT: DEFAULT_LOCALE } = require('../../ui/translate');
+const { LOCALES, DEFAULT: DEFAULT_LOCALE } = require('../../ui/lib/translate');
 const { validPause } = require('./pause');
 
 function initialState() {
   return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: DEFAULT_LOCALE, weekStart: 6, theme: 'system', palette: 'lavender', autoUpdate: null, pausedUntil: null } };
 }
-// Interface palettes in ui/theme.css; anything else shows Lavender.
+// Interface palettes in ui/styles/theme.css; anything else shows Lavender.
 const PALETTES = ['lavender', 'ocean', 'forest', 'sunset', 'graphite', 'contrast'];
-// Note paper colors (ui/theme.css) and styles. Notes saved before styles existed have none and show as plain.
+// Note paper colors (ui/styles/theme.css) and styles. Notes saved before styles existed have none and show as plain.
 const NOTE_COLORS = ['cream', 'yellow', 'orange', 'red', 'pink', 'purple', 'blue', 'green', 'gray', 'white'];
 const NOTE_STYLES = ['plain', 'sticky', 'lined'];
 function noteLook({ color, style } = {}) {

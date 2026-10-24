@@ -63,7 +63,7 @@ function localDateValue(date) { const d = new Date(date); return new Date(d.getT
 function isToday(value) { return value && new Date(value).toDateString() === new Date().toDateString(); }
 function timeLabel(value) { return new Date(value).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }); }
 function dateLabel(value) { if (!value) return ''; const d = new Date(value); return `${isToday(value) ? tr("Today") : d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' })}${tr(", ")}${timeLabel(value)}`; }
-// Interface palettes (ui/theme.css). The preload carries the saved one, so the first paint already uses it.
+// Interface palettes (ui/styles/theme.css). The preload carries the saved one, so the first paint already uses it.
 const PALETTES = ['lavender', 'ocean', 'forest', 'sunset', 'graphite', 'contrast'];
 function applyPalette(palette) { document.documentElement.dataset.palette = PALETTES.includes(palette) ? palette : 'lavender'; }
 applyPalette(globalThis.waqt?.palette);

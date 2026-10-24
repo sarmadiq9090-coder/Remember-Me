@@ -1,5 +1,5 @@
 'use strict';
-const { format } = require('../../ui/translate');
+const { format } = require('../../ui/lib/translate');
 // An error shown to the user. The message is English; key and params let the main process
 // translate it into the interface language when it is reported.
 class UserError extends Error {

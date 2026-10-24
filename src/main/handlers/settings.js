@@ -1,6 +1,6 @@
 'use strict';
 const { REMIND_AGAIN, PALETTES } = require('../../core/tasks');
-const { LOCALES, DEFAULT: DEFAULT_LOCALE } = require('../../../ui/translate');
+const { LOCALES, DEFAULT: DEFAULT_LOCALE } = require('../../../ui/lib/translate');
 
 module.exports = ctx => ({
   settings: { run: payload => {

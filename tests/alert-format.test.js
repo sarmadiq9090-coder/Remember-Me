@@ -1,6 +1,6 @@
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
-const { SNOOZE_PRESETS, snoozeTime, isOverdue, overdueAge, dueWhen, isShortcut, createInteractionGuard } = require('../ui/alert-format');
+const { SNOOZE_PRESETS, snoozeTime, isOverdue, overdueAge, dueWhen, isShortcut, createInteractionGuard } = require('../ui/lib/alert-format');
 const originalTZ = process.env.TZ;
 after(() => { if (originalTZ === undefined) delete process.env.TZ; else process.env.TZ = originalTZ; });
 

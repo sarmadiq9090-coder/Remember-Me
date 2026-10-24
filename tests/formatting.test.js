@@ -7,7 +7,7 @@ const vm = require('node:vm');
 // Loads the browser scripts that format dates, the way index.html and alert.html do.
 function loadUi(language) {
   const context = vm.createContext({ document: { querySelectorAll: () => [], addEventListener: () => {}, documentElement: { dataset: {} } } });
-  for (const file of ['translate.js', 'i18n.js', 'shared.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../ui', file), 'utf8'), context, { filename: file });
+  for (const file of ['translate.js', 'i18n.js', 'shared.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../ui/lib', file), 'utf8'), context, { filename: file });
   vm.runInContext(`uiLanguage = ${JSON.stringify(language)}; uiLocale = findLocale(uiLanguage);`, context);
   return code => vm.runInContext(code, context);
 }
@@ -15,7 +15,7 @@ function loadUi(language) {
 const easternDigits = /[٠-٩۰-۹]/;
 
 test('dates, times and counts use Western digits in every interface language', () => {
-  for (const language of require('../ui/translate').LOCALES.map(l => l.code)) {
+  for (const language of require('../ui/lib/translate').LOCALES.map(l => l.code)) {
     const run = loadUi(language);
     const labels = run(`[
       timeLabel(new Date(2026, 9, 24, 21, 5)), dateLabel(new Date(2027, 1, 14, 21, 5).toISOString()), dateLabel(new Date().toISOString()),

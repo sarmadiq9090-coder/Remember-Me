@@ -55,7 +55,7 @@ async function alertPage() {
     });
     assert.deepEqual(arabicLeft, [], 'Arabic text in the English interface');
     const languages = await page.locator('#setting-language option').allTextContents();
-    assert.deepEqual(languages, require('../ui/translate').LOCALES.map(l => l.name), 'Languages are listed by their own names');
+    assert.deepEqual(languages, require('../ui/lib/translate').LOCALES.map(l => l.name), 'Languages are listed by their own names');
     assert.deepEqual(languages.slice(0, 2), ['English', 'العربية']);
     assert.ok((await page.locator('.brand').textContent()).includes('Remember Me'));
     assert.ok((await page.locator('#settings-section').textContent()).includes('Language'));

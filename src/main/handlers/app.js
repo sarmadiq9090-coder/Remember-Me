@@ -1,7 +1,7 @@
 'use strict';
 const { dueTasks } = require('../../core/tasks');
 const { nextOccurrence } = require('../../core/repeat');
-const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale } = require('../../../ui/translate');
+const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale } = require('../../../ui/lib/translate');
 
 module.exports = ctx => ({
   state: { readOnly: true, run: () => ({ ...ctx.store.state, dataPath: ctx.app.getPath('userData'), packaged: ctx.app.isPackaged, recovered: ctx.store.recovered, driveBackup: ctx.driveBackup.status(), updates: ctx.updates.status(), openTask: ctx.takeOpenRequest() }) },
@@ -12,7 +12,8 @@ module.exports = ctx => ({
       next: t.repeat && t.repeat !== 'none' && t.scheduleAt ? nextOccurrence(t.scheduleAt, t.repeat, now, t) : null }));
   } },
   language: { readOnly: true, run: () => ({ language: ctx.language(), palette: ctx.store.state.settings.palette }) },
-  locale: { run: payload => {
+  // Reads translations only; each window asks once per language inside its own refresh, before rendering.
+  locale: { readOnly: true, run: payload => {
     const code = LOCALES.some(l => l.code === payload.code) ? payload.code : ctx.language();
     return { ...findLocale(code), messages: ctx.messages(code), fallback: ctx.messages(DEFAULT_LOCALE) };
   } },

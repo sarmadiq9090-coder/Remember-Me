@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { normalizeSearch, matchesSearch } = require('../ui/search');
+const { normalizeSearch, matchesSearch } = require('../ui/lib/search');
 
 test('Arabic search ignores diacritics, tatweel, hamza forms, taa marbuta and alef maqsura', () => {
   const item = { title: 'مُراجَعة خطّة الأسبوع مع أحمد', body: 'الاتصـــال بالمستشفى، ومسؤول المبنى، والإنشاء' };

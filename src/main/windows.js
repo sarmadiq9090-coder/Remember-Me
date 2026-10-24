@@ -10,7 +10,7 @@ const windowIcon = path.join(__dirname, '../../assets/icon.ico');
 function createWindows(ctx) {
   let mainWindow, alertWindow;
   const { tr } = ctx;
-  // Window backgrounds match the page's palette and mode (ui/theme.css), so opening a window never flashes another theme.
+  // Window backgrounds match the page's palette and mode (ui/styles/theme.css), so opening a window never flashes another theme.
   function background(kind) { return windowColors(ctx.store.state.settings.palette, nativeTheme.shouldUseDarkColors)[kind]; }
   function applyTheme() {
     nativeTheme.themeSource = ctx.store.state.settings.theme;

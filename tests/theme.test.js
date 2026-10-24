@@ -49,7 +49,7 @@ test('text, buttons and focus rings meet WCAG contrast in every palette and mode
 });
 
 test('the brand mark stands out from its tile in every palette and mode', () => {
-  // ui/theme.css: light marks put --on-accent on an accent tile, dark marks put --accent on an accent-soft tile.
+  // ui/styles/theme.css: light marks put --on-accent on an accent tile, dark marks put --accent on an accent-soft tile.
   const failures = [];
   for (const id of PALETTES) for (const mode of MODES) {
     const t = palettes[id][mode];
@@ -58,7 +58,7 @@ test('the brand mark stands out from its tile in every palette and mode', () => 
     for (const [fg, bg] of [...pairs, ['surface', 'success'], ['success-ink', 'success-soft']]) if (contrast(t[fg], t[bg]) < 3) failures.push(`${id} ${mode}: ${fg} on ${bg}`);
   }
   assert.deepEqual(failures, []);
-  const shared = fs.readFileSync(path.join(__dirname, '../ui/shared.js'), 'utf8');
+  const shared = fs.readFileSync(path.join(__dirname, '../ui/lib/shared.js'), 'utf8');
   assert.ok(!/#[0-9a-f]{3,8}\b/i.test(shared.slice(shared.indexOf('function brandMark'), shared.indexOf('function hydrateBrandMarks'))), 'The mark uses tokens, not fixed colors');
 });
 
@@ -84,9 +84,9 @@ test('stylesheets take their colors from the theme tokens', () => {
   // Neutral shadows, the photo caption overlay and the fixed illustration colors are the only literals left.
   const allowed = new Set(['#0001', '#0002', '#0003', '#30293b99', 'white', '#c5dfbd', '#54774f']);
   for (const name of ['styles.css', 'alert.css']) {
-    const source = fs.readFileSync(path.join(__dirname, '../ui', name), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const source = fs.readFileSync(path.join(__dirname, '../ui/styles', name), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
     const literals = (source.match(/#[0-9a-f]{3,8}\b|\b(?:white|black)\b|rgba?\([^)]*\)/gi) || []).filter(c => !allowed.has(c.toLowerCase()));
-    assert.deepEqual(literals, [], `${name} has hard-coded colors; add a token to ui/theme.css instead`);
+    assert.deepEqual(literals, [], `${name} has hard-coded colors; add a token to ui/styles/theme.css instead`);
   }
 });
 
@@ -144,11 +144,13 @@ test('note colors and styles validate, with cream and plain as fallbacks', () =>
 });
 
 test('the note editor offers every color and style', () => {
-  const app = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
+  // The main window's scripts, however they are split into files.
+  const appDir = path.join(__dirname, '../ui/main');
+  const app = fs.readdirSync(appDir, { recursive: true }).map(String).filter(name => name.endsWith('.js')).map(name => fs.readFileSync(path.join(appDir, name), 'utf8')).join('\n');
   const listed = name => [...(app.match(new RegExp(`const ${name} = \\[(.*)\\];`)) || ['', ''])[1].matchAll(/\['(\w+)'/g)].map(m => m[1]);
   assert.deepEqual(listed('NOTE_COLORS'), NOTE_COLORS);
   assert.deepEqual(listed('NOTE_STYLES'), NOTE_STYLES);
   assert.deepEqual(listed('PALETTE_NAMES'), PALETTES);
-  const shared = fs.readFileSync(path.join(__dirname, '../ui/shared.js'), 'utf8');
+  const shared = fs.readFileSync(path.join(__dirname, '../ui/lib/shared.js'), 'utf8');
   assert.deepEqual([...shared.match(/const PALETTES = \[(.*)\];/)[1].matchAll(/'(\w+)'/g)].map(m => m[1]), PALETTES);
 });
