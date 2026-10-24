@@ -12,7 +12,7 @@
   "keywords": ["reminder", "todo", "notes", "windows", "electron", "arabic", "english"],
   "scripts": {
     "start": "electron .",
-    "test": "node --test tests/core.test.js tests/scheduling.test.js tests/ipc.test.js tests/placement.test.js tests/search.test.js tests/attachments.test.js tests/backups.test.js tests/drive-backup.test.js tests/dark-theme.test.js",
+    "test": "node --test tests/core.test.js tests/scheduling.test.js tests/ipc.test.js tests/placement.test.js tests/search.test.js tests/attachments.test.js tests/backups.test.js tests/drive-backup.test.js tests/dark-theme.test.js tests/formatting.test.js",
     "package": "node tools/package.mjs",
     "installer": "node tools/installer.cjs"
   },

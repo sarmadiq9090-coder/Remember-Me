@@ -171,14 +171,24 @@ test('deleted items wait 30 days in the trash, out of every list and alert, and 
   assert.equal(loaded.tasks[0].deletedAt, null, 'A malformed deletion date restores the task rather than hiding it');
   assert.throws(() => trashItem(s, 'settings', 'x'));
 });
-test('digit style, first weekday and Hijri settings default to the previous behaviour and reject unknown values', () => {
+test('the week starts on Saturday unless Sunday or Monday was chosen', () => {
   const { validateState } = require('../src/core');
   const base = initialState();
-  assert.deepEqual([base.settings.digits, base.settings.weekStart, base.settings.hijri], ['auto', 'auto', false]);
-  const ok = validateState({ ...base, settings: { ...base.settings, digits: 'latn', weekStart: 1, hijri: true } }).settings;
-  assert.deepEqual([ok.digits, ok.weekStart, ok.hijri], ['latn', 1, true]);
-  const bad = validateState({ ...base, settings: { ...base.settings, digits: 'roman', weekStart: 3, hijri: 'yes' } }).settings;
-  assert.deepEqual([bad.digits, bad.weekStart, bad.hijri], ['auto', 'auto', false]);
+  assert.equal(base.settings.weekStart, 6);
+  assert.equal(validateState({ ...base, settings: { ...base.settings, weekStart: 1 } }).settings.weekStart, 1);
+  assert.equal(validateState({ ...base, settings: { ...base.settings, weekStart: 0 } }).settings.weekStart, 0);
+  for (const weekStart of [3, 'auto', '6', null]) assert.equal(validateState({ ...base, settings: { ...base.settings, weekStart } }).settings.weekStart, 6, String(weekStart));
+  assert.equal(validateState({ ...base, settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'en' } }).settings.weekStart, 6, 'v1.4.0 data has no weekStart and gets Saturday');
+});
+test('data saved with the removed Hijri date and digit style options still loads, without those fields', () => {
+  const { validateState } = require('../src/core');
+  const old = JSON.parse(JSON.stringify({ ...initialState(), settings: { ...initialState().settings, hijri: true, digits: 'arab' } }));
+  saveTask(old, { title: 'kept' });
+  const loaded = validateState(old);
+  assert.ok(!('hijri' in loaded.settings) && !('digits' in loaded.settings));
+  assert.equal(loaded.tasks[0].title, 'kept');
+  const odd = validateState({ ...initialState(), settings: { hijri: 'yes', digits: 'roman' } }).settings;
+  assert.ok(!('hijri' in odd) && !('digits' in odd));
 });
 test('a repeated Done or snooze for an occurrence that already moved on changes nothing', () => {
   const s = initialState();

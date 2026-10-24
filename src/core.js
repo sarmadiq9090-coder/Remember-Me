@@ -5,7 +5,7 @@ const path = require('node:path');
 const { attachmentIds, validateAttachment } = require('./attachments');
 
 function initialState() {
-  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'ar', digits: 'auto', weekStart: 'auto', hijri: false, theme: 'system' } };
+  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'ar', weekStart: 6, theme: 'system' } };
 }
 // Minutes between repeated alert sounds; 0 is off. Data from before the setting has no value, meaning off.
 const REMIND_AGAIN = [0, 2, 5, 15];
@@ -241,10 +241,13 @@ function validateState(data) {
   const defaults = initialState().settings;
   const saved = data.settings && typeof data.settings === 'object' && !Array.isArray(data.settings) ? data.settings : {};
   data.settings = { ...defaults, ...saved };
-  for (const key of ['sound', 'startAtLogin', 'hijri']) if (typeof data.settings[key] !== 'boolean') data.settings[key] = defaults[key];
-  if (!['auto', 'arab', 'latn'].includes(data.settings.digits)) data.settings.digits = 'auto';
+  // The Hijri date and digit style options were removed; data saved while they existed drops the fields.
+  delete data.settings.hijri;
+  delete data.settings.digits;
+  for (const key of ['sound', 'startAtLogin']) if (typeof data.settings[key] !== 'boolean') data.settings[key] = defaults[key];
   if (!['system', 'light', 'dark'].includes(data.settings.theme)) data.settings.theme = 'system';
-  if (!['auto', 0, 1, 6].includes(data.settings.weekStart)) data.settings.weekStart = 'auto';
+  // Saturday is the first weekday unless Sunday or Monday was chosen (older data has no value).
+  if (![0, 1, 6].includes(data.settings.weekStart)) data.settings.weekStart = 6;
   data.settings.alertSide = data.settings.alertSide === 'left' ? 'left' : 'right';
   data.settings.language = data.settings.language === 'en' ? 'en' : 'ar';
   if (data.settings.remindAgain !== undefined && !REMIND_AGAIN.includes(data.settings.remindAgain)) data.settings.remindAgain = 0;
