@@ -99,7 +99,7 @@ class DriveBackup {
       const state = this.getState();
       const fingerprint = createHash('sha256').update(JSON.stringify(state), 'utf8').digest('hex');
       const reusable = this.config.pending && this.config.lastLocalPath && fs.existsSync(path.join(this.config.lastLocalPath, 'data.json'))
-        && this.config.snapshotHash === fingerprint && this.clock() - Date.parse(this.config.snapshotAt) < 86400000;
+        && this.config.snapshotHash === fingerprint && this.age(this.config.snapshotAt) < 86400000;
       if (!reusable) {
         const parent = path.join(this.directory, 'backups');
         await fsp.mkdir(parent, { recursive: true });
@@ -146,9 +146,15 @@ class DriveBackup {
   async tick() {
     this.watchAvailability();
     if (!this.config.automatic || !this.config.folder || this.running) return;
+    const due = this.config.pending || this.age(this.config.lastCopiedAt) >= 86400000;
+    if (due && this.age(this.config.lastAttempt) >= 900000) await this.run().catch(() => {});
+  }
+  // Milliseconds since a stored time. Missing times, and times in the future (the clock was ahead and
+  // has been corrected), count as long ago, so a backup is never held back until the clock catches up.
+  age(stamp) {
+    const time = typeof stamp === 'number' ? stamp : Date.parse(stamp);
     const now = this.clock();
-    const due = this.config.pending || !this.config.lastCopiedAt || now - Date.parse(this.config.lastCopiedAt) >= 86400000;
-    if (due && (!this.config.lastAttempt || now - this.config.lastAttempt >= 900000)) await this.run().catch(() => {});
+    return stamp && Number.isFinite(time) && time <= now ? now - time : Infinity;
   }
 }
 module.exports = { DriveBackup };

@@ -118,7 +118,9 @@ all data. The shape (`version` is always `1`):
     repeat: 'none'|'daily'|'weekly'|'days'|'interval'|'monthly'|'yearly',
     repeatDays?: [0-6],       // only for 'days' (0 = Sunday)
     repeatEvery?: 2-365,      // only for 'interval'
-    repeatFrom?: ISO,         // only for 'monthly'/'yearly': the date the count starts from
+    repeatFrom?: ISO,         // the series anchor: every repeat's time of day, and where monthly/yearly
+                              // count from; only a new time or repeat mode moves it. Absent before v1.5
+                              // for other modes (then the current occurrence's time is used)
     remindBefore?: 5|10|15|30|60|1440,  // minutes, for the early notification
     snoozedAt: ISO|null, completedAt: ISO|null, deletedAt?: ISO|null,
     sourceId?: id,            // on completed copies of a repeating task
@@ -174,8 +176,9 @@ appear, with one sound, when the pause ends. An ended pause clears itself on the
 
 Overdue reminders survive restarts because they are simply tasks whose `dueAt` is in the past.
 Completing a repeating task moves `dueAt` and `scheduleAt` to `nextOccurrence(scheduleAt, repeat,
-now, task)`, which keeps the local wall-clock time across DST changes and never schedules in the
-past. A second timer, every minute, runs the Drive backup tick and removes trash older than 30 days.
+now, task)`, which never schedules in the past and rebuilds each occurrence from a calendar day plus
+the time of day of `repeatFrom`. So the local wall-clock time holds across DST changes: an
+occurrence that falls in a spring-forward gap fires an hour later, and the next one is back on time. A second timer, every minute, runs the Drive backup tick and removes trash older than 30 days.
 
 ## Backups, Google Drive and restore
 
@@ -185,7 +188,9 @@ past. A second timer, every minute, runs the Drive backup tick and removes trash
   the copied `data.json`), reported as `skipped`, and never blocks the backup.
 - **Restore** (`readBackup`, `restoreBackup`) verifies every file against its checksum (older
   backups without checksums are checked for presence and size), exports a safety copy of the current
-  data, copies the attachments in, and replaces the state in one `Store` commit.
+  data, copies the attachments in, and replaces the state in one `Store` commit. Settings about this
+  PC (`autoUpdate`, `startAtLogin`, `pausedUntil`) keep their current values; the rest come from the
+  backup and apply at once.
 - **Google Drive** (`DriveBackup`) needs no Google account access: the user picks a folder synced
   by Google Drive for desktop, and the app copies a fresh local snapshot there once a day (or on
   demand). If the folder is unavailable, the snapshot stays pending and is retried; a pending
