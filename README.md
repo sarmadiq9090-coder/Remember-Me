@@ -152,6 +152,7 @@ Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable
 - `tests/scheduling.test.js`: repeats across daylight-saving time, time-zone changes and the clock moving backwards; 20 reminders in the same minute; a full day of missed reminders among thousands of tasks.
 - `tests/ipc.test.js`: only the app's own pages are accepted, the alert window gets a limited set of actions, and payloads are validated.
 - `tests/search.test.js`: Arabic-aware search matching.
+- `tests/winget-manifest.test.js`: the winget manifests written from a release's `SHA256SUMS.txt`.
 - `tests/updates.test.js`: the update consent, background schedule, Check now, the ready banner, and installing after a safety backup.
 - `tests/data-folder.test.js` and `tests/login-item.test.js`: moving the old `Waqt` data folder, including locked and interrupted moves, and pointing start with Windows at the renamed executable.
 - `tests/attachments.test.js`, `tests/backups.test.js` and `tests/drive-backup.test.js`: copying, export, checksums, restore, rotation, migration, validation and Drive-folder recovery.
@@ -159,7 +160,7 @@ Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable
 
 ### Releasing
 
-Bump `version` in `package.json` and push a matching tag, such as `v1.4.1`. `.github/workflows/release.yml` runs the tests, builds the installer and publishes it to Releases with `SHA256SUMS.txt`, build provenance, and the `latest.yml` and `.blockmap` files the app's updater reads. Running the workflow by hand only builds the files and publishes nothing. Code signing needs a SignPath (free for open source), Azure Trusted Signing or certificate account, which can then be added to the installer step.
+Bump `version` in `package.json` and push a matching tag, such as `v1.4.1`. `.github/workflows/release.yml` runs the tests, builds the installer and publishes it to Releases with `SHA256SUMS.txt`, build provenance, and the `latest.yml` and `.blockmap` files the app's updater reads. Running the workflow by hand only builds the files and publishes nothing. [RELEASING.md](RELEASING.md) has the full checklist, and [docs/distribution](docs/distribution) has the winget manifests and a draft application for free code signing from SignPath Foundation.
 
 ## Acknowledgements
 
