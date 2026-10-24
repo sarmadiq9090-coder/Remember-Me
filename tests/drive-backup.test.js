@@ -38,6 +38,9 @@ test('missing Drive mount keeps a local pending copy, then retries without dupli
   await backup.configure(sync);
   fs.renameSync(sync, sync + '.offline');
   await assert.rejects(backup.run(), /unavailable/);
+  // Settings shows the saved error in the interface language, so it must be a locale key.
+  const en = JSON.parse(fs.readFileSync(path.join(__dirname, '../ui/locales/en.json'), 'utf8'));
+  assert.ok(backup.status().error in en, backup.status().error);
   assert.equal(backup.status().lastCopiedAt, null);
   assert.ok(backup.status().pending);
   const local = backup.status().lastLocalPath;
@@ -47,6 +50,7 @@ test('missing Drive mount keeps a local pending copy, then retries without dupli
   assert.equal(backup.status().lastLocalPath, local);
   assert.ok(!backup.status().pending);
   assert.ok(backup.status().lastCopiedAt);
+  assert.deepEqual([backup.status().error, backup.status().errorKey, backup.status().errorParams], ['', null, null], 'A successful copy clears the error and its key');
   assert.equal(fs.readdirSync(path.join(data, 'backups')).length, 1);
 });
 test('failed snapshots never report success and invalid recursive targets are rejected', async () => {
