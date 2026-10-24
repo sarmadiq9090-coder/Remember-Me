@@ -99,7 +99,9 @@ test('window backgrounds follow the palette and mode', () => {
 test('windows get the palette through the preload and keep plain page URLs', () => {
   // The desktop tests (and fromPage) find windows by URLs ending in /index.html and /alert.html,
   // so a query string such as ?palette= hid the main window from them (PR #35).
-  const main = fs.readFileSync(path.join(__dirname, '../src/main/index.js'), 'utf8');
+  // The main process source, however it is split into files.
+  const mainDir = path.join(__dirname, '../src/main');
+  const main = fs.readdirSync(mainDir, { recursive: true }).map(String).filter(name => name.endsWith('.js')).map(name => fs.readFileSync(path.join(mainDir, name), 'utf8')).join('\n');
   const loads = [...main.matchAll(/loadFile\(([^;]*)\);/g)].map(m => m[1]);
   assert.ok(loads.length >= 2);
   for (const args of loads) assert.match(args, /^path\.join\(__dirname, '\.\.\/\.\.\/ui\/\w+\.html'\)$/, `loadFile(${args}) adds nothing to the URL`);
