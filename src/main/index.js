@@ -2,23 +2,19 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, Notification, nativeTheme, clipboard } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
-const os = require('node:os');
-const { randomUUID } = require('node:crypto');
-const { REMIND_AGAIN, PALETTES, noteLook, Store, saveTask, completeTask, nextOccurrence, skipOccurrence, undoComplete, toggleStep, snoozeTask, dueTasks, alertQueue, upcomingTasks, trashItem, restoreItem, purgeItem, purgeTrash, TRASH_DAYS } = require('../core/tasks');
-const { storageUsage, removeOrphans, attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('../data/attachments');
+const { Store, alertQueue, upcomingTasks, purgeTrash, TRASH_DAYS } = require('../core/tasks');
 const { createPreviewService } = require('../data/image-preview');
 const { DriveBackup } = require('../data/drive-backup');
-const { checkRequest, fromPage } = require('./ipc');
+const { registerHandlers } = require('./handlers');
 const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale, translate } = require('../../ui/translate');
 const { alertBounds } = require('../core/placement');
-const { readBackup, safetyBackup, restoreBackup } = require('../data/backups');
+const { safetyBackup } = require('../data/backups');
 const { createRepeatBeep } = require('../core/repeat-beep');
 const { createLogger } = require('../platform/logger');
 const { Updates, configure: configureUpdater } = require('../platform/updates');
 const { migrateDataFolder } = require('../platform/data-folder');
 const { setLoginItem, refreshLoginItem } = require('../platform/login-item');
 const { windowColors } = require('../platform/themes');
-const { linkUrl, diagnostics } = require('../platform/about');
 const { UNTIL_RESUMED, isPaused, shownAlerts, createPause } = require('../core/pause');
 const { createEarlyNotices } = require('../core/early-notices');
 const testMode = process.env.WAQT_TEST === '1';
@@ -240,6 +236,17 @@ function createUpdates() {
     backup: () => safetyBackup(app.getPath('userData'), store.state, 'RememberMe-before-update-'),
     prepareQuit: () => { quitting = true; }, quit: () => app.quit() });
 }
+// What the IPC handlers (./handlers) need from the main process. Getters, because the store,
+// windows and services are created in start() and windows come and go.
+const PAGES = { main: path.join(__dirname, '../../ui/index.html'), alert: path.join(__dirname, '../../ui/alert.html') };
+const ctx = {
+  app, log, electron: { dialog, shell, clipboard }, UNDO_MS, imagePreview,
+  tr, errorText, language, localeTag, messages, activeAlerts, openInMain, takeOpenRequest, setLogin, rebuildTrayMenu, placeAlert, applyTheme,
+  get store() { return store; }, get mainWindow() { return mainWindow; }, get alertWindow() { return alertWindow; },
+  get driveBackup() { return driveBackup; }, get updates() { return updates; },
+  get preview() { return preview; }, set preview(value) { preview = value; },
+  get undoable() { return undoable; }, set undoable(value) { undoable = value; },
+};
 async function start() {
   // The UI needs no camera, microphone, notifications, location or other browser permissions.
   session.defaultSession.setPermissionRequestHandler((contents, permission, callback) => callback(false));
@@ -261,206 +268,7 @@ async function start() {
   rebuildTrayMenu();
   tray.on('double-click', showMain);
   tray.on('click', showMain);
-  ipcMain.handle('waqt:action', async (event, action, payload) => {
-    try {
-      const fromAlert = !!alertWindow && event.sender === alertWindow.webContents;
-      const page = path.join(__dirname, '../../ui', fromAlert ? 'alert.html' : 'index.html');
-      if ((!fromAlert && event.sender !== mainWindow?.webContents) || !fromPage(event.senderFrame?.url, page)) throw new Error(tr("Request not allowed."));
-      payload = checkRequest(action, payload, { fromAlert });
-      let value;
-      switch (action) {
-        case 'state': value = { ...store.state, dataPath: app.getPath('userData'), packaged: app.isPackaged, recovered: store.recovered, driveBackup: driveBackup.status(), updates: updates.status(), openTask: takeOpenRequest() }; break;
-        case 'alerts': {
-          const now = new Date();
-          // next is when a repeating reminder comes back after Done, shown under the Done button.
-          value = activeAlerts().map(t => ({ ...t, files: (t.attachments || []).map(id => store.state.attachments.find(a => a.id === id)).filter(Boolean),
-            next: t.repeat && t.repeat !== 'none' && t.scheduleAt ? nextOccurrence(t.scheduleAt, t.repeat, now, t) : null }));
-          break;
-        }
-        case 'language': value = { language: language(), palette: store.state.settings.palette }; break;
-        case 'locale': {
-          const code = LOCALES.some(l => l.code === payload.code) ? payload.code : language();
-          value = { ...findLocale(code), messages: messages(code), fallback: messages(DEFAULT_LOCALE) };
-          break;
-        }
-        case 'saveTask': store.change(s => saveTask(s, payload)); break;
-        case 'complete':
-          if (payload.id === '__preview') preview = null;
-          else {
-            // done is null when the reminder was already handled (a double click or another window).
-            const done = store.change(s => completeTask(s, payload.id, new Date(), { expectedDueAt: payload.expectedDueAt }));
-            value = done;
-            if (done && fromAlert) undoable = { ...done, title: store.state.tasks.find(t => t.id === done.id)?.title || '', until: Date.now() + UNDO_MS };
-          }
-          break;
-        case 'skip':
-          if (payload.id === '__preview') throw new Error(tr('The preview does not repeat.'));
-          value = store.change(s => skipOccurrence(s, payload.id, payload.expectedDueAt, new Date()));
-          break;
-        case 'undoComplete':
-          if (fromAlert && (!undoable || undoable.id !== payload.id || undoable.copyId !== payload.copyId)) throw new Error(tr("It is too late to undo."));
-          store.change(s => undoComplete(s, payload.id, String(payload.copyId || '')));
-          undoable = null;
-          break;
-        case 'toggleStep': store.change(s => toggleStep(s, payload.id, String(payload.stepId || ''))); break;
-        case 'undoable': value = undoable && undoable.until > Date.now() ? undoable : null; break;
-        case 'snooze':
-          if (payload.id === '__preview') { if (!payload.until || Date.parse(payload.until) <= Date.now()) throw new Error(tr('Choose a later time.')); preview = null; }
-          else value = store.change(s => snoozeTask(s, payload.id, payload.until, new Date(), { expectedDueAt: payload.expectedDueAt }));
-          break;
-        case 'reopen': store.change(s => { const t = s.tasks.find(t => t.id === payload.id); if (t) { t.completedAt = null; t.dueAt = null; t.scheduleAt = null; t.repeat = 'none'; t.snoozedAt = null; } }); break;
-        case 'deleteTask': store.change(s => trashItem(s, 'tasks', payload.id)); break;
-        case 'restoreTask': store.change(s => restoreItem(s, 'tasks', payload.id)); break;
-        case 'purgeTask': store.change(s => purgeItem(s, 'tasks', payload.id)); break;
-        case 'saveNote': store.change(s => {
-          const title = String(payload.title || '').trim();
-          if (!title || title.length > 200) throw new Error(tr('Add a note title of up to 200 characters.'));
-          let note = s.notes.find(n => n.id === payload.id);
-          if (!note) { note = { id: randomUUID(), createdAt: new Date().toISOString() }; s.notes.push(note); }
-          Object.assign(note, { title, body: String(payload.body || '').slice(0, 50000), attachments: attachmentIds(payload.attachments ?? note.attachments ?? []), ...noteLook(payload), updatedAt: new Date().toISOString() });
-        }); break;
-        case 'deleteNote': store.change(s => trashItem(s, 'notes', payload.id)); break;
-        case 'restoreNote': store.change(s => restoreItem(s, 'notes', payload.id)); break;
-        case 'purgeNote': store.change(s => purgeItem(s, 'notes', payload.id)); break;
-        case 'emptyTrash': store.change(s => purgeTrash(s, new Date(), true)); break;
-        case 'attachFiles': {
-          const remaining = Math.min(MAX_ATTACHMENTS, Math.max(0, Number(payload?.remaining) || 0));
-          if (!remaining) throw new Error(tr('You have reached the limit of 20 attachments.'));
-          const result = await dialog.showOpenDialog(mainWindow, { title: tr('Add attachments: PDF, Excel and other files'), properties: ['openFile', 'multiSelections'], filters: [
-            { name: tr('All files'), extensions: ['*'] }, { name: tr('Images'), extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif'] }, { name: 'PDF', extensions: ['pdf'] }, { name: 'Excel', extensions: ['xlsx', 'xls', 'xlsm', 'csv'] }, { name: tr('Documents'), extensions: ['docx', 'doc', 'txt', 'rtf'] }
-          ] });
-          if (result.canceled) { value = []; break; }
-          if (result.filePaths.length > remaining) throw new Error(tr('You can add {count} more files to this item.', { count: remaining }));
-          const records = await importFiles(app.getPath('userData'), result.filePaths);
-          store.change(s => { s.attachments.push(...records); });
-          value = records; break;
-        }
-        case 'openAttachment': {
-          if (event.sender === alertWindow?.webContents && !activeAlerts().some(t => (t.attachments || []).includes(payload.id))) throw new Error(tr('This attachment does not belong to an active reminder.'));
-          const { file, record } = resolveAttachment(store.state, app.getPath('userData'), payload.id);
-          if (opensAsProgram(record.name)) shell.showItemInFolder(file);
-          else {
-            const error = await shell.openPath(file);
-            if (error) throw new Error(tr('The file could not be opened. Make sure an app for this file type, such as a PDF reader or Excel, is installed.'));
-          }
-          break;
-        }
-        case 'imagePreview': {
-          if (event.sender === alertWindow?.webContents && !activeAlerts().some(t => (t.attachments || []).includes(payload.id))) throw new Error(tr('This image does not belong to an active reminder.'));
-          value = await imagePreview(store.state, app.getPath('userData'), payload.id);
-          break;
-        }
-        case 'chooseDriveFolder': {
-          const result = await dialog.showOpenDialog(mainWindow, { title: tr("Choose a synced folder inside Google Drive"), properties: ['openDirectory', 'createDirectory'], defaultPath: driveBackup.status().folder || undefined });
-          if (!result.canceled) { await driveBackup.configure(result.filePaths[0]); value = driveBackup.status(); }
-          break;
-        }
-        case 'driveBackupNow': value = await driveBackup.run(); break;
-        case 'driveAutomatic': driveBackup.setAutomatic(payload.enabled); break;
-        case 'driveKeep': {
-          const keep = payload.keep;
-          const expired = await driveBackup.expired(keep);
-          if (expired.length) {
-            const { response } = await dialog.showMessageBox(mainWindow, { type: 'warning', title: tr("Delete old backups"),
-              message: tr("{count} older automatic backups will be deleted.", { count: expired.length }),
-              detail: tr("The newest copies and backups you exported yourself are kept. Copies removed from the Drive folder go to the Google Drive trash."),
-              buttons: [tr("Cancel"), tr("Delete")], defaultId: 0, cancelId: 0 });
-            if (response !== 1) break;
-          }
-          await driveBackup.setKeep(keep);
-          break;
-        }
-        case 'driveHelp': await shell.openExternal('https://www.google.com/drive/download/'); break;
-        case 'openDriveFolder': {
-          const folder = driveBackup.status().folder;
-          if (!folder) throw new Error(tr("Choose a Google Drive folder first."));
-          const error = await shell.openPath(folder);
-          if (error) throw new Error(tr("The Google Drive folder is not available right now."));
-          break;
-        }
-        case 'settings': {
-          const old = store.state.settings;
-          const settings = { sound: !!payload.sound, startAtLogin: !!payload.startAtLogin, alertSide: payload.alertSide === 'left' ? 'left' : 'right', language: LOCALES.some(l => l.code === payload.language) ? payload.language : DEFAULT_LOCALE,
-            weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 6, theme: ['light', 'dark'].includes(payload.theme) ? payload.theme : 'system', palette: PALETTES.includes(payload.palette) ? payload.palette : 'lavender',
-            remindAgain: REMIND_AGAIN.includes(payload.remindAgain) ? payload.remindAgain : 0 };
-          if (old.startAtLogin !== settings.startAtLogin) setLogin(settings.startAtLogin);
-          try { store.change(s => { s.settings = { ...s.settings, ...settings }; }); }
-          catch (err) { if (old.startAtLogin !== settings.startAtLogin) setLogin(old.startAtLogin); throw err; }
-          rebuildTrayMenu(); placeAlert(); applyTheme(); break;
-        }
-        case 'preview':
-          if (dueTasks(store.state).length) throw new Error(tr("A real reminder is showing now. Try the preview after you finish it."));
-          preview = { id: '__preview', title: tr("Time for a short break ☕"), body: tr("This is a preview alert. It stays visible until you choose Done or Snooze. Snoozing here only closes the preview."), dueAt: new Date().toISOString(), priority: 'normal', category: 'personal' }; break;
-        case 'export': {
-          const result = await dialog.showOpenDialog(mainWindow, { title: tr("Choose where to save the backup with attachments"), properties: ['openDirectory', 'createDirectory'] });
-          if (result.canceled) break;
-          const skipped = [];
-          value = { folder: await exportBackup(store.state, app.getPath('userData'), result.filePaths[0], { skipped }), skipped };
-          log.info('export', { attachments: store.state.attachments.length, skipped: skipped.length });
-          break;
-        }
-        case 'restore': {
-          const result = await dialog.showOpenDialog(mainWindow, { title: tr("Choose a Remember Me backup folder"), properties: ['openDirectory'], defaultPath: path.join(app.getPath('userData'), 'backups') });
-          if (result.canceled) break;
-          const backup = await readBackup(result.filePaths[0]);
-          const { tasks, notes, attachments } = backup.state;
-          const when = backup.createdAt ? new Date(backup.createdAt).toLocaleString(localeTag()) : tr("unknown");
-          const { response } = await dialog.showMessageBox(mainWindow, { type: 'warning', title: tr("Restore a backup"),
-            message: tr("This backup will replace all your current tasks and notes."),
-            detail: [tr('Tasks: {tasks} • Notes: {notes} • Attachments: {attachments} • Backup date: {date}', { tasks: tasks.length, notes: notes.length, attachments: attachments.length, date: when }),
-              backup.verified ? tr('Every file was verified.') : tr('Older backup without checksums: only file presence and sizes were checked.'),
-              tr('A safety copy of your current data is saved in the backups folder first.')].join('\n'),
-            buttons: [tr("Cancel"), tr("Restore")], defaultId: 0, cancelId: 0 });
-          if (response !== 1) break;
-          preview = null;
-          value = await restoreBackup(app.getPath('userData'), store, backup);
-          log.info('restore', { tasks: tasks.length, notes: notes.length, attachments: attachments.length, verified: backup.verified });
-          // The restored language, theme and alert side apply at once; update consent stays as it was.
-          rebuildTrayMenu(); placeAlert(); applyTheme(); updates.consentChanged();
-          break;
-        }
-        case 'storage': value = await storageUsage(store.state, app.getPath('userData')); break;
-        case 'cleanOrphans': {
-          const usage = await storageUsage(store.state, app.getPath('userData'));
-          if (!usage.orphans) { value = usage; break; }
-          const size = (usage.orphanBytes / 1048576).toFixed(1);
-          const { response } = await dialog.showMessageBox(mainWindow, { type: 'warning', title: tr("Clean up attachments"),
-            message: tr("{count} unused attachments ({size} MB) will be deleted.", { count: usage.orphans, size }),
-            detail: tr("No task or note uses these files, including completed tasks. Backups keep their own copies."),
-            buttons: [tr("Cancel"), tr("Delete")], defaultId: 0, cancelId: 0 });
-          if (response !== 1) break;
-          log.info('clean-orphans', { count: (await removeOrphans(store, app.getPath('userData'))).count });
-          value = await storageUsage(store.state, app.getPath('userData'));
-          break;
-        }
-        case 'dataFolder': await shell.openPath(app.getPath('userData')); break;
-        case 'updateConsent': store.change(s => { s.settings.autoUpdate = payload.enabled; }); updates.consentChanged(); break;
-        case 'checkUpdates': value = await updates.check(); break;
-        case 'installUpdate':
-          try { value = await updates.restart(); }
-          catch (error) { throw new Error(tr("Couldn't save a safety copy of your data, so the update was not installed. {reason}", { reason: errorText(error) }), { cause: error }); }
-          break;
-        case 'dismissUpdate': updates.dismiss(); break;
-        case 'openLink': await shell.openExternal(linkUrl(payload.link)); break;
-        case 'copyDiagnostics':
-          value = diagnostics({ version: app.getVersion(), packaged: app.isPackaged, versions: process.versions, windows: os.release(), arch: process.arch,
-            language: language(), theme: store.state.settings.theme });
-          clipboard.writeText(value);
-          break;
-        case 'openLogs': {
-          // The folder appears with the first log line; create it so the button always opens something.
-          fs.mkdirSync(log.folder, { recursive: true });
-          const error = await shell.openPath(log.folder);
-          if (error) throw new Error(tr("Couldn't open the log folder."));
-          break;
-        }
-        case 'open': openInMain(payload.id && store.state.tasks.some(t => t.id === payload.id && !t.deletedAt) ? payload.id : null); break;
-        default: throw new Error(tr('Unknown action.'));
-      }
-      if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder', 'checkUpdates', 'installUpdate', 'dismissUpdate', 'openLink', 'copyDiagnostics', 'openLogs'].includes(action)) { scan(); notifyViews(); }
-      return { ok: true, value };
-    } catch (error) { log.warn('action-failed', error, { action: typeof action === 'string' ? action.slice(0, 40) : typeof action }); return { ok: false, error: errorText(error) }; }
-  });
+  registerHandlers(ctx, { ipcMain, scan, notifyViews, pages: PAGES });
   interval = setInterval(scan, 1000);
   purgeExpiredTrash();
   backupInterval = setInterval(() => { driveBackup.tick(); try { purgeExpiredTrash(); } catch (error) { console.error('Trash purge failed:', error); log.error('trash-purge-failed', error); } }, 60000);
