@@ -29,7 +29,10 @@ async function refresh() {
     // Deleted items only appear in the trash view; every other view works on the rest.
     trash = [...state.tasks.filter(t => t.deletedAt).map(item => ({ kind: 'Task', item })), ...state.notes.filter(n => n.deletedAt).map(item => ({ kind: 'Note', item }))].sort((a, b) => Date.parse(b.item.deletedAt) - Date.parse(a.item.deletedAt));
     state.tasks = state.tasks.filter(t => !t.deletedAt); state.notes = state.notes.filter(n => !n.deletedAt);
-    setLanguage(state.settings.language); render();
+    setLanguage(state.settings.language);
+    // While a palette choice is being saved, an older refresh must not switch the page back.
+    if (!appearanceSaving) applyPalette(state.settings.palette);
+    render();
   } catch (e) { toast(e.message); }
 }
 function todayEnd() { const d = new Date(); d.setHours(23, 59, 59, 999); return d.getTime(); }
@@ -84,7 +87,7 @@ function render() {
     $('setting-side').value = state.settings.alertSide;
     $('setting-language').value = state.settings.language;
     renderRemindAgain();
-    $('setting-theme').value = state.settings.theme;
+    renderAppearance();
     $('setting-week').value = String(state.settings.weekStart);
     $('data-path').textContent = state.dataPath;
     renderStorage();
@@ -153,7 +156,7 @@ function taskCard(t) {
 }
 function renderNotes() {
   const notes = state.notes.filter(n => matchesSearch(n, query)).sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
-  $('notes-list').innerHTML = notes.map(n => `<article class="note-card ${esc(n.color)}" data-id="${esc(n.id)}"><div class="note-edit-target" tabindex="0" role="button" aria-label="${tr('تعديل','Edit')} ${esc(n.title)}"><h3 dir="auto">${esc(n.title)}</h3><p dir="auto">${esc(n.body)}</p></div>${n.attachments?.length ? `<div class="file-chips">${attachmentChips(n.attachments)}</div>` : ''}<footer><span>${new Date(n.updatedAt).toLocaleDateString(locale(), { day: 'numeric', month: 'long' })}</span><button class="icon-button" data-action="delete" aria-label="${tr('حذف الملاحظة','Delete note')}">${icon('trash')}</button></footer></article>`).join('');
+  $('notes-list').innerHTML = notes.map(n => `<article class="note-card paper" data-paper="${esc(n.color)}" data-note-style="${esc(n.style || 'plain')}" data-id="${esc(n.id)}"><div class="note-edit-target" tabindex="0" role="button" aria-label="${tr('تعديل','Edit')} ${esc(n.title)}"><h3 dir="auto">${esc(n.title)}</h3><p dir="auto">${esc(n.body)}</p></div>${n.attachments?.length ? `<div class="file-chips">${attachmentChips(n.attachments)}</div>` : ''}<footer><span>${new Date(n.updatedAt).toLocaleDateString(locale(), { day: 'numeric', month: 'long' })}</span><button class="icon-button" data-action="delete" aria-label="${tr('حذف الملاحظة','Delete note')}">${icon('trash')}</button></footer></article>`).join('');
   $('notes-empty').hidden = !!notes.length;
   $('notes-empty').querySelector('h3').textContent = query ? tr('لا توجد ملاحظات مطابقة','No matching notes') : tr('أفكارك تستحق مكانًا','Your ideas deserve a place');
 }
@@ -216,7 +219,7 @@ function toggleReminder() { $('reminder-fields').hidden = !$('task-reminder').ch
 function openNoteEditor(note) {
   $('note-form').reset(); $('note-error').textContent = '';
   $('note-id').value = note?.id || ''; $('note-title').value = note?.title || ''; $('note-body').value = note?.body || '';
-  $('note-color').value = note?.color || 'cream'; $('note-dialog-title').textContent = note ? tr('تفاصيل الملاحظة','Note details') : tr('ملاحظة جديدة','New note');
+  renderNoteLook(); setNoteLook(note?.color || 'cream', note?.style || 'plain'); $('note-dialog-title').textContent = note ? tr('تفاصيل الملاحظة','Note details') : tr('ملاحظة جديدة','New note');
   noteAttachments = [...(note?.attachments || [])]; renderEditorFiles('note');
   $('note-dialog').showModal(); $('note-title').focus();
 }
@@ -306,7 +309,7 @@ const ABOUT_LINKS = [
 function renderAboutCard() {
   const updates = state.updates, busy = ['checking', 'downloading', 'installing'].includes(updates.state);
   const links = ABOUT_LINKS.map(([id, iconName, title, detail]) => `<button type="button" class="about-link" data-link="${id}"><span class="about-link-icon" data-icon="${iconName}"></span><span class="about-link-text"><strong>${tr(...title)}</strong><small dir="auto">${tr(...detail)}</small></span><span class="about-link-open" data-icon="external"></span></button>`).join('');
-  setMarkup($('about-card'), `<div class="about-head"><img class="about-icon" src="../assets/icon.png" alt=""><div><span class="eyebrow">${tr('حول البرنامج', 'About')}</span><h2>${tr('ذكرني', 'Remember Me')}</h2><p class="about-version">${esc(tr(`الإصدار ${updates.version}`, `Version ${updates.version}`))}</p><p>${tr('مهام وملاحظات وتذكيرات تبقى على جهازك.', 'Tasks, notes and reminders that stay on your PC.')}</p></div></div><div class="about-links">${links}</div><div class="setting-row"><p class="about-update-status">${esc(updateStatus(updates))}</p><button class="soft-button" data-update="checkUpdates"${busy ? ' disabled' : ''}>${tr('التحقق من التحديثات', 'Check for updates')}</button></div><div class="setting-row"><div><strong>${tr('معلومات التشخيص', 'Diagnostic info')}</strong><p>${tr('الإصدارات واللغة والمظهر فقط، لإرفاقها مع بلاغ. لا تتضمن مهامك أو ملاحظاتك أو ملفاتك.', 'Versions, language and theme only, to add to a problem report. Never your tasks, notes or files.')}</p></div><button class="soft-button" id="copy-diagnostics"><span data-icon="copy"></span> ${tr('نسخ معلومات التشخيص', 'Copy diagnostic info')}</button></div><div class="setting-row"><div><strong>${tr('سجل البرنامج', 'App log')}</strong><p>${tr('سجل محلي بأحداث البرنامج وأخطائه، دون عناوين مهامك أو ملاحظاتك أو أسماء ملفاتك. أرفقه مع بلاغك عند الحاجة.', 'A local record of app events and errors, without the titles of your tasks or notes or your file names. Attach it to a problem report if asked.')}</p></div><button class="soft-button" id="open-logs"><span data-icon="file"></span> ${tr('فتح مجلد السجل', 'Open log folder')}</button></div><p class="about-footnote"><bdi>${tr('مبني باستخدام Electron', 'Built with Electron')}</bdi> • <bdi>© 2026 ${tr('سرمد', 'Sarmad')}</bdi></p>`);
+  setMarkup($('about-card'), `<div class="about-head"><span class="about-icon" aria-hidden="true">${brandMark()}</span><div><span class="eyebrow">${tr('حول البرنامج', 'About')}</span><h2>${tr('ذكرني', 'Remember Me')}</h2><p class="about-version">${esc(tr(`الإصدار ${updates.version}`, `Version ${updates.version}`))}</p><p>${tr('مهام وملاحظات وتذكيرات تبقى على جهازك.', 'Tasks, notes and reminders that stay on your PC.')}</p></div></div><div class="about-links">${links}</div><div class="setting-row"><p class="about-update-status">${esc(updateStatus(updates))}</p><button class="soft-button" data-update="checkUpdates"${busy ? ' disabled' : ''}>${tr('التحقق من التحديثات', 'Check for updates')}</button></div><div class="setting-row"><div><strong>${tr('معلومات التشخيص', 'Diagnostic info')}</strong><p>${tr('الإصدارات واللغة والمظهر فقط، لإرفاقها مع بلاغ. لا تتضمن مهامك أو ملاحظاتك أو ملفاتك.', 'Versions, language and theme only, to add to a problem report. Never your tasks, notes or files.')}</p></div><button class="soft-button" id="copy-diagnostics"><span data-icon="copy"></span> ${tr('نسخ معلومات التشخيص', 'Copy diagnostic info')}</button></div><div class="setting-row"><div><strong>${tr('سجل البرنامج', 'App log')}</strong><p>${tr('سجل محلي بأحداث البرنامج وأخطائه، دون عناوين مهامك أو ملاحظاتك أو أسماء ملفاتك. أرفقه مع بلاغك عند الحاجة.', 'A local record of app events and errors, without the titles of your tasks or notes or your file names. Attach it to a problem report if asked.')}</p></div><button class="soft-button" id="open-logs"><span data-icon="file"></span> ${tr('فتح مجلد السجل', 'Open log folder')}</button></div><p class="about-footnote"><bdi>${tr('مبني باستخدام Electron', 'Built with Electron')}</bdi> • <bdi>© 2026 ${tr('سرمد', 'Sarmad')}</bdi></p>`);
 }
 $('about-card').addEventListener('click', async e => {
   const link = e.target.closest('[data-link]');
@@ -404,7 +407,7 @@ $('task-list').addEventListener('click', async e => {
 $('task-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('task-edit-target')) { e.preventDefault(); e.target.click(); } });
 $('note-form').addEventListener('submit', async e => {
   e.preventDefault(); e.submitter.disabled = true;
-  try { await api('saveNote', { id: $('note-id').value || undefined, title: $('note-title').value, body: $('note-body').value, color: $('note-color').value, attachments: noteAttachments }); $('note-dialog').close(); await refresh(); toast(tr('حُفظت ملاحظتك.','Note saved.')); }
+  try { await api('saveNote', { id: $('note-id').value || undefined, title: $('note-title').value, body: $('note-body').value, color: checked('note-color', 'cream'), style: checked('note-style', 'plain'), attachments: noteAttachments }); $('note-dialog').close(); await refresh(); toast(tr('حُفظت ملاحظتك.','Note saved.')); }
   catch (err) { $('note-error').textContent = err.message; } finally { e.submitter.disabled = false; }
 });
 $('notes-list').addEventListener('click', e => { const file = e.target.closest('[data-file-id]'); if (file) return openFile(file.dataset.fileId); const card = e.target.closest('[data-id]'); if (!card) return; if (e.target.closest('[data-action="delete"]')) return moveToTrash('Note', card.dataset.id); openNoteEditor(state.notes.find(n => n.id === card.dataset.id)); });
@@ -431,11 +434,60 @@ function renderRemindAgain() {
   $('setting-remind-again').value = String(state.settings.remindAgain || 0);
 }
 function settingsPayload() {
-  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: Number($('setting-week').value), theme: $('setting-theme').value, remindAgain: Number($('setting-remind-again').value) };
+  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: Number($('setting-week').value), theme: checked('theme-mode', state.settings.theme), palette: checked('palette', state.settings.palette), remindAgain: Number($('setting-remind-again').value) };
 }
-for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-week', 'setting-theme', 'setting-remind-again']) $(id).addEventListener('change', async () => {
+for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-week', 'setting-remind-again']) $(id).addEventListener('change', async () => {
   try { await api('settings', settingsPayload()); await refresh(); toast(tr('حُفظت الإعدادات.','Settings saved.')); }
   catch (err) { toast(err.message); } await refresh();
+});
+// The value of a radio group in the page, or the saved one before the group is built.
+function checked(name, saved) { return document.querySelector(`input[name="${name}"]:checked`)?.value ?? saved; }
+// Settings → Appearance: mode and palette as radio groups (arrow keys move between options), built here with tr().
+// Each preview card carries data-palette, so it shows that palette's real colors in the current mode.
+const PALETTE_NAMES = [['lavender', 'لافندر', 'Lavender'], ['ocean', 'محيط', 'Ocean'], ['forest', 'غابة', 'Forest'], ['sunset', 'غروب', 'Sunset'], ['graphite', 'رمادي', 'Graphite'], ['contrast', 'تباين عالٍ', 'High contrast']];
+const MODE_NAMES = [['system', 'حسب ويندوز', 'Same as Windows'], ['light', 'فاتح', 'Light'], ['dark', 'داكن', 'Dark']];
+const paletteMock = () => `<span class="mock-side"><span class="mock-logo">${brandMark(true)}</span><i class="mock-nav on"></i><i class="mock-nav"></i><i class="mock-nav"></i></span><span class="mock-page"><i class="mock-hero"></i><span class="mock-row"><i class="mock-check"></i><i class="mock-line"></i></span><span class="mock-row"><i class="mock-check"></i><i class="mock-line short"></i></span><i class="mock-button"></i></span>`;
+let appearanceLanguage, appearanceSaving = 0;
+function renderAppearance() {
+  const card = $('appearance-card');
+  if (appearanceLanguage !== uiLanguage) {
+    appearanceLanguage = uiLanguage;
+    card.innerHTML = `<h2>${tr('المظهر', 'Appearance')}</h2><div class="setting-row"><div><strong id="mode-label">${tr('الوضع', 'Mode')}</strong><p>${tr('فاتح أو داكن، أو حسب إعداد ويندوز.', 'Light or dark, or the same as Windows.')}</p></div><div class="segmented" role="radiogroup" aria-labelledby="mode-label">${MODE_NAMES.map(([value, ar, en]) => `<label><input type="radio" name="theme-mode" value="${value}"><span>${tr(ar, en)}</span></label>`).join('')}</div></div>`
+      + `<div class="palette-picker"><strong id="palette-label">${tr('الألوان', 'Colors')}</strong><div class="palette-grid" role="radiogroup" aria-labelledby="palette-label">${PALETTE_NAMES.map(([id, ar, en]) => `<label class="palette-card"><input type="radio" name="palette" value="${id}"><span class="palette-mock" data-palette="${id}" aria-hidden="true">${paletteMock()}</span><span class="palette-name">${tr(ar, en)}</span><span class="palette-tick" aria-hidden="true">${icon('check')}</span></label>`).join('')}</div></div>`;
+  }
+  if (appearanceSaving) return;
+  for (const [name, value] of [['theme-mode', state.settings.theme], ['palette', state.settings.palette]]) card.querySelector(`input[name="${name}"][value="${value}"]`).checked = true;
+}
+// Note editor: paper colors and styles as radio groups, with a live preview (ids match src/core.js).
+const NOTE_COLORS = [['cream', 'كريمي', 'Cream'], ['yellow', 'أصفر', 'Yellow'], ['orange', 'برتقالي', 'Orange'], ['red', 'أحمر', 'Red'], ['pink', 'وردي', 'Pink'], ['purple', 'بنفسجي', 'Purple'], ['blue', 'أزرق', 'Blue'], ['green', 'أخضر', 'Green'], ['gray', 'رمادي', 'Gray'], ['white', 'أبيض', 'White']];
+const NOTE_STYLES = [['plain', 'بطاقة بسيطة', 'Plain card'], ['sticky', 'ورقة لاصقة', 'Sticky note'], ['lined', 'ورق مسطّر', 'Lined paper']];
+let noteLookLanguage;
+function renderNoteLook() {
+  if (noteLookLanguage === uiLanguage) return;
+  noteLookLanguage = uiLanguage;
+  $('note-look').innerHTML = `<div><span class="look-label" id="note-color-label">${tr('لون الملاحظة', 'Note color')}</span><div class="swatches" role="radiogroup" aria-labelledby="note-color-label">${NOTE_COLORS.map(([id, ar, en]) => `<label class="swatch" title="${tr(ar, en)}"><input type="radio" name="note-color" value="${id}" aria-label="${tr(ar, en)}"><span class="swatch-paper" data-paper="${id}">${icon('check')}</span></label>`).join('')}</div>`
+    + `<span class="look-label" id="note-style-label">${tr('الشكل', 'Style')}</span><div class="style-tiles" role="radiogroup" aria-labelledby="note-style-label">${NOTE_STYLES.map(([id, ar, en]) => `<label class="style-tile"><input type="radio" name="note-style" value="${id}"><span class="style-sample paper" data-paper="cream" data-note-style="${id}" aria-hidden="true"><i></i><i></i><i></i></span>${tr(ar, en)}</label>`).join('')}</div></div>`
+    + '<div class="note-preview paper" data-paper="cream" data-note-style="plain" aria-hidden="true"><strong dir="auto"></strong><p dir="auto"></p></div>';
+}
+function setNoteLook(color, style) {
+  for (const [name, value] of [['note-color', color], ['note-style', style]]) $('note-look').querySelector(`input[name="${name}"][value="${value}"]`).checked = true;
+  updateNotePreview();
+}
+function updateNotePreview() {
+  const color = checked('note-color', 'cream'), preview = $('note-look').querySelector('.note-preview');
+  for (const paper of $('note-look').querySelectorAll('.style-sample, .note-preview')) paper.dataset.paper = color;
+  preview.dataset.noteStyle = checked('note-style', 'plain');
+  preview.querySelector('strong').textContent = $('note-title').value || tr('عنوان الملاحظة', 'Note title');
+  preview.querySelector('p').textContent = $('note-body').value;
+}
+$('note-look').addEventListener('change', updateNotePreview);
+for (const id of ['note-title', 'note-body']) $(id).addEventListener('input', updateNotePreview);
+$('appearance-card').addEventListener('change', async e => {
+  // The palette shows at once; main then updates the alert window and the window backgrounds.
+  if (e.target.name === 'palette') applyPalette(e.target.value);
+  appearanceSaving++;
+  try { await api('settings', settingsPayload()); } catch (err) { toast(err.message); } finally { appearanceSaving--; }
+  await refresh();
 });
 // Names the attachments a backup had to leave out because their files are missing, with the task or note each belongs to.
 function skippedText(skipped = []) {

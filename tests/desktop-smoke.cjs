@@ -71,9 +71,10 @@ async function alertPage() {
     await page.locator('#page-add').click();
     await page.locator('#note-title').fill('أفكار للأسبوع القادم');
     await page.locator('#note-body').fill('أخصص وقتًا للقراءة.\nأرتب مساحة العمل.\nأجعل البداية بسيطة.');
-    await page.locator('#note-color').selectOption('green');
+    await page.locator('.swatch:has(input[value=green])').click();
+    await page.locator('.style-tile:has(input[value=sticky])').click();
     await page.locator('#note-form button[type=submit]').click();
-    await page.locator('.note-card').waitFor();
+    await page.locator('.note-card[data-paper=green][data-note-style=sticky]').waitFor();
     await page.locator('.note-card').click();
     await page.locator('#note-body').fill('ملاحظة معدلة ومحفوظة بعد إعادة التشغيل.');
     await page.locator('#note-form button[type=submit]').click();

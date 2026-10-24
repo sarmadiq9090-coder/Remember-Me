@@ -31,14 +31,14 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 - **Pause reminders:** from the notification-area menu, for 1 hour, until tomorrow at 8:00, or until you resume. Nothing pops up or sounds meanwhile, and reminders that came due appear when the pause ends.
 - **Undo and Trash:** undo Done from the main window or the alert, and undo a delete from its message. Deleted tasks and notes wait 30 days in the Trash and can be restored.
 - **No dropped alerts:** several due reminders are queued and shown one at a time, with a count of how many are waiting.
-- **Notes:** colored notes you can edit, search and delete.
+- **Notes:** notes you can edit, search and delete, on ten paper colors as a plain card, a sticky note or lined paper.
 - **Attachments:** add PDFs, Excel sheets, documents, images or any other file to tasks and notes, up to 20 files per item and 50 MB per file. Images preview inline, including in the alert.
 - **Safe file handling:** programs, scripts, installers and shortcuts are revealed in File Explorer instead of being launched.
 - **Smart search (Ctrl+K):** searches tasks and notes, and matches Arabic text regardless of diacritics and common spelling variants.
 - **Arabic and English interfaces:** a full right-to-left Arabic UI and a left-to-right English UI, switchable in Settings. Mixed-language text keeps its reading order.
 - **Local-first data:** atomic saves, an automatic `.bak` copy and automatic recovery if the data file is damaged.
 - **Backups:** export a full backup with all attachments and checksums, restore one from Settings after it's verified, or copy daily backups into a synced Google Drive folder.
-- **Dark mode and display options:** light, dark or follow Windows, and choose the first day of the week (Saturday by default). Dates and times always use Western digits (0-9), in Arabic too.
+- **Themes and display options:** light, dark or follow Windows, six color palettes (Lavender, Ocean, Forest, Sunset, Graphite and High contrast), and the first day of the week (Saturday by default). Dates and times always use Western digits (0-9), in Arabic too.
 - **Multi-monitor aware:** the alert sits above the taskbar wherever it is (bottom, top, left or right) and adapts to scaled and secondary displays.
 - **Runs in the background:** closing the window keeps Remember Me in the notification area, and it can start with Windows. The icon shows a dot while reminders are waiting, and Remember Me warns you if Start with Windows is off while reminders are still to come.
 - **Optional automatic updates:** with your permission, new versions are downloaded from GitHub Releases and installed when you restart.
@@ -89,7 +89,8 @@ v1.4.0 can't update itself: install the next version from Releases once by hand,
 - **Attachments:** while editing a task or note, choose **Add files**. Files are copied into Remember Me's data folder, so moving or deleting the original doesn't break the attachment. Removing an attachment from one item doesn't affect other items.
 - **Opening files:** click an attachment to open it with the default Windows app. Excel files need a compatible app such as Excel.
 - **Settings:**
-  - *Reminders and background:* alert sound, **Remind me again**, start with Windows, alert position (left or right), appearance (light, dark or same as Windows), interface language, and a preview alert.
+  - *Reminders and background:* alert sound, **Remind me again**, start with Windows, alert position (left or right), interface language, and a preview alert.
+  - *Appearance:* light, dark or same as Windows, and one of six palettes, picked from preview cards. The change shows at once in the main window and the alert.
   - *Calendar:* the first day of the week.
   - *Your data:* export, restore, storage use and cleanup, the data folder, and Google Drive backups with how many automatic copies to keep.
   - *Updates:* automatic checks and **Check now**.
@@ -172,7 +173,7 @@ Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable
 - `tests/icons.test.js`: every size in `icon.ico` and the tray images' dimensions.
 - `tests/search.test.js`: Arabic-aware search matching.
 - `tests/placement.test.js`: placing the alert next to a taskbar on any edge, on scaled and secondary displays.
-- `tests/dark-theme.test.js`: `ui/dark.css` is up to date with the light stylesheets, and dark colors keep accents and focus rings.
+- `tests/theme.test.js`: every palette in light and dark meets WCAG contrast for text, buttons, focus rings and the logo; the stylesheets use only theme tokens; palette, note color and note style settings fall back safely.
 - `tests/pause.test.js`: pausing reminders from the tray, with a fake clock.
 - `tests/winget-manifest.test.js`: the winget manifests written from a release's `SHA256SUMS.txt`.
 - `tests/updates.test.js`: the update consent, background schedule, Check now, the ready banner, and installing after a safety backup.

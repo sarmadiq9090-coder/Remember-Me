@@ -2,7 +2,8 @@ let currentId, currentDue, queueSize = 0, busy = false;
 const $ = id => document.getElementById(id);
 async function refreshAlert() {
   try {
-    setLanguage(await api('language'));
+    const look = await api('language');
+    setLanguage(look); applyPalette(look.palette);
     const tasks = await api('alerts');
     // After the last Done the window stays briefly so it can be undone; show that instead of an empty card.
     document.body.classList.toggle('all-done', !tasks.length);

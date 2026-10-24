@@ -41,6 +41,22 @@ function localDateValue(date) { const d = new Date(date); return new Date(d.getT
 function isToday(value) { return value && new Date(value).toDateString() === new Date().toDateString(); }
 function timeLabel(value) { return new Date(value).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }); }
 function dateLabel(value) { if (!value) return ''; const d = new Date(value); return `${isToday(value) ? tr('اليوم', 'Today') : d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' })}${tr('، ', ', ')}${timeLabel(value)}`; }
+// Interface palettes (ui/theme.css). The preload carries the saved one, so the first paint already uses it.
+const PALETTES = ['lavender', 'ocean', 'forest', 'sunset', 'graphite', 'contrast'];
+function applyPalette(palette) { document.documentElement.dataset.palette = PALETTES.includes(palette) ? palette : 'lavender'; }
+applyPalette(globalThis.waqt?.palette);
+// The app icon drawn with the --mark-* theme tokens, so it matches every palette and mode (issue #18).
+// Same artwork as assets/icon.svg; small marks use the simplified glyph of assets/icon-small.svg.
+// The Windows icon files stay fixed purple. Any element with data-brand-mark ("small" for the glyph) gets one.
+let brandMarks = 0;
+function brandMark(small = false) {
+  const id = `brand-tile-${++brandMarks}`;
+  const tile = `<defs><linearGradient id="${id}" x2="1" y2="1"><stop class="mark-tile-1"/><stop offset="1" class="mark-tile-2"/></linearGradient></defs>`;
+  return small
+    ? `<svg class="brand-svg mark-small" viewBox="0 0 16 16" aria-hidden="true">${tile}<rect width="16" height="16" rx="3.5" fill="url(#${id})"/><g class="mark-glyph"><rect x="6" y="1.5" width="2" height="2" rx=".75"/><path d="M3 6.5a4 4 0 0 1 8 0V9l1 1v1H2v-1l1-1z"/><path d="M5.5 12h3a1.5 1.5 0 0 1-3 0z"/></g><circle class="mark-badge" cx="12" cy="12" r="3.5" stroke-width="1"/><path class="mark-check" d="m10.4 12 1.1 1.1 2.1-2.3" stroke-width="1.25"/></svg>`
+    : `<svg class="brand-svg" viewBox="0 0 256 256" aria-hidden="true">${tile}<rect x="8" y="8" width="240" height="240" rx="68" fill="url(#${id})"/><path class="mark-glyph" d="M78 151c13-14 11-32 12-52 1-21 16-38 38-38s37 17 38 38c1 20-1 38 12 52l9 11c4 6 0 13-7 13H76c-7 0-11-7-7-13z"/><path class="mark-clapper" d="M111 190c4 18 30 18 34 0" stroke-width="12"/><path class="mark-rays" d="M128 50v10M67 87l-9-10m131 10 9-10" stroke-width="10"/><circle class="mark-badge" cx="187" cy="169" r="35" stroke-width="7"/><path class="mark-check" d="m172 169 10 10 20-23" stroke-width="8"/></svg>`;
+}
+function hydrateBrandMarks(root = document) { root.querySelectorAll('[data-brand-mark]').forEach(el => { el.innerHTML = brandMark(el.dataset.brandMark === 'small'); }); }
 async function api(action, payload) { const result = await window.waqt.call(action, payload); if (!result.ok) throw new Error(result.error); return result.value; }
 function fileSize(bytes) { return bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1048576).toFixed(1)} MB`; }
 function fileBadge(name) { const ext = name.includes('.') ? name.split('.').pop().toUpperCase() : 'FILE'; return ext.slice(0, 5); }
@@ -83,3 +99,4 @@ function fileMarkup(record, removable = false) {
   return isImageFile(record) ? `<div class="image-attachment">${photoMarkup(record)}${row}</div>` : row;
 }
 hydrateIcons();
+hydrateBrandMarks();

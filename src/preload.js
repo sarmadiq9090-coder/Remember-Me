@@ -1,5 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
+// The palette the window was opened with (main's additionalArguments), applied before the first paint.
+const palette = (process.argv.find(arg => arg.startsWith('--waqt-palette=')) || '').slice('--waqt-palette='.length);
 contextBridge.exposeInMainWorld('waqt', {
+  palette,
   call: (action, payload) => ipcRenderer.invoke('waqt:action', action, payload),
   onUpdate: (callback) => { const listener = () => callback(); ipcRenderer.on('waqt:update', listener); return () => ipcRenderer.removeListener('waqt:update', listener); },
   // The tray's "New task". Carries no data, so the page only learns that it was chosen.
