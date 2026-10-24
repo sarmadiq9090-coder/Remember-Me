@@ -88,3 +88,80 @@ test('a day with the app closed brings back every missed reminder once, and the 
   assert.equal(s.tasks.filter(t => t.completedAt).length, 100, 'One history entry per handled reminder');
   assert.ok(s.tasks.filter(t => t.repeat === 'daily').every(t => Date.parse(t.dueAt) > next.getTime()));
 });
+
+test('monthly and yearly repeats keep their day, clamping to short months without drifting', () => {
+  process.env.TZ = 'Asia/Baghdad';
+  const s = initialState();
+  const monthly = saveTask(s, { title: 'إيجار', dueAt: new Date(2027, 0, 31, 9).toISOString(), repeat: 'monthly' });
+  const seen = [];
+  for (let i = 0; i < 4; i++) { completeTask(s, monthly.id, new Date(monthly.dueAt)); const d = new Date(monthly.dueAt); seen.push(`${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}`); }
+  assert.deepEqual(seen, ['2/28 9', '3/31 9', '4/30 9', '5/31 9']);
+  const yearly = saveTask(s, { title: 'ميلاد', dueAt: new Date(2028, 1, 29, 8).toISOString(), repeat: 'yearly' });
+  const years = [];
+  for (let i = 0; i < 4; i++) { completeTask(s, yearly.id, new Date(yearly.dueAt)); const d = new Date(yearly.dueAt); years.push(`${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`); }
+  assert.deepEqual(years, ['2029-2-28', '2030-2-28', '2031-2-28', '2032-2-29']);
+  // Fourteen months with the app closed: one alert, then the next 31st-or-last-day after today.
+  const late = saveTask(s, { title: 'late', dueAt: new Date(2026, 0, 31, 9).toISOString(), repeat: 'monthly' });
+  const back = new Date(2027, 2, 15, 12);
+  assert.equal(dueTasks(s, back).filter(t => t.id === late.id).length, 1);
+  completeTask(s, late.id, back);
+  assert.equal(new Date(late.dueAt).toDateString(), new Date(2027, 2, 31).toDateString());
+});
+
+test('chosen weekdays, workdays and every-N-days repeats skip the right days', () => {
+  process.env.TZ = 'Asia/Baghdad';
+  const s = initialState();
+  // Sunday–Thursday working week: Thursday's reminder comes back on Sunday.
+  const work = saveTask(s, { title: 'دوام', dueAt: new Date(2026, 9, 22, 9).toISOString(), repeat: 'days', repeatDays: [4, 0, 1, 2, 3, 3, 9] });
+  assert.deepEqual(work.repeatDays, [0, 1, 2, 3, 4], 'Days are de-duplicated, validated and sorted');
+  completeTask(s, work.id, new Date(2026, 9, 22, 9, 5));
+  assert.deepEqual([new Date(work.dueAt).getDay(), new Date(work.dueAt).getDate(), new Date(work.dueAt).getHours()], [0, 25, 9]);
+  const gym = saveTask(s, { title: 'رياضة', dueAt: new Date(2026, 0, 5, 18).toISOString(), repeat: 'days', repeatDays: [1, 3] });
+  completeTask(s, gym.id, new Date(2026, 9, 24, 12));  // Saturday, months later
+  assert.deepEqual([new Date(gym.dueAt).getDay(), new Date(gym.dueAt).getDate(), new Date(gym.dueAt).getHours()], [1, 26, 18]);
+  const water = saveTask(s, { title: 'سقي النبات', dueAt: new Date(2026, 9, 1, 7).toISOString(), repeat: 'interval', repeatEvery: 3 });
+  completeTask(s, water.id, new Date(2026, 9, 24, 8));
+  assert.equal(new Date(water.dueAt).getDate(), 25, 'Oct 1 + 3n: the first after the 24th is the 25th');
+  assert.equal(saveTask(s, { title: 'x', dueAt: water.dueAt, repeat: 'interval', repeatEvery: 900 }).repeatEvery, 365);
+  assert.equal(saveTask(s, { title: 'y', dueAt: work.dueAt, repeat: 'days', repeatDays: 'bad' }).repeatDays[0], 0, 'Falls back to the due weekday');
+});
+
+test('repeat rules stay consistent when a task is edited, completed or loaded', () => {
+  const { validateState } = require('../src/core');
+  process.env.TZ = 'Europe/Berlin';
+  const s = initialState();
+  const t = saveTask(s, { title: 'r', dueAt: new Date(2026, 2, 15, 9).toISOString(), repeat: 'monthly' });
+  assert.equal(t.repeatFrom, t.dueAt);
+  saveTask(s, { ...t, dueAt: new Date(2026, 2, 20, 9).toISOString() });
+  assert.equal(t.repeatFrom, t.dueAt, 'A new date restarts the monthly count');
+  saveTask(s, { ...t, repeat: 'daily' });
+  assert.ok(!('repeatFrom' in t) && !('repeatDays' in t) && !('repeatEvery' in t), 'Daily tasks carry no rule fields');
+  saveTask(s, { ...t, repeat: 'monthly' });
+  completeTask(s, t.id, new Date(2026, 2, 20, 9, 30));
+  const history = s.tasks.find(x => x.completedAt);
+  assert.ok(!('repeatFrom' in history), 'History copies are plain one-time tasks');
+  assert.equal(new Date(t.dueAt).getHours(), 9, 'Monthly keeps the hour across the March DST change');
+  const loaded = validateState(JSON.parse(JSON.stringify({ ...s, tasks: [{ ...t, repeat: 'days', repeatDays: [] }, { ...t, id: 'b', repeat: 'interval', repeatEvery: 'x' }] })));
+  assert.deepEqual(loaded.tasks[0].repeatDays, [new Date(t.dueAt).getDay()]);
+  assert.ok(!('repeatFrom' in loaded.tasks[0]));
+  assert.equal(loaded.tasks[1].repeatEvery, 2);
+});
+
+test('early notifications start at the chosen lead time and stop at the due time', () => {
+  const { upcomingTasks, validateState } = require('../src/core');
+  process.env.TZ = 'Asia/Baghdad';
+  const s = initialState();
+  const t = saveTask(s, { title: 'اجتماع', dueAt: '2026-10-24T10:00:00.000Z', remindBefore: 10 });
+  assert.equal(t.remindBefore, 10);
+  assert.equal(upcomingTasks(s, new Date('2026-10-24T09:49:59Z')).length, 0);
+  assert.equal(upcomingTasks(s, new Date('2026-10-24T09:50:00Z')).length, 1);
+  assert.equal(upcomingTasks(s, new Date('2026-10-24T10:00:00Z')).length, 0, 'At the due time the sticky alert takes over');
+  assert.ok(!('remindBefore' in saveTask(s, { title: 'بلا', dueAt: '2026-10-24T10:00:00.000Z', remindBefore: 7 })), 'Only offered lead times are kept');
+  assert.ok(!('remindBefore' in saveTask(s, { title: 'بلا موعد', remindBefore: 10 })), 'No due time, no early notification');
+  saveTask(s, { ...t, remindBefore: 0 });
+  assert.ok(!('remindBefore' in t));
+  const daily = saveTask(s, { title: 'يومي', dueAt: '2026-10-24T10:00:00.000Z', repeat: 'daily', remindBefore: 60 });
+  completeTask(s, daily.id, new Date('2026-10-24T10:05:00Z'));
+  assert.equal(upcomingTasks(s, new Date('2026-10-25T09:00:00Z')).map(x => x.title).join(), 'يومي', 'The next occurrence keeps its lead time');
+  assert.ok(!('remindBefore' in validateState({ ...initialState(), tasks: [{ ...t, remindBefore: 'soon' }] }).tasks[0]));
+});

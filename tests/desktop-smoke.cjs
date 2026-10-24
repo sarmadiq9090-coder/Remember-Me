@@ -136,10 +136,12 @@ async function alertPage() {
     assert.equal(saved.tasks.filter(t => t.completedAt).length, 2);
     await page.locator('[data-view="completed"]').click();
     assert.equal(await page.locator('.task-row').count(), 2);
+    // Deleting moves the task to the trash at once, with Undo instead of a confirmation.
     await page.locator('.task-row').first().locator('[data-action="delete"]').click();
-    await page.locator('#confirm-delete').click();
     await page.waitForTimeout(150);
-    assert.equal(await page.locator('.task-row').count(), 1);
+    assert.equal(await page.locator('#tasks-section .task-row').count(), 1);
+    await page.locator('[data-view="trash"]').click();
+    assert.equal(await page.locator('#trash-list .task-row').count(), 1);
     assert.deepEqual(errors, [], 'No renderer errors');
     console.log('PASS: Arabic task/note CRUD, search, persistence, native tray behavior, scheduler, sticky alert, quick/custom snooze, overdue recovery, queue, completion, deletion.');
     console.log('Screenshots: screenshots/main.png and screenshots/reminder.png');

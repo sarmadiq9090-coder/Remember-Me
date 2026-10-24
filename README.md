@@ -24,7 +24,9 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 
 - **Sticky reminders:** a persistent alert above the taskbar, shown on top of other windows until you choose **Done** or snooze it.
 - **Flexible snooze:** 5 minutes, 15 minutes, 1 hour, 24 hours, or any date and time you pick. Snoozes survive restarts.
-- **Recurring tasks:** daily or weekly. Completing one logs it under *Completed* and schedules the next occurrence at the same wall-clock time, including across daylight-saving changes.
+- **Recurring tasks:** daily, weekly, monthly, yearly, on chosen weekdays (for example workdays), or every few days. Completing one logs it under *Completed* and schedules the next occurrence at the same wall-clock time, including across daylight-saving changes. Monthly repeats on the 31st and yearly repeats on February 29 fall back to the last day of the month without drifting.
+- **Early notice:** an optional Windows notification from 5 minutes to 1 day before a reminder is due.
+- **Undo and Trash:** undo Done from the main window or the alert; deleted tasks and notes wait 30 days in the Trash and can be restored.
 - **No dropped alerts:** several due reminders are queued and shown one at a time, with a count of how many are waiting.
 - **Notes:** colored notes you can edit, search and delete.
 - **Attachments:** add PDFs, Excel sheets, documents, images or any other file to tasks and notes, up to 20 files per item and 50 MB per file. Images preview inline, including in the alert.
@@ -33,6 +35,8 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 - **Arabic and English interfaces:** a full right-to-left Arabic UI and a left-to-right English UI, switchable in Settings. Mixed-language text keeps its reading order.
 - **Local-first data:** atomic saves, an automatic `.bak` copy and automatic recovery if the data file is damaged.
 - **Backups:** export a full backup with all attachments and checksums, restore one from Settings after it's verified, or copy daily backups into a synced Google Drive folder.
+- **Dark mode and display options:** light, dark or follow Windows; Arabic-Indic or Western digits; choose the first day of the week; and an optional Hijri (Umm al-Qura) date.
+- **Multi-monitor aware:** the alert sits above the taskbar wherever it is (bottom, top, left or right) and adapts to scaled and secondary displays.
 - **Runs in the background:** closing the window keeps Remember Me in the notification area, and it can start with Windows.
 
 ## Install
