@@ -23,6 +23,7 @@
     "electron-updater": "6.8.10"
   },
   "devDependencies": {
+    "@electron/fuses": "1.8.0",
     "@electron/packager": "^20.3.0",
     "@eslint/js": "10.0.1",
     "electron": "^45.0.0",

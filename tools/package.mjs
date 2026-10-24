@@ -8,6 +8,9 @@ const require = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const version = require('../package.json').version;
 const { FEED, UPDATER_CACHE } = require('../src/updates.js');
+const { flipFuses, getCurrentFuseWire, FuseVersion, FuseV1Options } = require('@electron/fuses');
+// The values getCurrentFuseWire reports ('0' and '1' in the fuse wire).
+const FuseState = { DISABLE: 48, ENABLE: 49 };
 // Only the app itself goes into app.asar: never docs, CI files, worktrees or local data.
 const bundled = ['/package.json', '/LICENSE', '/src', '/ui', '/assets'];
 const ignore = file => !!file && !bundled.some(entry => file === entry || file.startsWith(entry + '/'));
@@ -61,4 +64,26 @@ const paths = await packager({
 // signed by anyone else are refused.
 const updateConfig = Object.entries({ ...FEED, updaterCacheDirName: UPDATER_CACHE }).map(([key, value]) => `${key}: ${value}\n`).join('');
 for (const folder of paths) await fs.writeFile(path.join(folder, 'resources', 'app-update.yml'), updateConfig);
+// Electron fuses: the shipped exe can't be run as a plain Node.js interpreter, take NODE_OPTIONS
+// or --inspect, or load app code from outside its checked app.asar. Packager writes the asar
+// integrity resource the exe checks. Playwright attaches through --inspect, so a build for the
+// desktop tests (WAQT_DESKTOP_TEST_BUILD=1) keeps only that fuse on. Fuses are set before
+// electron-builder (and later code signing) touch the exe.
+const desktopTestBuild = process.env.WAQT_DESKTOP_TEST_BUILD === '1';
+const fuses = {
+  [FuseV1Options.RunAsNode]: false,
+  [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
+  [FuseV1Options.EnableNodeCliInspectArguments]: desktopTestBuild,
+  [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
+  [FuseV1Options.OnlyLoadAppFromAsar]: true,
+};
+for (const folder of paths) {
+  const exe = path.join(folder, 'Remember Me.exe');
+  await flipFuses(exe, { version: FuseVersion.V1, ...fuses });
+  const wire = await getCurrentFuseWire(exe);
+  for (const [fuse, on] of Object.entries(fuses)) {
+    if (wire[fuse] !== (on ? FuseState.ENABLE : FuseState.DISABLE)) throw new Error(`Fuse ${FuseV1Options[fuse]} was not set in ${exe}.`);
+  }
+}
+console.log(`Fuses set${desktopTestBuild ? ' (desktop test build: --inspect allowed)' : ''}.`);
 console.log('Ready:', paths.join('\n'));
