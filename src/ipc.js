@@ -4,7 +4,8 @@ const { fileURLToPath } = require('node:url');
 const ACTIONS = new Set(['state', 'alerts', 'language', 'saveTask', 'complete', 'skip', 'snooze', 'reopen', 'deleteTask', 'saveNote', 'deleteNote',
   'attachFiles', 'openAttachment', 'imagePreview', 'chooseDriveFolder', 'driveBackupNow', 'driveAutomatic', 'driveKeep', 'driveHelp', 'openDriveFolder',
   'undoComplete', 'undoable', 'restoreTask', 'restoreNote', 'purgeTask', 'purgeNote', 'emptyTrash',
-  'settings', 'preview', 'export', 'restore', 'storage', 'cleanOrphans', 'dataFolder', 'open']);
+  'settings', 'preview', 'export', 'restore', 'storage', 'cleanOrphans', 'dataFolder', 'open',
+  'updateConsent', 'checkUpdates', 'installUpdate', 'dismissUpdate']);
 // The always-on-top alert only needs to read its queue and act on the reminder it shows.
 const ALERT_ACTIONS = new Set(['alerts', 'language', 'complete', 'skip', 'undoComplete', 'undoable', 'snooze', 'open', 'openAttachment', 'imagePreview']);
 const ID_ACTIONS = new Set(['complete', 'skip', 'undoComplete', 'snooze', 'reopen', 'deleteTask', 'deleteNote', 'restoreTask', 'restoreNote', 'purgeTask', 'purgeNote', 'openAttachment', 'imagePreview']);
@@ -21,6 +22,7 @@ function checkRequest(action, payload, { fromAlert = false, text = arabic } = {}
   if (ID_ACTIONS.has(action) ? !isId(payload.id) : payload.id !== undefined && !isId(payload.id)) throw new Error(text('معرّف العنصر غير صالح.', 'Invalid item ID.'));
   // The due time the user saw: null for an undated task, left out by older callers.
   if (DUE_ACTIONS.has(action) && payload.expectedDueAt !== undefined && payload.expectedDueAt !== null && !isDate(payload.expectedDueAt)) throw new Error(text('موعد غير صالح.', 'Invalid time.'));
+  if (action === 'updateConsent' && typeof payload.enabled !== 'boolean') throw new Error(text('بيانات الطلب غير صالحة.', 'Invalid request data.'));
   return payload;
 }
 // True only when the request comes from the top-level page the window was created with.

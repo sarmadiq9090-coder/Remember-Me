@@ -147,6 +147,9 @@
 @media (prefers-color-scheme:dark){.repeat-days button{border:1px solid var(--border);background:#15171e}}
 @media (prefers-color-scheme:dark){.repeat-days button[aria-pressed=true]{background:var(--purple-light);border-color:#ac93e4;color:var(--purple)}}
 @media (prefers-color-scheme:dark){.toast-action{color:inherit}}
+@media (prefers-color-scheme:dark){.update-notice{background:#15171e;border:1px solid #3d265d;color:#8b71b7}}
+@media (prefers-color-scheme:dark){.update-notice p{color:#aba2b8}}
+@media (prefers-color-scheme:dark){#update-status{color:#a79ab4}}
 @media (prefers-color-scheme:dark){.alert-body{background:#15171e}}
 @media (prefers-color-scheme:dark){.alert-shell{border:1px solid #3c2860;border-top:4px solid #9c83ce}}
 @media (prefers-color-scheme:dark){.alert-logo{background:#8a6dc1;color:white}}

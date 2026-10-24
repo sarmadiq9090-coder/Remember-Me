@@ -63,7 +63,7 @@ function resolveAttachment(state, directory, id) {
   if (!record) throw new Error('المرفق غير موجود.');
   const file = attachmentPath(directory, record);
   let stat;
-  try { stat = fs.lstatSync(file); } catch { throw new Error(`ملف «${record.name}» غير موجود في مجلد بيانات وقت. استعده من نسختك الاحتياطية.`); }
+  try { stat = fs.lstatSync(file); } catch { throw new Error(`ملف «${record.name}» غير موجود في مجلد بيانات ذكرني. استعده من نسختك الاحتياطية.`); }
   if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('مسار المرفق غير صالح.');
   return { file, record };
 }
@@ -79,7 +79,7 @@ function fileMissing(directory, record) {
 // kind is 'automatic' for copies the app makes on its own; only those may ever be rotated away.
 // An attachment whose file is gone is left out instead of blocking every backup: it is dropped from
 // the copied data.json so the backup stays restorable, and reported in `skipped` (if given) and backup.json.
-async function exportBackup(state, directory, destination, { kind = 'manual', prefix = 'Waqt-backup-', skipped = [] } = {}) {
+async function exportBackup(state, directory, destination, { kind = 'manual', prefix = 'RememberMe-backup-', skipped = [] } = {}) {
   const snapshot = structuredClone(state);
   const items = [...snapshot.tasks, ...snapshot.notes];
   const used = new Set(items.flatMap(item => item.attachments || []));
