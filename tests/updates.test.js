@@ -106,7 +106,7 @@ test('a downloaded update shows the banner; Later hides it but keeps the update 
   assert.equal(updates.check(), checking, 'A second click joins the running check');
   assert.equal((await checking).state, 'downloading');
   updater.emit('download-progress', { percent: 42.7 });
-  assert.equal(updates.status().percent, 42);
+  assert.equal(updates.status().percent, 40, 'Progress is shown in 10% steps');
   assert.equal(updates.status().banner, false);
   updater.emit('update-downloaded', { version: '1.6.0' });
   assert.deepEqual([updates.status().state, updates.status().next, updates.status().banner], ['ready', '1.6.0', true]);
@@ -172,4 +172,14 @@ test('settings.autoUpdate is null until the user answers, and unknown values bec
   assert.equal(saved({ autoUpdate: true }), true);
   assert.equal(saved({ autoUpdate: false }), false);
   for (const value of ['true', 1, 0, {}, [], undefined]) assert.equal(saved({ autoUpdate: value }), null);
+});
+
+test('download progress notifies the window only on whole 10% steps', async () => {
+  const { updater, updates, app } = setup({ consent: true });
+  updater.result = available;
+  await updates.check();
+  const before = app.changes;
+  for (let tenths = 0; tenths <= 1000; tenths++) updater.emit('download-progress', { percent: tenths / 10 });
+  assert.equal(app.changes - before, 10, 'From 10% to 100%: ten updates instead of a thousand');
+  assert.equal(updates.status().percent, 100);
 });

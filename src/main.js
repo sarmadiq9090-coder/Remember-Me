@@ -217,7 +217,8 @@ function createUpdates() {
   let loggedState = 'idle';
   const onChange = () => {
     if (updates && updates.state !== loggedState) { loggedState = updates.state; log.info('update', { state: updates.state, version: app.getVersion(), ...(updates.next ? { next: String(updates.next).slice(0, 40) } : {}) }); }
-    notifyViews();
+    // Only the main window shows update status; the alert window is never refreshed for it.
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('waqt:update');
   };
   return new Updates({ updater, version: app.getVersion(), consent: () => store.state.settings.autoUpdate, onChange,
     backup: () => safetyBackup(app.getPath('userData'), store.state, 'RememberMe-before-update-'),

@@ -3,6 +3,7 @@
 // writes the same feed into resources/app-update.yml, which electron-updater also reads.
 const FEED = { provider: 'github', owner: 'sarmadiq9090-coder', repo: 'Remember-Me', protocol: 'https' };
 const UPDATER_CACHE = 'remember-me-updater';
+const PROGRESS_STEP = 10;
 const FIRST_CHECK = 30 * 1000, CHECK_EVERY = 24 * 60 * 60 * 1000, TICK = 60 * 60 * 1000, BACKUP_LIMIT = 2 * 60 * 1000;
 
 // Applies the app's update policy to electron-updater's autoUpdater.
@@ -30,7 +31,11 @@ class Updates {
     this.next = null; this.percent = 0; this.checkedAt = null; this.dismissed = false;
     this.running = null; this.timeout = null; this.interval = null;
     updater.on('update-available', info => this.set({ state: 'downloading', next: info.version, percent: 0 }));
-    updater.on('download-progress', progress => { if (this.state === 'downloading') this.set({ percent: Math.floor(progress.percent || 0) }); });
+    // electron-updater reports progress about once a second; the window only hears of whole 10% steps.
+    updater.on('download-progress', progress => {
+      const percent = Math.min(100, Math.floor((progress.percent || 0) / PROGRESS_STEP) * PROGRESS_STEP);
+      if (this.state === 'downloading' && percent !== this.percent) this.set({ percent });
+    });
     updater.on('update-downloaded', info => this.set({ state: 'ready', next: info.version, dismissed: false }));
     updater.on('error', () => {
       if (['checking', 'downloading'].includes(this.state)) this.set({ state: 'error' });
