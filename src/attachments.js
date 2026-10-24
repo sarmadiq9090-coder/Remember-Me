@@ -14,6 +14,19 @@ function validateAttachment(record) {
   if (!record || !idPattern.test(record.id) || typeof record.name !== 'string' || !record.name || record.name.length > 255 || /[<>:"/\\|?*\x00-\x1f]/.test(record.name) || record.name === '.' || record.name === '..' || /[. ]$/.test(record.name) || !Number.isSafeInteger(record.size) || record.size < 0 || record.size > MAX_FILE_SIZE) throw new Error('بيانات المرفق غير صالحة.');
   return record;
 }
+// Files Windows would run or install (directly, through an interpreter, or by mounting) are shown
+// in Explorer instead of being launched. Matching uses the final extension, so "report.pdf.exe" counts.
+const programExtensions = new Set(('exe com bat cmd ps1 psm1 psd1 ps1xml ps2 ps2xml psc1 psc2 msh msh1 msh2 mshxml msh1xml msh2xml ' +
+  'vb vbs vbe js jse jar wsf wsh wsc ws sct hta msi msp mst msc cpl pif scr lnk url website scf shb shs reg inf ins isp ' +
+  'application appref-ms gadget xbap jnlp chm hlp settingcontent-ms diagcab diagcfg diagpkg appx appxbundle msix msixbundle ' +
+  'appinstaller library-ms search-ms searchconnector-ms iso img vhd vhdx wsb rdp dll ocx sys drv xll xlam ppam ade adp mde accde ' +
+  'py pyw pyz pyc').split(' '));
+function opensAsProgram(name) {
+  // Bidirectional overrides can disguise an extension on screen ("gpj.exe" shown as "exe.jpg").
+  if (/[\u202a-\u202e\u2066-\u2069]/.test(name)) return true;
+  const dot = name.lastIndexOf('.');
+  return dot >= 0 && programExtensions.has(name.slice(dot + 1).toLowerCase());
+}
 function attachmentPath(directory, record) {
   validateAttachment(record);
   return path.join(directory, 'attachments', record.id, record.name);
@@ -70,4 +83,4 @@ async function exportBackup(state, directory, destination) {
   await fsp.writeFile(path.join(folder, 'data.json'), JSON.stringify(snapshot, null, 2), { encoding: 'utf8', flag: 'wx' });
   return folder;
 }
-module.exports = { MAX_ATTACHMENTS, attachmentIds, validateAttachment, attachmentPath, importFiles, resolveAttachment, exportBackup };
+module.exports = { MAX_ATTACHMENTS, attachmentIds, opensAsProgram, validateAttachment, attachmentPath, importFiles, resolveAttachment, exportBackup };

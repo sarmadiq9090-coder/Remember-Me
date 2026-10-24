@@ -3,7 +3,7 @@ const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, screen, powerMonit
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { Store, saveTask, completeTask, snoozeTask, dueTasks } = require('./core');
-const { attachmentIds, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
+const { attachmentIds, opensAsProgram, importFiles, resolveAttachment, exportBackup, MAX_ATTACHMENTS } = require('./attachments');
 const { createPreviewService } = require('./image-preview');
 const { DriveBackup } = require('./drive-backup');
 const testMode = process.env.WAQT_TEST === '1';
@@ -144,9 +144,8 @@ async function start() {
         }
         case 'openAttachment': {
           if (event.sender === alertWindow?.webContents && !activeAlerts().some(t => (t.attachments || []).includes(payload.id))) throw new Error('المرفق لا يتبع تنبيهًا نشطًا.');
-          const { file } = resolveAttachment(store.state, app.getPath('userData'), payload.id);
-          // Executable/script attachments are revealed rather than launched by the app.
-          if (/\.(exe|com|bat|cmd|ps1|vbs|vbe|js|jse|wsf|wsh|msi|scr|lnk|url|hta|reg)$/i.test(file)) shell.showItemInFolder(file);
+          const { file, record } = resolveAttachment(store.state, app.getPath('userData'), payload.id);
+          if (opensAsProgram(record.name)) shell.showItemInFolder(file);
           else {
             const error = await shell.openPath(file);
             if (error) throw new Error('تعذّر فتح الملف. تأكد من وجود برنامج مناسب لهذا النوع، مثل قارئ PDF أو Excel.');
