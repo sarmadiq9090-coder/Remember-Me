@@ -82,6 +82,18 @@ function normalizeChecklist(value) {
   });
 }
 function setChecklist(task, value) { const steps = normalizeChecklist(value); if (steps.length) task.checklist = steps; else delete task.checklist; }
+// Applies the editor's steps but keeps the stored ticks: used when a repeat was completed while the
+// editor was open, so the ticks it shows belong to the occurrence that is now in the history.
+function setChecklistKeepingTicks(task, value) {
+  const stored = new Map((task.checklist || []).map(step => [step.id, step.done]));
+  setChecklist(task, value);
+  for (const step of task.checklist || []) step.done = stored.get(step.id) === true;
+}
+// True when a repeat's occurrence was completed after the editor opened with updatedAt.
+function completedSince(state, task, updatedAt) {
+  const opened = Date.parse(updatedAt);
+  return Number.isFinite(opened) && state.tasks.some(t => t.sourceId === task.id && t.completedAt && Date.parse(t.completedAt) > opened);
+}
 function toggleStep(state, taskId, stepId) {
   const step = state.tasks.find(t => t.id === taskId && !t.completedAt && !t.deletedAt)?.checklist?.find(s => s.id === stepId);
   if (!step) throw new Error('This step no longer exists.');
@@ -99,11 +111,12 @@ function saveTask(state, input, now = new Date()) {
     // repeat) were edited. If the alert snoozed or completed the task meanwhile, only the text is
     // applied so the editor's old time cannot undo that; older callers send neither field.
     const outdated = typeof input.timeEdited === 'boolean' && input.updatedAt !== task.updatedAt;
+    const applySteps = outdated && completedSince(state, task, input.updatedAt) ? setChecklistKeepingTicks : setChecklist;
     if (outdated && (!input.timeEdited || task.completedAt)) {
       const { title, body, priority, category, attachments } = fields;
       Object.assign(task, { title, body, priority, category, attachments, updatedAt: now.toISOString() });
       setTags(task, input.tags ?? task.tags);
-      setChecklist(task, input.checklist ?? task.checklist);
+      applySteps(task, input.checklist ?? task.checklist);
       return task;
     }
     if (task.completedAt) throw new Error('Reopen the task before editing it.');
@@ -122,7 +135,7 @@ function saveTask(state, input, now = new Date()) {
     applyRule(task, rule);
     setEarly(task, input.remindBefore);
     setTags(task, input.tags ?? task.tags);
-    setChecklist(task, input.checklist ?? task.checklist);
+    applySteps(task, input.checklist ?? task.checklist);
     if (anchor) { task.scheduleAt = fields.dueAt; task.snoozedAt = null; delete task.snoozeCount; }
   } else {
     if (fields.repeat !== 'none') rule.repeatFrom = fields.dueAt;
@@ -172,6 +185,9 @@ function undoComplete(state, id, copyId, now = new Date()) {
   if (!copy) return;
   Object.assign(task, { dueAt: copy.dueAt, scheduleAt: copy.scheduleAt, snoozedAt: copy.snoozedAt, updatedAt: now.toISOString() });
   if (copy.snoozeCount) task.snoozeCount = copy.snoozeCount; else delete task.snoozeCount;
+  // The ticks of the occurrence come back from the copy, matched by step id.
+  const ticks = new Map((copy.checklist || []).map(step => [step.id, step.done]));
+  for (const step of task.checklist || []) if (ticks.has(step.id)) step.done = ticks.get(step.id);
   state.tasks = state.tasks.filter(t => t !== copy);
 }
 // Deleted tasks and notes stay in a trash for TRASH_DAYS before they are removed for good.
