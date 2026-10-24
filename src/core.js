@@ -187,4 +187,4 @@ class Store {
     this.state = draft;
   }
 }
-module.exports = { initialState, saveTask, completeTask, snoozeTask, dueTasks, nextOccurrence, validateState, Store };
+module.exports = { initialState, saveTask, completeTask, snoozeTask, dueTasks, nextOccurrence, validateState, Store, writeDurable, renameWithRetry };

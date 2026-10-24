@@ -2,6 +2,8 @@
 const fs = require('node:fs');
 const fsp = fs.promises;
 const path = require('node:path');
+const { createHash } = require('node:crypto');
+const { writeDurable } = require('./core');
 const { exportBackup, BACKUP_INFO } = require('./attachments');
 const { validKeep, expiredBackups, rotateBackups } = require('./backups');
 
@@ -17,7 +19,7 @@ class DriveBackup {
     this.exporter = options.exporter || exportBackup;
     this.text = options.text || (ar => ar);
     this.running = null;
-    this.config = { folder: '', automatic: true, lastCopiedAt: null, lastLocalPath: '', lastDrivePath: '', pending: false, error: '', lastAttempt: 0, keep: 0, unavailableSince: null, skipped: [] };
+    this.config = { folder: '', automatic: true, lastCopiedAt: null, lastLocalPath: '', lastDrivePath: '', pending: false, error: '', lastAttempt: 0, keep: 0, unavailableSince: null, skipped: [], snapshotAt: null, snapshotHash: '' };
     if (fs.existsSync(this.file)) {
       try {
         const data = JSON.parse(fs.readFileSync(this.file, 'utf8'));
@@ -36,8 +38,8 @@ class DriveBackup {
   }
   save() {
     fs.mkdirSync(this.directory, { recursive: true });
-    fs.writeFileSync(this.file + '.tmp', JSON.stringify(this.config, null, 2), 'utf8');
-    fs.renameSync(this.file + '.tmp', this.file);
+    // Retries a rename briefly locked by antivirus or the search indexer, like data.json.
+    writeDurable(this.file, JSON.stringify(this.config, null, 2));
     this.onChange();
   }
   async configure(folder) {
@@ -90,13 +92,21 @@ class DriveBackup {
     try {
       if (!this.config.folder) throw new Error(this.text('اختر مجلدًا داخل Google Drive أولًا.', 'Choose a folder inside Google Drive first.'));
       this.config.lastAttempt = this.clock();
-      if (!this.config.pending || !this.config.lastLocalPath || !fs.existsSync(path.join(this.config.lastLocalPath, 'data.json'))) {
+      // A snapshot left pending by a failed copy is reused only while it still matches the data and
+      // is under a day old; otherwise a retry days later would upload old data under a new date.
+      const state = this.getState();
+      const fingerprint = createHash('sha256').update(JSON.stringify(state), 'utf8').digest('hex');
+      const reusable = this.config.pending && this.config.lastLocalPath && fs.existsSync(path.join(this.config.lastLocalPath, 'data.json'))
+        && this.config.snapshotHash === fingerprint && this.clock() - Date.parse(this.config.snapshotAt) < 86400000;
+      if (!reusable) {
         const parent = path.join(this.directory, 'backups');
         await fsp.mkdir(parent, { recursive: true });
         // Attachments whose files are missing are left out and reported, not allowed to block the backup.
         const skipped = [];
-        this.config.lastLocalPath = await this.exporter(this.getState(), this.directory, parent, { kind: 'automatic', skipped });
+        this.config.lastLocalPath = await this.exporter(state, this.directory, parent, { kind: 'automatic', skipped });
         this.config.skipped = skipped;
+        this.config.snapshotAt = new Date(this.clock()).toISOString();
+        this.config.snapshotHash = fingerprint;
         this.config.pending = true;
         this.save();
       }
@@ -110,7 +120,8 @@ class DriveBackup {
       return this.status();
     } catch (error) {
       this.config.error = error.message || this.text('تعذّر نسخ الملفات إلى مجلد Google Drive.', 'Could not copy the files to the Google Drive folder.');
-      this.save();
+      // Report the backup's own failure, not a later one while recording it.
+      try { this.save(); } catch { /* the in-memory status still shows the error */ }
       throw error;
     }
   }

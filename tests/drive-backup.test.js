@@ -100,3 +100,52 @@ test('a missing attachment does not block the Drive backup, and the status names
   assert.deepEqual(status.skipped.map(s => [s.name, s.itemTitle]), [[image.name, 'صورة الفاتورة']]);
   assert.deepEqual(new DriveBackup(data, () => store.state).status().skipped, status.skipped, 'The warning survives a restart');
 });
+test('a retry days later uploads the current data, not the snapshot left pending by the failed copy', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-drive-fresh-'));
+  const data = path.join(root, 'data'), sync = path.join(root, 'Drive');
+  fs.mkdirSync(sync); const store = new Store(data);
+  store.change(s => saveTask(s, { title: 'اليوم الأول' }));
+  let now = Date.parse('2026-10-20T09:00:00Z');
+  const backup = new DriveBackup(data, () => store.state, () => {}, { clock: () => now });
+  await backup.configure(sync);
+  fs.renameSync(sync, sync + '.offline');
+  await assert.rejects(backup.run());
+  const dayOne = backup.status().lastLocalPath;
+  store.change(s => saveTask(s, { title: 'اليوم الخامس' }));
+  now = Date.parse('2026-10-24T09:00:00Z');
+  fs.renameSync(sync + '.offline', sync);
+  const status = await backup.run();
+  assert.notEqual(status.lastLocalPath, dayOne);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(status.lastDrivePath, 'data.json'))).tasks.map(t => t.title), ['اليوم الأول', 'اليوم الخامس']);
+  assert.equal(status.snapshotAt, '2026-10-24T09:00:00.000Z');
+  assert.ok(fs.existsSync(path.join(dayOne, 'data.json')), 'The older local snapshot is kept');
+
+  // Unchanged data within a day still reuses the pending snapshot; after a day it is renewed.
+  fs.renameSync(sync, sync + '.offline');
+  await assert.rejects(backup.run());
+  const pending = backup.status().lastLocalPath;
+  now += 3600000; fs.renameSync(sync + '.offline', sync);
+  assert.equal((await backup.run()).lastLocalPath, pending);
+  fs.renameSync(sync, sync + '.offline');
+  await assert.rejects(backup.run());
+  now += 86400000; fs.renameSync(sync + '.offline', sync);
+  assert.notEqual((await backup.run()).lastLocalPath, pending);
+});
+test('saving the Drive settings retries a rename locked by antivirus, and a failing save never hides the backup error', async () => {
+  const { writeDurable, renameWithRetry } = require('../src/core');
+  assert.equal(typeof writeDurable, 'function'); assert.equal(typeof renameWithRetry, 'function');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-drive-locked-'));
+  const data = path.join(root, 'data'), sync = path.join(root, 'Drive');
+  fs.mkdirSync(sync); const store = new Store(data);
+  const backup = new DriveBackup(data, () => store.state, () => {}, { exporter: async () => { throw new Error('disk full'); } });
+  const rename = fs.renameSync;
+  try {
+    let blocked = 0;
+    fs.renameSync = (...args) => { if (blocked++ < 1) throw Object.assign(new Error('locked'), { code: 'EPERM' }); return rename(...args); };
+    await backup.configure(sync);
+    assert.equal(blocked, 2);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(data, 'drive-backup.json'))).folder, sync);
+    fs.renameSync = () => { throw Object.assign(new Error('still locked'), { code: 'EBUSY' }); };
+    await assert.rejects(backup.run(), /disk full/);
+  } finally { fs.renameSync = rename; }
+});
