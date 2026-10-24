@@ -97,7 +97,7 @@
   "Copy diagnostic info": "复制诊断信息",
   "Could not copy the files to the Google Drive folder.": "无法将文件复制到 Google Drive 文件夹。",
   "Could not read the Drive backup settings. Choose the sync folder again.": "无法读取 Drive 备份设置。请重新选择同步文件夹。",
-  "Could not read the data or its backup. The files were left unchanged in: {folder}": "无法读取数据及其备份。文件已原样保留在：{folder}",
+  "Could not read the data or its backup. The files were left unchanged in: \"{folder}\"": "无法读取数据及其备份。文件已原样保留在：“{folder}”",
   "Couldn't check for updates. Check your internet connection.": "无法检查更新。请检查网络连接。",
   "Couldn't open the log folder.": "无法打开日志文件夹。",
   "Couldn't save a safety copy of your data, so the update was not installed. {reason}": "无法保存数据的安全副本，因此未安装更新。{reason}",

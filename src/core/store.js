@@ -40,7 +40,7 @@ class Store {
         fs.copyFileSync(this.file, this.file + '.damaged-' + Date.now());
         writeDurable(this.file, JSON.stringify(this.state, null, 2));
         this.recovered = true;
-      } catch { throw new UserError('Could not read the data or its backup. The files were left unchanged in: {folder}', { folder: directory }); }
+      } catch { throw new UserError('Could not read the data or its backup. The files were left unchanged in: "{folder}"', { folder: directory }); }
     }
   }
   change(fn) {

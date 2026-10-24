@@ -30,7 +30,7 @@ function inventory(folder, prefix = '', files = new Map()) {
 function verifyCopy(source, copy) {
   const expected = inventory(source), actual = inventory(copy);
   if (expected.size !== actual.size) throw new Error('The copied data folder is missing files.');
-  for (const [name, size] of expected) if (actual.get(name) !== size) throw new Error(`The copy of ${name} is incomplete.`);
+  for (const [name, size] of expected) if (actual.get(name) !== size) throw new Error(`The copy of "${name}" is incomplete.`);
   const data = path.join(copy, 'data.json');
   if (fs.existsSync(data)) validateState(JSON.parse(fs.readFileSync(data, 'utf8')));
 }

@@ -97,7 +97,7 @@
   "Copy diagnostic info": "診断情報をコピー",
   "Could not copy the files to the Google Drive folder.": "Google ドライブのフォルダーにファイルをコピーできませんでした。",
   "Could not read the Drive backup settings. Choose the sync folder again.": "ドライブのバックアップ設定を読み込めませんでした。同期フォルダーを選び直してください。",
-  "Could not read the data or its backup. The files were left unchanged in: {folder}": "データとそのバックアップを読み込めませんでした。ファイルは変更せずに次の場所に残してあります: {folder}",
+  "Could not read the data or its backup. The files were left unchanged in: \"{folder}\"": "データとそのバックアップを読み込めませんでした。ファイルは変更せずに次の場所に残してあります: 「{folder}」",
   "Couldn't check for updates. Check your internet connection.": "更新を確認できませんでした。インターネット接続を確認してください。",
   "Couldn't open the log folder.": "ログフォルダーを開けませんでした。",
   "Couldn't save a safety copy of your data, so the update was not installed. {reason}": "データの安全コピーを保存できなかったため、更新をインストールしませんでした。{reason}",

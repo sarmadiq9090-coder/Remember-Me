@@ -98,7 +98,7 @@
   "Copy diagnostic info": "Copiar información de diagnóstico",
   "Could not copy the files to the Google Drive folder.": "No se pudieron copiar los archivos a la carpeta de Google Drive.",
   "Could not read the Drive backup settings. Choose the sync folder again.": "No se pudo leer la configuración de copias en Drive. Vuelve a elegir la carpeta sincronizada.",
-  "Could not read the data or its backup. The files were left unchanged in: {folder}": "No se pudieron leer los datos ni su copia. Los archivos se dejaron sin cambios en: {folder}",
+  "Could not read the data or its backup. The files were left unchanged in: \"{folder}\"": "No se pudieron leer los datos ni su copia. Los archivos se dejaron sin cambios en: «{folder}»",
   "Couldn't check for updates. Check your internet connection.": "No se pudo buscar actualizaciones. Comprueba tu conexión a internet.",
   "Couldn't open the log folder.": "No se pudo abrir la carpeta del registro.",
   "Couldn't save a safety copy of your data, so the update was not installed. {reason}": "No se pudo guardar una copia de seguridad de tus datos, así que no se instaló la actualización. {reason}",

@@ -98,7 +98,7 @@
   "Copy diagnostic info": "Copy diagnostic info",
   "Could not copy the files to the Google Drive folder.": "Could not copy the files to the Google Drive folder.",
   "Could not read the Drive backup settings. Choose the sync folder again.": "Could not read the Drive backup settings. Choose the sync folder again.",
-  "Could not read the data or its backup. The files were left unchanged in: {folder}": "Could not read the data or its backup. The files were left unchanged in: {folder}",
+  "Could not read the data or its backup. The files were left unchanged in: \"{folder}\"": "Could not read the data or its backup. The files were left unchanged in: \"{folder}\"",
   "Couldn't check for updates. Check your internet connection.": "Couldn't check for updates. Check your internet connection.",
   "Couldn't open the log folder.": "Couldn't open the log folder.",
   "Couldn't save a safety copy of your data, so the update was not installed. {reason}": "Couldn't save a safety copy of your data, so the update was not installed. {reason}",

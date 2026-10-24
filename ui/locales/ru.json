@@ -100,7 +100,7 @@
   "Copy diagnostic info": "Копировать диагностику",
   "Could not copy the files to the Google Drive folder.": "Не удалось скопировать файлы в папку Google Диска.",
   "Could not read the Drive backup settings. Choose the sync folder again.": "Не удалось прочитать настройки копирования на Диск. Выберите папку синхронизации снова.",
-  "Could not read the data or its backup. The files were left unchanged in: {folder}": "Не удалось прочитать данные и их резервную копию. Файлы оставлены без изменений в папке: {folder}",
+  "Could not read the data or its backup. The files were left unchanged in: \"{folder}\"": "Не удалось прочитать данные и их резервную копию. Файлы оставлены без изменений в папке: «{folder}»",
   "Couldn't check for updates. Check your internet connection.": "Не удалось проверить обновления. Проверьте подключение к интернету.",
   "Couldn't open the log folder.": "Не удалось открыть папку журнала.",
   "Couldn't save a safety copy of your data, so the update was not installed. {reason}": "Не удалось сохранить страховочную копию данных, поэтому обновление не установлено. {reason}",

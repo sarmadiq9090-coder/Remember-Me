@@ -97,7 +97,7 @@
   "Copy diagnostic info": "निदान जानकारी कॉपी करें",
   "Could not copy the files to the Google Drive folder.": "फ़ाइलें Google Drive फ़ोल्डर में कॉपी नहीं हो सकीं।",
   "Could not read the Drive backup settings. Choose the sync folder again.": "Drive बैकअप सेटिंग्स पढ़ी नहीं जा सकीं। सिंक फ़ोल्डर फिर से चुनें।",
-  "Could not read the data or its backup. The files were left unchanged in: {folder}": "डेटा या उसका बैकअप पढ़ा नहीं जा सका। फ़ाइलें बिना बदलाव के यहाँ छोड़ी गई हैं: {folder}",
+  "Could not read the data or its backup. The files were left unchanged in: \"{folder}\"": "डेटा या उसका बैकअप पढ़ा नहीं जा सका। फ़ाइलें बिना बदलाव के यहाँ छोड़ी गई हैं: \"{folder}\"",
   "Couldn't check for updates. Check your internet connection.": "अपडेट की जाँच नहीं हो सकी। अपना इंटरनेट कनेक्शन देखें।",
   "Couldn't open the log folder.": "लॉग फ़ोल्डर नहीं खुल सका।",
   "Couldn't save a safety copy of your data, so the update was not installed. {reason}": "आपके डेटा की सुरक्षा कॉपी सहेजी नहीं जा सकी, इसलिए अपडेट इंस्टॉल नहीं हुआ। {reason}",

@@ -101,7 +101,7 @@
   "Copy diagnostic info": "نسخ معلومات التشخيص",
   "Could not copy the files to the Google Drive folder.": "تعذّر نسخ الملفات إلى مجلد Google Drive.",
   "Could not read the Drive backup settings. Choose the sync folder again.": "تعذّرت قراءة إعدادات النسخ إلى Drive. اختر مجلد المزامنة مجددًا.",
-  "Could not read the data or its backup. The files were left unchanged in: {folder}": "تعذّر قراءة البيانات والنسخة الاحتياطية. احتفظنا بالملفات دون تغيير في: {folder}",
+  "Could not read the data or its backup. The files were left unchanged in: \"{folder}\"": "تعذّر قراءة البيانات والنسخة الاحتياطية. احتفظنا بالملفات دون تغيير في: «{folder}»",
   "Couldn't check for updates. Check your internet connection.": "تعذّر التحقق من التحديثات. تأكد من اتصالك بالإنترنت.",
   "Couldn't open the log folder.": "تعذّر فتح مجلد السجل.",
   "Couldn't save a safety copy of your data, so the update was not installed. {reason}": "تعذّر حفظ نسخة أمان من بياناتك، فلم يُثبَّت التحديث. {reason}",

@@ -97,7 +97,7 @@
   "Copy diagnostic info": "Salin info diagnostik",
   "Could not copy the files to the Google Drive folder.": "Tidak dapat menyalin file ke folder Google Drive.",
   "Could not read the Drive backup settings. Choose the sync folder again.": "Tidak dapat membaca pengaturan cadangan Drive. Pilih folder sinkronisasi lagi.",
-  "Could not read the data or its backup. The files were left unchanged in: {folder}": "Tidak dapat membaca data maupun cadangannya. File dibiarkan tanpa perubahan di: {folder}",
+  "Could not read the data or its backup. The files were left unchanged in: \"{folder}\"": "Tidak dapat membaca data maupun cadangannya. File dibiarkan tanpa perubahan di: \"{folder}\"",
   "Couldn't check for updates. Check your internet connection.": "Tidak dapat memeriksa pembaruan. Periksa koneksi internet Anda.",
   "Couldn't open the log folder.": "Tidak dapat membuka folder log.",
   "Couldn't save a safety copy of your data, so the update was not installed. {reason}": "Salinan pengaman data Anda tidak dapat disimpan, jadi pembaruan tidak dipasang. {reason}",

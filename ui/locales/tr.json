@@ -97,7 +97,7 @@
   "Copy diagnostic info": "Tanılama bilgisini kopyala",
   "Could not copy the files to the Google Drive folder.": "Dosyalar Google Drive klasörüne kopyalanamadı.",
   "Could not read the Drive backup settings. Choose the sync folder again.": "Drive yedekleme ayarları okunamadı. Eşitleme klasörünü yeniden seçin.",
-  "Could not read the data or its backup. The files were left unchanged in: {folder}": "Veriler ve yedekleri okunamadı. Dosyalar şurada değiştirilmeden bırakıldı: {folder}",
+  "Could not read the data or its backup. The files were left unchanged in: \"{folder}\"": "Veriler ve yedekleri okunamadı. Dosyalar şurada değiştirilmeden bırakıldı: \"{folder}\"",
   "Couldn't check for updates. Check your internet connection.": "Güncellemeler denetlenemedi. İnternet bağlantınızı kontrol edin.",
   "Couldn't open the log folder.": "Günlük klasörü açılamadı.",
   "Couldn't save a safety copy of your data, so the update was not installed. {reason}": "Verilerinizin güvenlik kopyası kaydedilemediği için güncelleme yüklenmedi. {reason}",
