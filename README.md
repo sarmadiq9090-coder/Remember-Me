@@ -28,6 +28,28 @@ Open-source task, note, and reminder app for 64-bit Windows with Arabic and Engl
 
 حمّل أحدث ملف تثبيت من صفحة [Releases](https://github.com/sarmadiq9090-coder/Remember-Me/releases/latest)، ثم افتحه على Windows 10 أو 11 بنواة 64-bit. بيانات المستخدم الشخصية لا تدخل في المستودع أو المثبّت.
 
+### التحقق من الملف | Verify the download
+
+يُبنى المثبّت آليًا عبر GitHub Actions من الكود المنشور نفسه. المثبّت غير موقّع رقميًا بعد، لذلك قد يعرض Windows SmartScreen تحذيرًا «Windows protected your PC»؛ اختر «More info» ثم «Run anyway» بعد التحقق من الملف. قارن بصمة الملف بالقيمة في `SHA256SUMS.txt` المرفق مع الإصدار:
+
+The installer is built by GitHub Actions from the published source. It is not code-signed yet, so Windows SmartScreen may warn before running it. Compare its fingerprint with `SHA256SUMS.txt` from the same release:
+
+```powershell
+Get-FileHash .\Remember-Me-Setup-1.4.0-x64.exe -Algorithm SHA256
+```
+
+ولمن لديه GitHub CLI، يمكن التأكد أن الملف بُني من هذا المستودع | With GitHub CLI you can also confirm the file was built from this repository:
+
+```powershell
+gh attestation verify .\Remember-Me-Setup-1.4.0-x64.exe --repo sarmadiq9090-coder/Remember-Me
+```
+
+### لماذا «Waqt»؟ | Why "Waqt"?
+
+«وقت» (Waqt) هو الاسم الداخلي الأول للمشروع، وما زال اسم الملف التنفيذي `Waqt.exe` ومجلد البيانات `%APPDATA%\Waqt` ومعرّف التطبيق `com.waqt.reminder`. أُبقي عليها عمدًا: تغيير المجلد أو المعرّف يفصل البيانات الحالية والتشغيل مع ويندوز والاختصارات عن الإصدارات السابقة. أي تغيير مستقبلي للاسم سيرحّل البيانات تلقائيًا.
+
+"Waqt" (time) was the project's original internal name. It remains in `Waqt.exe`, the `%APPDATA%\Waqt` data folder and the `com.waqt.reminder` app ID on purpose: renaming them would detach existing data, start-with-Windows entries and shortcuts from earlier versions. Any future rename will migrate data automatically.
+
 ## الاستخدام
 
 - **مهمة جديدة:** عنوان، ملاحظات، أولوية، وموعد اختياري للتذكير.
@@ -86,6 +108,10 @@ npm run installer
 ```
 
 يتطلب التطوير Node.js 22 أو أحدث. ينتج `npm run package` نسخة محمولة داخل `release/v1.4.0`، وينتج `npm run installer` مثبّت NSIS داخل `release/installer`. مجلدات البناء وبيانات المستخدم مستبعدة من Git.
+
+**إصدار جديد:** حدّث `version` في `package.json`، ثم ادفع tag مطابقًا مثل `v1.4.1`. يشغّل `.github/workflows/release.yml` الاختبارات ويبني المثبّت وينشره في Releases مع `SHA256SUMS.txt` وإثبات البناء (build provenance). توقيع الكود يحتاج حسابًا لدى SignPath (مجاني لمشاريع المصدر المفتوح) أو Azure Trusted Signing أو شهادة مدفوعة؛ عند توفره يُضاف التوقيع إلى خطوة المثبّت.
+
+**Releasing:** bump `version` in `package.json` and push a matching tag such as `v1.4.1`. The release workflow tests, builds and publishes the installer with checksums and build provenance. Code signing needs a SignPath (free for open source), Azure Trusted Signing or certificate account, which can then be added to the installer step.
 
 `tests/core.test.js` يختبر المواعيد والتكرار والتأجيل والحفظ والاستعادة. `tests/desktop-smoke.cjs` يختبر تطبيق ويندوز باستخدام Playwright وبيانات مؤقتة منفصلة، بما في ذلك إخفاء النافذة وبقاء التنبيه والتأجيل والتشغيل من جديد. شغّله بعد تثبيت Playwright للتطوير أو تحديد مساره في `WAQT_PLAYWRIGHT`.
 
