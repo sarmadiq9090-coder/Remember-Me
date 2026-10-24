@@ -280,10 +280,10 @@ function renderDriveBackup() {
   $('drive-now').disabled = !backup.folder || backup.busy;
   $('drive-now-label').textContent = backup.busy ? tr("Preparing and copying files…") : backup.pending ? tr("Retry backup") : tr("Back up now");
   $('drive-open').hidden = !backup.folder;
-  const last = backup.lastCopiedAt ? dateLabel(backup.lastCopiedAt) : tr("never");
+  const last = backup.lastCopiedAt ? dateLabel(backup.lastCopiedAt) : null;
   // When a retried copy reused an earlier snapshot, say when its data is from.
   const snapshot = backup.snapshotAt && backup.lastCopiedAt && Date.parse(backup.lastCopiedAt) - Date.parse(backup.snapshotAt) > 60000 ? dateLabel(backup.snapshotAt) : '';
-  const stale = backup.stale ? tr("The Google Drive folder has been unavailable for over a day; no new backups have reached your account since {last}. Open Google Drive and sign in.", { last }) : '';
+  const stale = !backup.stale ? '' : !last ? tr("The Google Drive folder has been unavailable for over a day, and no backup has reached your account yet. Open Google Drive and sign in.") : tr("The Google Drive folder has been unavailable for over a day; no new backups have reached your account since {last}. Open Google Drive and sign in.", { last });
   $('drive-status').textContent = stale || backup.error || (backup.busy ? tr("Saving a local copy, then copying it to the Drive folder…") : backup.lastCopiedAt ? tr('Last copy to the sync folder: {last}{snapshot}. Check the Google Drive icon to confirm the upload finished.', { last, snapshot: snapshot ? tr(' (data from {date})', { date: snapshot }) : '' }) : tr("Install Google Drive and sign in, then choose a folder inside it. Google Drive uploads the copies when you are online."));
   if (!stale && !backup.error && backup.skipped?.length) $('drive-status').textContent += ' ' + skippedText(backup.skipped);
   $('drive-status').classList.toggle('backup-error', !!(stale || backup.error || backup.skipped?.length));

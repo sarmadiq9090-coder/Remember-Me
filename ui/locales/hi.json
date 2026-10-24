@@ -119,11 +119,12 @@
   "Diagnostic info": "निदान जानकारी",
   "Diagnostic info copied. Paste it into your report.": "निदान जानकारी कॉपी हो गई। इसे अपनी रिपोर्ट में चिपकाएँ।",
   "Dismiss": "हटाएँ",
+  "Documents": "दस्तावेज़",
   "Don't let the idea slip away": "विचार को हाथ से न जाने दें",
   "Done": "हो गया",
   "Downloading version {next}… {percent}%": "संस्करण {next} डाउनलोड हो रहा है… {percent}%",
   "Due at {time}": "{time} पर",
-  "Due now": "अभी समय है",
+  "Due now": "समय हो गया",
   "Due {when}": "नियत: {when}",
   "Duplicate attachment ID.": "अटैचमेंट ID दोहराई गई है।",
   "Early notice": "पहले से सूचना",
@@ -173,7 +174,7 @@
   "Language": "भाषा",
   "Last copy to the sync folder: {last}{snapshot}. Check the Google Drive icon to confirm the upload finished.": "सिंक फ़ोल्डर में आख़िरी कॉपी: {last}{snapshot}। अपलोड पूरा हुआ या नहीं, Google Drive आइकन पर देखें।",
   "Later": "बाद में",
-  "Latest 10 (recommended)": "नवीनतम 10 (सुझावित)",
+  "Latest 10 (recommended)": "नवीनतम 10 (अनुशंसित)",
   "Latest 30": "नवीनतम 30",
   "Latest 5": "नवीनतम 5",
   "Left side": "बाईं ओर",
@@ -345,6 +346,7 @@
   "Tasks and notes you delete stay here for 30 days and can be restored.": "आपके हटाए कार्य और नोट्स यहाँ 30 दिन रहते हैं और बहाल किए जा सकते हैं।",
   "Tasks, notes and reminders that stay on your PC.": "कार्य, नोट्स और रिमाइंडर जो आपके पीसी पर रहते हैं।",
   "Tasks: {tasks} • Notes: {notes} • Attachments: {attachments} • Backup date: {date}": "कार्य: {tasks} • नोट्स: {notes} • अटैचमेंट: {attachments} • बैकअप की तारीख़: {date}",
+  "The Google Drive folder has been unavailable for over a day, and no backup has reached your account yet. Open Google Drive and sign in.": "Google Drive फ़ोल्डर एक दिन से ज़्यादा समय से उपलब्ध नहीं है, और अभी तक कोई बैकअप आपके खाते तक नहीं पहुँचा है। Google Drive खोलें और साइन इन करें।",
   "The Google Drive folder has been unavailable for over a day; no new backups have reached your account since {last}. Open Google Drive and sign in.": "Google Drive फ़ोल्डर एक दिन से ज़्यादा समय से उपलब्ध नहीं है; {last} के बाद से कोई नया बैकअप आपके खाते में नहीं पहुँचा। Google Drive खोलें और साइन इन करें।",
   "The Google Drive folder is not available right now.": "Google Drive फ़ोल्डर अभी उपलब्ध नहीं है।",
   "The Google Drive folder is unavailable. Open Google Drive and sign in; the local copy is saved and the backup will be retried.": "Google Drive फ़ोल्डर उपलब्ध नहीं है। Google Drive खोलें और साइन इन करें; लोकल कॉपी सहेजी गई है और बैकअप फिर से आज़माया जाएगा।",
@@ -421,6 +423,7 @@
   "Write your first note": "अपना पहला नोट लिखें",
   "Yearly": "हर साल",
   "You can add {count} more files to this item.": {
+    "one": "इस आइटम में आप {count} और फ़ाइल जोड़ सकते हैं।",
     "other": "इस आइटम में आप {count} और फ़ाइलें जोड़ सकते हैं।"
   },
   "You completed {count} tasks. Keep going at your pace.": {
@@ -444,20 +447,23 @@
   "Your space": "आपकी जगह",
   "Your text was saved, and the time chosen from the alert was kept.": "आपका टेक्स्ट सहेजा गया और अलर्ट से चुना गया समय बना रहा।",
   "Your text was saved. The task had already been completed from the alert.": "आपका टेक्स्ट सहेजा गया। यह कार्य अलर्ट से पहले ही पूरा हो चुका था।",
-  "never": "कभी नहीं",
   "unknown": "अज्ञात",
   "until you resume": "जब तक आप फिर शुरू न करें",
   "until {time}": "{time} तक",
   "{count} attachments were left out because their files are missing: {list}": {
+    "one": "फ़ाइल ग़ायब होने के कारण {count} अटैचमेंट छोड़ा गया: {list}",
     "other": "फ़ाइलें ग़ायब होने के कारण {count} अटैचमेंट छोड़े गए: {list}"
   },
   "{count} items will be removed for good. This cannot be undone.": {
+    "one": "{count} आइटम हमेशा के लिए हट जाएगा। इसे पूर्ववत नहीं किया जा सकता।",
     "other": "{count} आइटम हमेशा के लिए हट जाएँगे। इसे पूर्ववत नहीं किया जा सकता।"
   },
   "{count} older automatic backups will be deleted.": {
+    "one": "{count} पुराना स्वचालित बैकअप हटाया जाएगा।",
     "other": "{count} पुराने स्वचालित बैकअप हटाए जाएँगे।"
   },
   "{count} unused attachments ({size} MB) will be deleted.": {
+    "one": "{count} अप्रयुक्त अटैचमेंट ({size} MB) हटाया जाएगा।",
     "other": "{count} अप्रयुक्त अटैचमेंट ({size} MB) हटाए जाएँगे।"
   },
   "{day}, {time}": "{day}, {time}",

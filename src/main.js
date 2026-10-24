@@ -321,7 +321,7 @@ async function start() {
           const remaining = Math.min(MAX_ATTACHMENTS, Math.max(0, Number(payload?.remaining) || 0));
           if (!remaining) throw new Error(tr('You have reached the limit of 20 attachments.'));
           const result = await dialog.showOpenDialog(mainWindow, { title: tr('Add attachments: PDF, Excel and other files'), properties: ['openFile', 'multiSelections'], filters: [
-            { name: tr('All files'), extensions: ['*'] }, { name: tr('Images'), extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif'] }, { name: 'PDF', extensions: ['pdf'] }, { name: 'Excel', extensions: ['xlsx', 'xls', 'xlsm', 'csv'] }, { name: 'مستندات', extensions: ['docx', 'doc', 'txt', 'rtf'] }
+            { name: tr('All files'), extensions: ['*'] }, { name: tr('Images'), extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'avif'] }, { name: 'PDF', extensions: ['pdf'] }, { name: 'Excel', extensions: ['xlsx', 'xls', 'xlsm', 'csv'] }, { name: tr('Documents'), extensions: ['docx', 'doc', 'txt', 'rtf'] }
           ] });
           if (result.canceled) { value = []; break; }
           if (result.filePaths.length > remaining) throw new Error(tr('You can add {count} more files to this item.', { count: remaining }));
