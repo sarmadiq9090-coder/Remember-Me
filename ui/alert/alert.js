@@ -14,7 +14,7 @@ async function refreshAlert() {
     // After the last Done the window stays briefly so it can be undone; show that instead of an empty card.
     document.body.classList.toggle('all-done', !tasks.length);
     $('alert-all-done').hidden = !!tasks.length;
-    if (!tasks.length) { shownId = null; return; }
+    if (!tasks.length) { if (shownId !== null) allDone(); shownId = null; return; }
     const kept = tasks.findIndex(t => t.id === shownId);
     index = kept >= 0 ? kept : Math.min(index, tasks.length - 1);
     render();
@@ -106,6 +106,12 @@ function move(step) {
   index = Math.max(0, Math.min(tasks.length - 1, index + step));
   render(true);
 }
+// The last reminder is done: say so, and give the keyboard Undo (while it lasts) or the message to stand on.
+function allDone() {
+  const undo = !$('alert-undo').hidden;
+  $('alert-live').textContent = undo ? `${$('alert-undo-text').textContent}. ${$('alert-all-done').textContent}` : $('alert-all-done').textContent;
+  (undo ? $('alert-undo-button') : $('alert-all-done')).focus({ preventScroll: true });
+}
 function openPicker() {
   $('snooze-form').hidden = false;
   document.querySelector('[data-preset="pick"]').setAttribute('aria-expanded', 'true');
@@ -113,9 +119,12 @@ function openPicker() {
   $('snooze-until').focus();
 }
 function closePicker() {
+  // Hiding the field under the focus would drop it to the page; it goes back to Pick a time.
+  const hadFocus = $('snooze-form').contains(document.activeElement);
   $('snooze-form').hidden = true;
   $('snooze-until').value = '';
   document.querySelector('[data-preset="pick"]').setAttribute('aria-expanded', 'false');
+  if (hadFocus) document.querySelector('[data-preset="pick"]').focus({ preventScroll: true });
 }
 // Disabling the focused button during an action drops the focus; give it back to Done.
 function restoreFocus() { if (current() && (document.activeElement === document.body || !document.activeElement)) $('alert-complete').focus({ preventScroll: true }); }
@@ -146,7 +155,11 @@ function showUndo(info) {
   $('alert-undo-text').textContent = tr('Completed "{title}"', { title: isolate(info.title) });
   Object.assign($('alert-undo').dataset, { id: info.id, copyId: info.copyId });
   $('alert-undo').hidden = false;
-  clearTimeout(undoTimer); undoTimer = setTimeout(() => { $('alert-undo').hidden = true; }, Math.max(0, info.until - Date.now()));
+  clearTimeout(undoTimer); undoTimer = setTimeout(() => {
+    const hadFocus = document.activeElement === $('alert-undo-button');
+    $('alert-undo').hidden = true;
+    if (hadFocus && !current()) $('alert-all-done').focus({ preventScroll: true });
+  }, Math.max(0, info.until - Date.now()));
 }
 $('alert-undo-button').addEventListener('click', async () => {
   const { id, copyId } = $('alert-undo').dataset;
