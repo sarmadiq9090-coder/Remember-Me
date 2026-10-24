@@ -117,7 +117,7 @@ test('a downloaded update shows the banner; Later hides it but keeps the update 
 });
 
 test('Restart now backs up the data, sets quitting, then installs and starts the new version', async () => {
-  const { updater, updates, app } = setup({ consent: true });
+  const { updater, updates } = setup({ consent: true });
   assert.equal(await updates.restart(), false, 'Nothing to install yet');
   updater.emit('update-downloaded', { version: '1.6.0' });
   assert.equal(await updates.restart(), true);
@@ -135,7 +135,7 @@ test('a failed safety backup cancels Restart now and keeps the update for later'
 });
 
 test('a normal quit installs a downloaded update after a safety backup, without restarting', async () => {
-  const { updater, updates, app } = setup({ consent: true });
+  const { updater, updates } = setup({ consent: true });
   const quit = { prevented: false, preventDefault() { this.prevented = true; } };
   assert.equal(updates.beforeQuit(quit), false, 'Without an update the app quits as usual');
   assert.equal(quit.prevented, false);

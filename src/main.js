@@ -10,6 +10,7 @@ const { checkRequest, fromPage } = require('./ipc');
 const { alertBounds } = require('./placement');
 const { readBackup, safetyBackup, restoreBackup } = require('./backups');
 const { createRepeatBeep } = require('./repeat-beep');
+const { createLogger } = require('./logger');
 const { Updates, configure: configureUpdater } = require('./updates');
 const { migrateDataFolder } = require('./data-folder');
 const { setLoginItem, refreshLoginItem } = require('./login-item');
@@ -25,6 +26,10 @@ app.setPath('userData', dataFolder.folder);
 // The ID predates the Remember Me name. Keep it: it names the start-with-Windows entry and taskbar
 // group of v1.4.0, and the installer's appId must stay the same for upgrades and updates.
 app.setAppUserModelId('com.waqt.reminder');
+// Local log for bug reports: ids, counts and outcomes only, never task or note content or paths.
+const log = createLogger(app.getPath('userData'));
+if (dataFolder.migrated !== 'none') log.info('data-folder-migrated', { result: dataFolder.migrated });
+if (dataFolder.error) log.warn('data-folder-migration-failed', dataFolder.error);
 let mainWindow, alertWindow, tray, store, quitting = false, interval, preview = null, driveBackup, backupInterval, updates, pause;
 const imagePreview = createPreviewService(nativeImage);
 let previousDue = new Set();
@@ -55,7 +60,7 @@ let trayWaiting = false;
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => showMain());
-  app.whenReady().then(start).catch(error => { dialog.showErrorBox(nativeText('تعذّر تشغيل ذكرني', 'Remember Me could not start'), error.message); app.quit(); });
+  app.whenReady().then(start).catch(error => { log.error('start-failed', error); dialog.showErrorBox(nativeText('تعذّر تشغيل ذكرني', 'Remember Me could not start'), error.message); app.quit(); });
 }
 // Window backgrounds match ui/dark.css so opening a window never flashes the other theme.
 function background(light, dark) { return nativeTheme.shouldUseDarkColors ? dark : light; }
@@ -142,7 +147,15 @@ function pauseText(pausedUntil) {
 }
 function activeAlerts() { const queue = alertQueue(store.state, preview); preview = queue.preview; return queue.alerts; }
 // The scheduler must survive any single failure; an exception here would otherwise repeat every second.
-function scan() { try { scanNow(); } catch (error) { console.error('Reminder scan failed:', error); } }
+// A failure that repeats every second is logged once, then again only if it changes or every 10 minutes.
+let lastScanError = { message: '', at: 0 };
+function scan() {
+  try { scanNow(); }
+  catch (error) {
+    console.error('Reminder scan failed:', error);
+    if (error?.message !== lastScanError.message || Date.now() - lastScanError.at > 600000) { lastScanError = { message: error?.message, at: Date.now() }; log.error('scan-failed', error); }
+  }
+}
 function scanNow() {
   // While paused nothing pops up or beeps; due reminders stay queued and appear when it ends.
   const paused = pause.check();
@@ -175,7 +188,7 @@ function scanNow() {
 }
 function purgeExpiredTrash() {
   const limit = Date.now() - TRASH_DAYS * 86400000;
-  if ([...store.state.tasks, ...store.state.notes].some(i => i.deletedAt && Date.parse(i.deletedAt) <= limit)) store.change(s => purgeTrash(s));
+  if ([...store.state.tasks, ...store.state.notes].some(i => i.deletedAt && Date.parse(i.deletedAt) <= limit)) log.info('trash-purged', { count: store.change(s => purgeTrash(s)) });
 }
 function setLogin(enabled) {
   if (testMode) return;
@@ -186,7 +199,13 @@ function createUpdates() {
   // Test runs never contact GitHub; electron-updater itself does nothing in development builds.
   const updater = testMode ? Object.assign(new (require('node:events'))(), { checkForUpdates: async () => null, quitAndInstall() {} })
     : configureUpdater(require('electron-updater').autoUpdater);
-  return new Updates({ updater, version: app.getVersion(), consent: () => store.state.settings.autoUpdate, onChange: notifyViews,
+  // Logs each change of update state with versions only; electron-updater's messages can hold paths and URLs.
+  let loggedState = 'idle';
+  const onChange = () => {
+    if (updates && updates.state !== loggedState) { loggedState = updates.state; log.info('update', { state: updates.state, version: app.getVersion(), ...(updates.next ? { next: String(updates.next).slice(0, 40) } : {}) }); }
+    notifyViews();
+  };
+  return new Updates({ updater, version: app.getVersion(), consent: () => store.state.settings.autoUpdate, onChange,
     backup: () => safetyBackup(app.getPath('userData'), store.state, 'RememberMe-before-update-'),
     prepareQuit: () => { quitting = true; }, quit: () => app.quit() });
 }
@@ -195,13 +214,15 @@ async function start() {
   session.defaultSession.setPermissionRequestHandler((contents, permission, callback) => callback(false));
   session.defaultSession.setPermissionCheckHandler(() => false);
   store = new Store(app.getPath('userData'));
+  log.info('start', { version: app.getVersion(), packaged: app.isPackaged, tasks: store.state.tasks.length, notes: store.state.notes.length, attachments: store.state.attachments.length });
+  if (store.recovered) log.warn('data-recovered-from-bak');
   pause = createPause({ read: () => store.state.settings.pausedUntil, write: value => { store.change(s => { s.settings.pausedUntil = value; }); rebuildTrayMenu(); notifyViews(); } });
   nativeTheme.themeSource = store.state.settings.theme;
   nativeTheme.on('updated', applyTheme);
-  driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, notifyViews, { text: nativeText });
+  driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, notifyViews, { text: nativeText, log });
   // After an upgrade the entry may still point at the old Waqt.exe, or at an old install folder.
   if (store.state.settings.startAtLogin && app.isPackaged && !testMode) {
-    try { refreshLoginItem(app, process.execPath); } catch (error) { console.error('Could not update start with Windows:', error); }
+    try { refreshLoginItem(app, process.execPath); } catch (error) { console.error('Could not update start with Windows:', error); log.warn('login-item-refresh-failed', error); }
   }
   updates = createUpdates();
   createMain();
@@ -332,6 +353,7 @@ async function start() {
           if (result.canceled) break;
           const skipped = [];
           value = { folder: await exportBackup(store.state, app.getPath('userData'), result.filePaths[0], { skipped }), skipped };
+          log.info('export', { attachments: store.state.attachments.length, skipped: skipped.length });
           break;
         }
         case 'restore': {
@@ -352,6 +374,7 @@ A safety copy of your current data is saved in the backups folder first.`),
           if (response !== 1) break;
           preview = null;
           value = await restoreBackup(app.getPath('userData'), store, backup);
+          log.info('restore', { tasks: tasks.length, notes: notes.length, attachments: attachments.length, verified: backup.verified });
           break;
         }
         case 'storage': value = await storageUsage(store.state, app.getPath('userData')); break;
@@ -364,7 +387,7 @@ A safety copy of your current data is saved in the backups folder first.`),
             detail: nativeText('لا تتبع هذه الملفات أي مهمة أو ملاحظة، بما فيها المهام المكتملة. النسخ الاحتياطية تحتفظ بنسخها الخاصة.', 'No task or note uses these files, including completed tasks. Backups keep their own copies.'),
             buttons: [nativeText('إلغاء', 'Cancel'), nativeText('حذف', 'Delete')], defaultId: 0, cancelId: 0 });
           if (response !== 1) break;
-          await removeOrphans(store, app.getPath('userData'));
+          log.info('clean-orphans', { count: (await removeOrphans(store, app.getPath('userData'))).count });
           value = await storageUsage(store.state, app.getPath('userData'));
           break;
         }
@@ -373,7 +396,7 @@ A safety copy of your current data is saved in the backups folder first.`),
         case 'checkUpdates': value = await updates.check(); break;
         case 'installUpdate':
           try { value = await updates.restart(); }
-          catch (error) { throw new Error(nativeText(`تعذّر حفظ نسخة أمان من بياناتك، فلم يُثبَّت التحديث. ${error.message}`, `Couldn't save a safety copy of your data, so the update was not installed. ${error.message}`)); }
+          catch (error) { throw new Error(nativeText(`تعذّر حفظ نسخة أمان من بياناتك، فلم يُثبَّت التحديث. ${error.message}`, `Couldn't save a safety copy of your data, so the update was not installed. ${error.message}`), { cause: error }); }
           break;
         case 'dismissUpdate': updates.dismiss(); break;
         case 'open': showMain(); break;
@@ -381,14 +404,14 @@ A safety copy of your current data is saved in the backups folder first.`),
       }
       if (!['state', 'alerts', 'undoable', 'language', 'open', 'openAttachment', 'imagePreview', 'storage', 'dataFolder', 'export', 'driveHelp', 'openDriveFolder', 'checkUpdates', 'installUpdate', 'dismissUpdate'].includes(action)) { scan(); notifyViews(); }
       return { ok: true, value };
-    } catch (error) { return { ok: false, error: error.message }; }
+    } catch (error) { log.warn('action-failed', error, { action: typeof action === 'string' ? action.slice(0, 40) : typeof action }); return { ok: false, error: error.message }; }
   });
   interval = setInterval(scan, 1000);
   purgeExpiredTrash();
-  backupInterval = setInterval(() => { driveBackup.tick(); try { purgeExpiredTrash(); } catch (error) { console.error('Trash purge failed:', error); } }, 60000);
+  backupInterval = setInterval(() => { driveBackup.tick(); try { purgeExpiredTrash(); } catch (error) { console.error('Trash purge failed:', error); log.error('trash-purge-failed', error); } }, 60000);
   if (!testMode) driveBackup.tick();
   updates.start();
-  powerMonitor.on('resume', scan);
+  powerMonitor.on('resume', () => { log.info('resume'); scan(); });
   powerMonitor.on('unlock-screen', scan);
   screen.on('display-metrics-changed', placeAlert);
   screen.on('display-removed', placeAlert);
@@ -399,6 +422,7 @@ app.on('web-contents-created', (event, contents) => contents.on('will-attach-web
 app.on('activate', showMain);
 app.on('window-all-closed', () => {});
 app.on('before-quit', event => {
+  log.info('quit');
   quitting = true; clearInterval(interval); clearInterval(backupInterval);
   // With a downloaded update this waits for a safety backup, then installs it.
   updates?.beforeQuit(event);
