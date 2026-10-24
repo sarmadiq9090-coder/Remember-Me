@@ -1,6 +1,6 @@
 'use strict';
 const { REMIND_AGAIN, PALETTES } = require('../../core/tasks');
-const { LOCALES, DEFAULT: DEFAULT_LOCALE } = require('../../../ui/lib/translate');
+const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale } = require('../../../ui/lib/translate');
 
 module.exports = ctx => ({
   settings: { run: payload => {
@@ -12,5 +12,8 @@ module.exports = ctx => ({
     try { ctx.store.change(s => { s.settings = { ...s.settings, ...settings }; }); }
     catch (err) { if (old.startAtLogin !== settings.startAtLogin) ctx.setLogin(old.startAtLogin); throw err; }
     ctx.rebuildTrayMenu(); ctx.placeAlert(); ctx.applyTheme();
+    // Native date, time and number fields keep the locale Chromium started with until a restart.
+    return { restart: old.language !== settings.language && findLocale(settings.language).chromium !== ctx.controlsLocale };
   } },
+  relaunch: { readOnly: true, run: () => { ctx.quitting = true; ctx.app.relaunch(); ctx.app.quit(); } },
 });

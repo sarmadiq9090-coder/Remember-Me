@@ -14,7 +14,12 @@ function settingsPayload() {
   return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: Number($('setting-week').value), theme: checked('theme-mode', state.settings.theme), palette: checked('palette', state.settings.palette), remindAgain: Number($('setting-remind-again').value) };
 }
 for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-week', 'setting-remind-again']) $(id).addEventListener('change', async () => {
-  try { await api('settings', settingsPayload()); await refresh(); toast(tr('Settings saved.')); }
+  try {
+    const saved = await api('settings', settingsPayload()); await refresh();
+    // Native date and time fields take a new language only when the app starts again.
+    if (saved?.restart) toast(tr("Settings saved. Date and time fields switch to the new language after a restart."), () => api('relaunch'), tr("Restart now"));
+    else toast(tr('Settings saved.'));
+  }
   catch (err) { toast(err.message); } await refresh();
 });
 // The value of a radio group in the page, or the saved one before the group is built.

@@ -60,7 +60,10 @@ function createScheduler(ctx) {
   function purgeExpiredTrash() {
     const { store } = ctx;
     const limit = Date.now() - TRASH_DAYS * 86400000;
-    if ([...store.state.tasks, ...store.state.notes].some(i => i.deletedAt && Date.parse(i.deletedAt) <= limit)) log.info('trash-purged', { count: store.change(s => purgeTrash(s)) });
+    if (![...store.state.tasks, ...store.state.notes].some(i => i.deletedAt && Date.parse(i.deletedAt) <= limit)) return;
+    log.info('trash-purged', { count: store.change(s => purgeTrash(s)) });
+    // An open Trash view still lists what was just removed.
+    ctx.windows.notifyViews();
   }
   return {
     activeAlerts, scan, purgeExpiredTrash, earlyLog,

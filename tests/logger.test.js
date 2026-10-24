@@ -59,3 +59,31 @@ test('a Drive backup is logged with counts only, never task titles or attachment
   assert.equal(events[0].skipped, 1);
   for (const secret of ['الطبيب', 'شخصية', 'كشف الحساب', 'Drive.away', root]) assert.ok(!text.includes(secret), secret);
 });
+
+test('stack frames keep only the file name, even when folders contain spaces or brackets', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-log-frames-'));
+  const log = createLogger(dir);
+  const error = new Error('x');
+  error.stack = ['Error: x',
+    String.raw`    at saveTask (C:\Users\John Smith\AppData\Local\Programs\Remember Me\resources\app.asar\src\core\tasks.js:10:5)`,
+    String.raw`    at C:\Users\Ali (Work)\AppData\Local\Programs\Remember Me\resources\app.asar\src\main\ipc.js:3:7`,
+    '    at load (file:///C:/Users/John Smith/Remember Me/ui/main/boot.js:1:2)'].join('\n');
+  log.warn('action-failed', error);
+  const entry = JSON.parse(fs.readFileSync(log.file, 'utf8'));
+  assert.deepEqual(entry.at, ['at saveTask (tasks.js:10:5)', 'at ipc.js:3:7', 'at load (boot.js:1:2)']);
+  assert.ok(!/John|Smith|Ali|Work|Remember Me/.test(JSON.stringify(entry)), JSON.stringify(entry));
+});
+
+test('unquoted paths and the file names of the two data-folder errors never reach the log', () => {
+  const { UserError } = require('../src/core/errors');
+  assert.equal(redact(String.raw`Could not read: C:\Users\John Smith\AppData\Roaming\Remember Me`), 'Could not read: …');
+  assert.equal(redact(String.raw`Shared at \\server\John Smith\data`), 'Shared at …');
+  assert.equal(redact('Update failed: https://github.com/owner/repo/releases'), 'Update failed: https://github.com/owner/repo/releases', 'Web addresses stay');
+  assert.equal(redact(String.raw`The copy of "attachments\a1\Salary review.pdf" is incomplete.`), 'The copy of "…" is incomplete.');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-log-user-'));
+  const log = createLogger(dir);
+  log.error('start-failed', new UserError('Could not read the data or its backup. The files were left unchanged in: "{folder}"', { folder: String.raw`C:\Users\John Smith\AppData\Roaming\Remember Me` }));
+  const entry = JSON.parse(fs.readFileSync(log.file, 'utf8'));
+  assert.equal(entry.error, 'Could not read the data or its backup. The files were left unchanged in: "…"');
+  assert.ok(!fs.readFileSync(log.file, 'utf8').includes('John'));
+});

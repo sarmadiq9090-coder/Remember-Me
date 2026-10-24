@@ -19,11 +19,11 @@ const views = {
   trash: [msg("Trash"), msg("Recently deleted"), msg("Deleted items stay here for 30 days, then are removed for good."), ""],
   settings: [msg("Settings"), msg("Remember Me, your way"), msg("Small details that make the space feel yours."), ""],
 };
-// An optional undo callback adds an Undo button and keeps the message up a little longer.
-function toast(message, undo) {
+// An optional undo callback adds an Undo button (or one named by label) and keeps the message up a little longer.
+function toast(message, undo, label = tr("Undo")) {
   const el = $('toast'); el.textContent = message;
   if (undo) {
-    const button = document.createElement('button'); button.type = 'button'; button.className = 'toast-action'; button.textContent = tr("Undo");
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'toast-action'; button.textContent = label;
     button.addEventListener('click', async () => { el.hidden = true; try { await undo(); await refresh(); } catch (e) { toast(e.message); } }, { once: true });
     el.append(' ', button);
   }

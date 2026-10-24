@@ -18,7 +18,8 @@ module.exports = ctx => ({
     const { undoable } = ctx;
     if (fromAlert && (!undoable || undoable.id !== payload.id || undoable.copyId !== payload.copyId)) throw new Error(ctx.tr("It is too late to undo."));
     ctx.store.change(s => undoComplete(s, payload.id, String(payload.copyId || '')));
-    ctx.undoable = null;
+    // Undoing another task from the main window leaves the alert's own Undo working.
+    if (undoable && undoable.id === payload.id && undoable.copyId === payload.copyId) ctx.undoable = null;
   } },
   toggleStep: { run: payload => { ctx.store.change(s => toggleStep(s, payload.id, String(payload.stepId || ''))); } },
   undoable: { readOnly: true, run: () => { const { undoable } = ctx; return undoable && undoable.until > Date.now() ? undoable : null; } },
