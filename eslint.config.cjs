@@ -15,7 +15,10 @@ const safety = {
   'no-caller': 'error',
   'no-restricted-properties': ['error',
     { object: 'document', property: 'write', message: 'Build DOM nodes or escaped markup instead.' },
-    { object: 'document', property: 'writeln', message: 'Build DOM nodes or escaped markup instead.' }],
+    { object: 'document', property: 'writeln', message: 'Build DOM nodes or escaped markup instead.' },
+    // Main never runs code inside a page: it sends an IPC message that the preload exposes.
+    { property: 'executeJavaScript', message: 'Send an IPC message that the preload exposes instead.' },
+    { property: 'executeJavaScriptInIsolatedWorld', message: 'Send an IPC message that the preload exposes instead.' }],
   'no-restricted-syntax': ['error',
     { selector: "CallExpression[callee.name='require'][arguments.0.value=/^(node:)?child_process$/]", message: 'The app never starts other programs.' },
     { selector: 'Property[key.name=/^(nodeIntegration|nodeIntegrationInWorker|nodeIntegrationInSubFrames|webviewTag|allowRunningInsecureContent)$/][value.value=true]', message: 'Windows stay isolated from Node.js.' },
