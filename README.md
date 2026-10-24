@@ -54,10 +54,10 @@ Compare the file's fingerprint with `SHA256SUMS.txt` from the same release:
 Get-FileHash .\Remember-Me-Setup-1.4.0-x64.exe -Algorithm SHA256
 ```
 
-With the GitHub CLI you can also confirm the file was built from this repository:
+With the GitHub CLI you can also confirm the file was built by this repository's release workflow from the release tag:
 
 ```powershell
-gh attestation verify .\Remember-Me-Setup-1.4.0-x64.exe --repo sarmadiq9090-coder/Remember-Me
+gh attestation verify .\Remember-Me-Setup-1.4.0-x64.exe --repo sarmadiq9090-coder/Remember-Me --source-ref refs/tags/v1.4.0 --signer-workflow sarmadiq9090-coder/Remember-Me/.github/workflows/release.yml
 ```
 
 ### Upgrading from v1.4.0 or earlier
@@ -170,7 +170,7 @@ Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable
 
 ### Releasing
 
-Bump `version` in `package.json` and push a matching tag, such as `v1.4.1`. `.github/workflows/release.yml` runs the tests, builds the installer and publishes it to Releases with `SHA256SUMS.txt`, build provenance, and the `latest.yml` and `.blockmap` files the app's updater reads. Running the workflow by hand only builds the files and publishes nothing. [RELEASING.md](RELEASING.md) has the full checklist, and [docs/distribution/winget](docs/distribution/winget/README.md) the winget manifests.
+Bump `version` in `package.json` and push a matching tag, such as `v1.4.1`. `.github/workflows/release.yml` runs the tests, builds the installer and publishes it to Releases with `SHA256SUMS.txt`, build provenance, and the `latest.yml` and `.blockmap` files the app's updater reads. Running the workflow by hand only builds the files: it creates no release and no attestation. [RELEASING.md](RELEASING.md) has the full checklist, and [docs/distribution/winget](docs/distribution/winget/README.md) the winget manifests.
 
 ## Code signing policy
 
