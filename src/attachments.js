@@ -73,7 +73,7 @@ async function hashFile(file) {
   return hash.digest('hex');
 }
 // kind is 'automatic' for copies the app makes on its own; only those may ever be rotated away.
-async function exportBackup(state, directory, destination, { kind = 'manual', prefix = 'Waqt-backup-' } = {}) {
+async function exportBackup(state, directory, destination, { kind = 'manual', prefix = 'RememberMe-backup-' } = {}) {
   const snapshot = structuredClone(state);
   const used = new Set([...snapshot.tasks, ...snapshot.notes].flatMap(item => item.attachments || []));
   snapshot.attachments = snapshot.attachments.filter(a => used.has(a.id));

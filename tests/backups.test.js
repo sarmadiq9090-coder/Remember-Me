@@ -68,7 +68,7 @@ test('restoring replaces the data and files, after saving a safety copy of the c
   assert.equal(undo.verified, true);
   assert.equal(undo.kind, 'safety');
   assert.deepEqual(undo.state.tasks.map(t => t.title), ['الحالية'], 'The previous data can be restored again');
-  assert.ok(path.basename(safety).startsWith('Waqt-before-restore-'));
+  assert.ok(path.basename(safety).startsWith('RememberMe-before-restore-'));
 });
 
 test('rotation keeps the newest automatic copies locally and in Drive, and never touches manual or older backups', async () => {
@@ -98,4 +98,19 @@ test('rotation keeps the newest automatic copies locally and in Drive, and never
   await drive.run();
   assert.equal(fs.readdirSync(local).length, 3, 'Each new copy retires the oldest automatic one');
   for (const keep of [-1, 1.5, '5', 101]) await assert.rejects(drive.setKeep(keep));
+});
+
+test('backups made under the old Waqt name are still restored and rotated, safety copies excepted', async () => {
+  const { rotateBackups } = require('../src/backups');
+  const { root, data, store } = await setup('قديمة', Buffer.from('x'));
+  const parent = path.join(root, 'backups'); fs.mkdirSync(parent);
+  const pause = () => new Promise(r => setTimeout(r, 5));
+  const old = await exportBackup(store.state, data, parent, { kind: 'automatic', prefix: 'Waqt-backup-' }); await pause();
+  const oldSafety = await exportBackup(store.state, data, parent, { kind: 'safety', prefix: 'Waqt-before-restore-' }); await pause();
+  const newer = await exportBackup(store.state, data, parent, { kind: 'automatic' });
+  assert.ok(path.basename(newer).startsWith('RememberMe-backup-'));
+  assert.equal((await readBackup(old)).state.tasks[0].title, 'قديمة');
+  assert.equal((await readBackup(oldSafety)).kind, 'safety');
+  assert.deepEqual(await rotateBackups(parent, 1), [old], 'The older automatic copy goes first, whatever its name');
+  assert.ok(fs.existsSync(newer) && fs.existsSync(oldSafety));
 });
