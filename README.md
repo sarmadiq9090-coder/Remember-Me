@@ -92,6 +92,8 @@ The bell button at the top shows a **preview alert**. Snoozing a preview only cl
 
 Closing the main window keeps Remember Me running next to the Windows clock. Its icon may be under the hidden-icons arrow. Click it to open the app, or right-click it to quit completely.
 
+To stop reminders for a while, right-click the icon and choose **Pause reminders**: for 1 hour, until tomorrow at 8:00, or until you resume. Nothing pops up or makes a sound during a pause. Reminders that come due wait and appear when it ends, or when you choose **Resume reminders**. A pause continues after a restart.
+
 Turn on **Settings → Start with Windows** to start reminders automatically when you sign in. It's off by default.
 
 Alerts can't appear while the PC is off or asleep, or while the app isn't running. Missed reminders appear as soon as you return. Remember Me doesn't wake the PC, uses your device's local time, and doesn't appear over the secure Windows lock screen.
@@ -152,6 +154,7 @@ Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable
 - `tests/scheduling.test.js`: repeats across daylight-saving time, time-zone changes and the clock moving backwards; 20 reminders in the same minute; a full day of missed reminders among thousands of tasks.
 - `tests/ipc.test.js`: only the app's own pages are accepted, the alert window gets a limited set of actions, and payloads are validated.
 - `tests/search.test.js`: Arabic-aware search matching.
+- `tests/pause.test.js`: pausing reminders from the tray, with a fake clock.
 - `tests/winget-manifest.test.js`: the winget manifests written from a release's `SHA256SUMS.txt`.
 - `tests/updates.test.js`: the update consent, background schedule, Check now, the ready banner, and installing after a safety backup.
 - `tests/data-folder.test.js` and `tests/login-item.test.js`: moving the old `Waqt` data folder, including locked and interrupted moves, and pointing start with Windows at the renamed executable.

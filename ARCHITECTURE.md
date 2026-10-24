@@ -24,6 +24,7 @@ true (see "Keeping this document current").
 | Local log | `src/logger.js` |
 | Moving the data folder from `Waqt` to `Remember Me` | `src/data-folder.js` |
 | Start with Windows entry | `src/login-item.js` |
+| Pausing reminders from the tray | `src/pause.js` |
 | Update checks, download and install policy | `src/updates.js` |
 | Main window and sticky alert pages, shared scripts and CSS | `ui/` |
 | Packaging, installer, winget manifests, icon and dark-theme generators | `tools/` |
@@ -120,7 +121,8 @@ all data. The shape (`version` is always `1`):
     sound: true, startAtLogin: false, alertSide: 'right'|'left', language: 'ar'|'en',
     weekStart: 6|0|1, theme: 'system'|'light'|'dark',
     autoUpdate: null|true|false,  // consent to background update checks; null means not asked yet
-    remindAgain?: 0|2|5|15    // minutes between repeated alert sounds; absent means off
+    remindAgain?: 0|2|5|15,   // minutes between repeated alert sounds; absent means off
+    pausedUntil: null|'<ISO time>'|'manual'  // reminders paused from the tray; null means not paused
   }
 }
 ```
@@ -156,6 +158,10 @@ next tick tries again). Each scan:
    minutes (at most 6 times, in memory only);
 4. destroys the alert window once the queue is empty (after the short undo window for a Done made
    in the alert), and swaps the tray icon to its dotted variant only when the waiting state changes.
+
+While reminders are paused from the tray (`settings.pausedUntil`, handled by the pause module), the
+scan opens no alert window, plays no sound and sends no early notices. Due reminders stay queued and
+appear, with one sound, when the pause ends. An ended pause clears itself on the next scan.
 
 Overdue reminders survive restarts because they are simply tasks whose `dueAt` is in the past.
 Completing a repeating task moves `dueAt` and `scheduleAt` to `nextOccurrence(scheduleAt, repeat,
