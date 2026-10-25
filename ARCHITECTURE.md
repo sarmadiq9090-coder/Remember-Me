@@ -272,7 +272,9 @@ The updates module wraps electron-updater with the app's policy:
 - A downloaded update installs only when the user chooses "Restart now", or on the next normal quit.
   The app never restarts on its own. Either way a safety copy of the data
   (`RememberMe-before-update-<time>`) is made first; if it fails, nothing is installed.
-- Test mode replaces the updater with a stub that never contacts GitHub.
+- Test mode replaces the updater with a stub that never contacts GitHub. So does a copy without
+  `Uninstall Remember Me.exe` next to its exe (the portable build, or one Scoop unpacked): its
+  updates come from elsewhere, so it reports updates as unavailable and the window asks no consent.
 
 ## About
 

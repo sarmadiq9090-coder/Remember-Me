@@ -6,7 +6,7 @@ const { createPreviewService } = require('../data/image-preview');
 const { DriveBackup } = require('../data/drive-backup');
 const { safetyBackup } = require('../data/backups');
 const { createLogger } = require('../platform/logger');
-const { Updates, configure: configureUpdater } = require('../platform/updates');
+const { Updates, configure: configureUpdater, installedByInstaller } = require('../platform/updates');
 const { migrateDataFolder } = require('../platform/data-folder');
 const { setLoginItem, refreshLoginItem } = require('../platform/login-item');
 const { createPause } = require('../core/pause');
@@ -66,8 +66,10 @@ function setLogin(enabled) {
   setLoginItem(app, enabled, process.execPath);
 }
 function createUpdates() {
-  // Test runs never contact GitHub; electron-updater itself does nothing in development builds.
-  const updater = testMode ? Object.assign(new (require('node:events'))(), { checkForUpdates: async () => null, quitAndInstall() {} })
+  // Test runs never contact GitHub, and neither do copies the installer didn't put there (portable or
+  // Scoop); electron-updater itself does nothing in development builds.
+  const available = !testMode && (!app.isPackaged || installedByInstaller(process.execPath));
+  const updater = !available ? Object.assign(new (require('node:events'))(), { checkForUpdates: async () => null, quitAndInstall() {} })
     : configureUpdater(require('electron-updater').autoUpdater);
   // Logs each change of update state with versions only; electron-updater's messages can hold paths and URLs.
   let loggedState = 'idle';
@@ -76,7 +78,7 @@ function createUpdates() {
     if (updates && updates.state !== loggedState) { loggedState = updates.state; log.info('update', { state: updates.state, version: app.getVersion(), ...(updates.next ? { next: String(updates.next).slice(0, 40) } : {}) }); }
     windows.notifyMain();
   };
-  return new Updates({ updater, version: app.getVersion(), consent: () => ctx.store.state.settings.autoUpdate, onChange,
+  return new Updates({ updater, available: available || testMode, version: app.getVersion(), consent: () => ctx.store.state.settings.autoUpdate, onChange,
     backup: () => safetyBackup(app.getPath('userData'), ctx.store.state, 'RememberMe-before-update-'),
     prepareQuit: () => { ctx.quitting = true; }, quit: () => app.quit() });
 }

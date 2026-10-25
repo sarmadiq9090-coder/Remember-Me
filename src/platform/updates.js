@@ -1,10 +1,18 @@
 'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
 // New versions come from this repository's GitHub Releases, over HTTPS only. tools/package.mjs
 // writes the same feed into resources/app-update.yml, which electron-updater also reads.
 const FEED = { provider: 'github', owner: 'sarmadiq9090-coder', repo: 'Remember-Me', protocol: 'https' };
 const UPDATER_CACHE = 'remember-me-updater';
 const PROGRESS_STEP = 10;
 const FIRST_CHECK = 30 * 1000, CHECK_EVERY = 24 * 60 * 60 * 1000, TICK = 60 * 60 * 1000, BACKUP_LIMIT = 2 * 60 * 1000;
+
+// electron-updater updates by running the NSIS installer, which suits only installed copies. A copy
+// without the installer's uninstaller next to its exe (the portable build, or one Scoop unpacked)
+// is kept up to date by whatever put it there, so it offers no updates of its own.
+const UNINSTALLER = 'Uninstall Remember Me.exe';
+function installedByInstaller(execPath, exists = fs.existsSync) { return exists(path.join(path.dirname(execPath), UNINSTALLER)); }
 
 // Applies the app's update policy to electron-updater's autoUpdater.
 function configure(updater) {
@@ -25,8 +33,9 @@ function configure(updater) {
 // start, then once a day. "Check now" works either way. A downloaded update installs when the
 // user chooses Restart now, or on the next normal quit; the app never restarts on its own.
 class Updates {
-  constructor({ updater, consent, version, backup, prepareQuit, quit, onChange = () => {}, clock = () => Date.now(), timers = globalThis }) {
-    Object.assign(this, { updater, consent, version, backup, prepareQuit, quit, onChange, clock, timers });
+  // available: false for a copy that gets its updates elsewhere; the window then doesn't ask for consent.
+  constructor({ updater, consent, version, backup, prepareQuit, quit, available = true, onChange = () => {}, clock = () => Date.now(), timers = globalThis }) {
+    Object.assign(this, { updater, consent, version, backup, prepareQuit, quit, available, onChange, clock, timers });
     this.state = 'idle';
     this.next = null; this.percent = 0; this.checkedAt = null; this.dismissed = false;
     this.running = null; this.timeout = null; this.interval = null;
@@ -45,7 +54,7 @@ class Updates {
   }
   set(fields) { Object.assign(this, fields); this.onChange(); }
   status() {
-    return { state: this.state, version: this.version, next: this.next, percent: this.percent, checkedAt: this.checkedAt, banner: this.state === 'ready' && !this.dismissed };
+    return { state: this.state, version: this.version, next: this.next, percent: this.percent, checkedAt: this.checkedAt, banner: this.state === 'ready' && !this.dismissed, available: this.available };
   }
   start() {
     this.stop();
@@ -117,4 +126,4 @@ class Updates {
     return true;
   }
 }
-module.exports = { FEED, UPDATER_CACHE, FIRST_CHECK, CHECK_EVERY, configure, Updates };
+module.exports = { FEED, UPDATER_CACHE, FIRST_CHECK, CHECK_EVERY, UNINSTALLER, installedByInstaller, configure, Updates };

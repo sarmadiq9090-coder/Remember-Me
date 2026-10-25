@@ -25,8 +25,8 @@ function renderDriveBackup() {
 function renderUpdateNotice() {
   const updates = state.updates, notice = $('update-notice');
   if (updates?.banner) setMarkup(notice, `<span data-icon="download"></span><p>${esc(tr("Version {next} is ready. Restart to update", { next: updates.next }))}</p><button class="primary" data-update="installUpdate">${tr("Restart now")}</button><button class="text-button" data-update="dismissUpdate">${tr("Later")}</button>`);
-  else if (state.settings.autoUpdate === null) setMarkup(notice, `<span data-icon="info"></span><p>${tr("Remember Me can check GitHub for new versions and install them when you restart. Nothing else is sent.")}</p><button class="primary" data-update="allow">${tr("Allow")}</button><button class="text-button" data-update="decline">${tr("Not now")}</button>`);
-  notice.hidden = !updates?.banner && state.settings.autoUpdate !== null;
+  else if (state.settings.autoUpdate === null && updates?.available !== false) setMarkup(notice, `<span data-icon="info"></span><p>${tr("Remember Me can check GitHub for new versions and install them when you restart. Nothing else is sent.")}</p><button class="primary" data-update="allow">${tr("Allow")}</button><button class="text-button" data-update="decline">${tr("Not now")}</button>`);
+  notice.hidden = !updates?.banner && (state.settings.autoUpdate !== null || updates?.available === false);
 }
 function updateStatus(updates) {
   const next = updates.next, checked = updates.checkedAt ? dateLabel(updates.checkedAt) : '';
