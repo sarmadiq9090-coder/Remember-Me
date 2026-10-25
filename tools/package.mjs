@@ -1,4 +1,6 @@
 import { packager } from '@electron/packager';
+// @electron/fuses 2 is ESM-only, so it is imported rather than loaded with require().
+import { flipFuses, getCurrentFuseWire, FuseVersion, FuseV1Options, FuseState } from '@electron/fuses';
 import { createRequire } from 'node:module';
 import fs from 'node:fs/promises';
 import { existsSync, realpathSync } from 'node:fs';
@@ -8,9 +10,6 @@ const require = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const version = require('../package.json').version;
 const { FEED, UPDATER_CACHE } = require('../src/platform/updates.js');
-const { flipFuses, getCurrentFuseWire, FuseVersion, FuseV1Options } = require('@electron/fuses');
-// The values getCurrentFuseWire reports ('0' and '1' in the fuse wire).
-const FuseState = { DISABLE: 48, ENABLE: 49 };
 // Only the app itself goes into app.asar: never docs, CI files, worktrees or local data.
 const bundled = ['/package.json', '/LICENSE', '/src', '/ui', '/assets'];
 const ignore = file => !!file && !bundled.some(entry => file === entry || file.startsWith(entry + '/'));
