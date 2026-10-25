@@ -30,6 +30,8 @@ The `remember-me` package ID was free on the community repository in October 202
    choco push remember-me.1.5.0.nupkg --source https://push.chocolatey.org/
    ```
 
+   Without Chocolatey installed, `node tools/chocolatey-pack.mjs` builds the same package, `release/chocolatey/remember-me.<version>.nupkg`, in the layout `choco pack` writes. It can then be uploaded with NuGet's push request (`PUT https://push.chocolatey.org/api/v2/package/`, multipart/form-data, with the API key in the `X-NuGet-ApiKey` header).
+
 4. Wait for moderation. The first version goes through the automated validator and verifier, then a human moderator, which can take several days. Answer the moderators' comments on the package page; they may ask for changes to these files.
 
 ## Each new release
