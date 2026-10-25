@@ -13,6 +13,8 @@
 
 <p align="center"><strong>A task, note and reminder app for Windows whose alerts stay on screen until you deal with them.</strong></p>
 
+<p align="center"><a href="https://sarmadiq9090-coder.github.io/Remember-Me/"><strong>Website</strong></a> · <a href="https://sarmadiq9090-coder.github.io/Remember-Me/ar/">الموقع بالعربية</a> · <a href="https://github.com/sarmadiq9090-coder/Remember-Me/releases/latest">Download for Windows</a></p>
+
 Remember Me is an open-source desktop app for 64-bit Windows. It runs without an account or a permanent internet connection, keeps your data on your own device, and shows each reminder in a sticky window above the taskbar until you mark it done or snooze it. Missed reminders don't get lost in the notification center.
 
 <p align="center">
@@ -172,6 +174,8 @@ pnpm run installer
 
 Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable build in `release/v<version>`, and `pnpm run installer` produces an NSIS installer in `release/installer`.
 
+The website at <https://sarmadiq9090-coder.github.io/Remember-Me/> is plain HTML and CSS in `site/`, in English and Arabic, with no scripts, trackers or files from other hosts. `.github/workflows/pages.yml` publishes it when `site/` changes on `main`. `pnpm run site-assets` (`tools/build-site-assets.cjs`) makes its WebP screenshots from `docs/screenshots` and its 1200×630 social preview images, and `tests/site.test.js` checks the version, links, language alternates and page weight.
+
 `pnpm run screenshots` retakes the pictures in `docs/screenshots` (`tools/desktop-screenshots.cjs`): it runs the app in test mode with made-up sample tasks and notes in a temporary data folder, in English and Arabic, light and dark, so no personal data ends up in the repository. It needs Playwright, a devDependency.
 
 `pnpm run assets` redraws the icons in `assets/` with Electron: `icon.ico` with 10 sizes from 16 to 256 px (16-32 px use the simpler `icon-small.svg` glyph without rays), `icon.png`, and the tray images `tray.png` and `tray-waiting.png` with `@1.5x` and `@2x` versions. It also writes [`docs/icon-preview.png`](docs/icon-preview.png), every size on a light and a dark taskbar.
@@ -194,6 +198,7 @@ Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable
 - `tests/focus.test.js`: a rebuilt list gives focus back to the same control of the same item, or to the next item when it is gone.
 - `tests/structure.test.js`: every `require` and import, every script and stylesheet the pages load, and every fixed path the main process builds exists.
 - `tests/handlers.test.js`: every allowed IPC action has exactly one handler, and only actions that change nothing skip the rescan.
+- `tests/site.test.js`: the website shows the current version, its local links work, it loads nothing from other hosts, its language alternates and structured data are right, and it stays under 200 KB without screenshots.
 - `tests/winget-manifest.test.js`: the winget manifests written from a release's `SHA256SUMS.txt`.
 - `tests/updates.test.js`: the update consent, background schedule, Check now, the ready banner, and installing after a safety backup.
 - `tests/data-folder.test.js` and `tests/login-item.test.js`: moving the old `Waqt` data folder, including locked and interrupted moves, and pointing start with Windows at the renamed executable.

@@ -10,7 +10,8 @@ Releases are built only by `.github/workflows/release.yml` on GitHub Actions, ne
 - [ ] In `package.json`, set `"version": "1.5.0"`. The lockfile doesn't change.
 - [ ] In `CHANGELOG.md`, replace `## v1.5.0 (unreleased)` with `## v1.5.0 (YYYY-MM-DD)` and check the entries match what's merged.
 - [ ] Check the entry against `git log v1.4.0..main --oneline` and the merged pull requests: every user-visible change since the last release needs a line with its PR. Replace or delete every **TODO** line and the 'Before release' note.
-- [ ] If the interface changed, run `pnpm run screenshots` and commit the new `docs/screenshots` (sample data only).
+- [ ] If the interface changed, run `pnpm run screenshots` and commit the new `docs/screenshots` (sample data only), then `pnpm run site-assets` for the website's copies.
+- [ ] On the website, change the version and the installer name in `site/index.html` and `site/ar/index.html` (the visible text and `softwareVersion`), and `lastmod` in `site/sitemap.xml`. `pnpm test` fails until the pages match `package.json`.
 - [ ] In the README's "Verify the download" section, change the example file name to `Remember-Me-Setup-1.5.0-x64.exe` in both commands, and the attestation's `--source-ref` to `refs/tags/v1.5.0`.
 - [ ] Merge these changes through a pull request, and wait for **Tests** to pass on `main`.
 
