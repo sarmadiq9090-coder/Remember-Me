@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>remember-me</id>
+    <version>1.5.0</version>
+    <packageSourceUrl>https://github.com/sarmadiq9090-coder/Remember-Me/tree/main/docs/distribution/chocolatey</packageSourceUrl>
+    <owners>Sarmad</owners>
+    <title>Remember Me</title>
+    <authors>Sarmad</authors>
+    <projectUrl>https://github.com/sarmadiq9090-coder/Remember-Me</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/sarmadiq9090-coder/Remember-Me/v1.5.0/assets/icon.png</iconUrl>
+    <copyright>Copyright (c) 2026 Sarmad</copyright>
+    <licenseUrl>https://github.com/sarmadiq9090-coder/Remember-Me/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/sarmadiq9090-coder/Remember-Me</projectSourceUrl>
+    <docsUrl>https://github.com/sarmadiq9090-coder/Remember-Me#readme</docsUrl>
+    <bugTrackerUrl>https://github.com/sarmadiq9090-coder/Remember-Me/issues</bugTrackerUrl>
+    <tags>remember-me reminder reminders todo tasks notes productivity arabic foss</tags>
+    <summary>Tasks, notes and reminders for Windows, with alerts that stay on screen until you deal with them.</summary>
+    <description>Tasks, notes and reminders for Windows, with alerts that stay on screen until you deal with them.
+
+Remember Me is an open-source (MIT) task, note and reminder app for 64-bit Windows, in 12 interface languages, including a full right-to-left Arabic interface. It runs without an account and keeps all data on your PC.
+
+## Features
+- Sticky reminders above the taskbar that stay until you choose **Done** or snooze them
+- Recurring tasks, notes, file attachments and search
+- Verified backups, optionally copied to a synced Google Drive folder
+- Optional automatic updates from GitHub Releases, only after you allow them
+
+## Notes
+- The installer installs per user, in `%LOCALAPPDATA%\Programs\Remember Me`, for the account whose administrator rights Chocolatey runs with.
+- Your data is kept in `%APPDATA%\Remember Me` and is not removed on uninstall.
+- If you allow it, the app updates itself from GitHub Releases; `choco upgrade remember-me` works as well.</description>
+    <releaseNotes>https://github.com/sarmadiq9090-coder/Remember-Me/releases/tag/v1.5.0</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

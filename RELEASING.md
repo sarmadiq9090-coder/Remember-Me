@@ -20,6 +20,7 @@ Releases are built only by `.github/workflows/release.yml` on GitHub Actions, ne
 - [ ] In GitHub, open **Actions → Release → Run workflow** and run it on `main`. It builds and uploads files but publishes nothing.
 - [ ] Download the `installer` artifact. It must contain `Remember-Me-Setup-1.5.0-x64.exe`, `Remember-Me-Setup-1.5.0-x64.exe.blockmap`, `latest.yml` and `SHA256SUMS.txt`.
 - [ ] Download the `winget-manifests` artifact (three `Sarmad.RememberMe*.yaml` files) and run `winget validate --manifest <folder>`.
+- [ ] Download the `package-managers` artifact: `scoop/remember-me.json` and the `chocolatey/` package sources.
 
 ## 3. Tag and publish
 
@@ -78,6 +79,9 @@ The automatic update itself can only be tested end to end once v1.5.1 exists: in
 ## 6. After the release
 
 - [ ] Submit the `winget-manifests` artifact to [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs) under `manifests/s/Sarmad/RememberMe/1.5.0/`. See [docs/distribution/winget](docs/distribution/winget/README.md).
+- [ ] Update the Scoop manifest: in the owner's bucket, `autoupdate` does it within hours; otherwise copy `scoop/remember-me.json` from the `package-managers` artifact. See [docs/distribution/scoop](docs/distribution/scoop/README.md).
+- [ ] Pack and push the Chocolatey package from the `package-managers` artifact (`choco pack`, then `choco push`). See [docs/distribution/chocolatey](docs/distribution/chocolatey/README.md).
+- [ ] Run `node tools/package-managers.mjs --sums SHA256SUMS.txt --out docs/distribution` with the release's `SHA256SUMS.txt` and commit the result, so the files in the repository match the latest release.
 - [ ] Add a new `## vX.Y.Z (unreleased)` heading at the top of `CHANGELOG.md` for the next version.
 
 ## If something is wrong

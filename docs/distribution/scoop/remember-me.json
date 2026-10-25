@@ -1,0 +1,35 @@
+{
+    "version": "1.5.0",
+    "description": "Tasks, notes and reminders for Windows, with alerts that stay on screen until you deal with them.",
+    "homepage": "https://github.com/sarmadiq9090-coder/Remember-Me",
+    "license": "MIT",
+    "notes": "Your tasks, notes and settings are kept in %APPDATA%\\Remember Me, so they survive updates and uninstalling. Scoop updates this copy; the app's own updater is off.",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/sarmadiq9090-coder/Remember-Me/releases/download/v1.5.0/Remember-Me-Setup-1.5.0-x64.exe#/dl.7z",
+            "hash": "5ee1e02d97e72e5e4659231eaef1c4e1710f4ec5347bc636a0afa40cd2cb9d1c",
+            "pre_install": "Expand-7zipArchive \"$dir\\`$PLUGINSDIR\\app-64.7z\" \"$dir\""
+        }
+    },
+    "post_install": "Remove-Item \"$dir\\`$*\", \"$dir\\Uninstall*.exe\" -Recurse -Force",
+    "shortcuts": [
+        [
+            "Remember Me.exe",
+            "Remember Me"
+        ]
+    ],
+    "checkver": {
+        "github": "https://github.com/sarmadiq9090-coder/Remember-Me"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/sarmadiq9090-coder/Remember-Me/releases/download/v$version/Remember-Me-Setup-$version-x64.exe#/dl.7z"
+            }
+        },
+        "hash": {
+            "url": "$baseurl/SHA256SUMS.txt",
+            "regex": "$sha256\\s+$basename"
+        }
+    }
+}
