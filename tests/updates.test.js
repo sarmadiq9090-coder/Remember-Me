@@ -1,6 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
+const path = require('node:path');
 const { Updates, configure, FIRST_CHECK, CHECK_EVERY } = require('../src/platform/updates');
 const { initialState, validateState } = require('../src/core/tasks');
 
@@ -182,4 +183,18 @@ test('download progress notifies the window only on whole 10% steps', async () =
   for (let tenths = 0; tenths <= 1000; tenths++) updater.emit('download-progress', { percent: tenths / 10 });
   assert.equal(app.changes - before, 10, 'From 10% to 100%: ten updates instead of a thousand');
   assert.equal(updates.status().percent, 100);
+});
+
+test('only a copy the installer put there updates itself; portable and Scoop copies do not', () => {
+  const { installedByInstaller, UNINSTALLER } = require('../src/platform/updates');
+  const dir = path.join('C:', 'Users', 'me', 'AppData', 'Local', 'Programs', 'Remember Me');
+  const files = new Set([path.join(dir, UNINSTALLER)]);
+  const exists = file => files.has(file);
+  assert.equal(UNINSTALLER, 'Uninstall Remember Me.exe', "electron-builder's name for the NSIS uninstaller");
+  assert.equal(installedByInstaller(path.join(dir, 'Remember Me.exe'), exists), true);
+  assert.equal(installedByInstaller(path.join('C:', 'Users', 'me', 'scoop', 'apps', 'remember-me', 'current', 'Remember Me.exe'), exists), false);
+  const { updates } = setup({ consent: null });
+  assert.equal(updates.status().available, true);
+  const managed = new Updates({ updater: new FakeUpdater(), available: false, version: '1.5.0', consent: () => null });
+  assert.equal(managed.status().available, false, 'The window then shows no consent card');
 });
