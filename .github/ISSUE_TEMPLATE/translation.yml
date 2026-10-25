@@ -1,0 +1,66 @@
+name: Translation review
+description: Point out text that reads badly in your language, and suggest better wording
+title: "[Translation]: "
+labels: [translation]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping Remember Me sound natural in your language. You don't need to know any code: list the text that reads badly and what you would write instead. [TRANSLATING.md](https://github.com/sarmadiq9090-coder/Remember-Me/blob/main/TRANSLATING.md) explains how the translations work if you'd rather open a pull request.
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language
+      options:
+        - العربية (ar)
+        - Español (es)
+        - Français (fr)
+        - Deutsch (de)
+        - Português (Brasil) (pt-BR)
+        - Русский (ru)
+        - 中文 (简体) (zh-CN)
+        - 日本語 (ja)
+        - Türkçe (tr)
+        - हिन्दी (hi)
+        - Bahasa Indonesia (id)
+        - English (en)
+    validations:
+      required: true
+  - type: dropdown
+    id: speaker
+    attributes:
+      label: Your level in this language
+      options:
+        - Native speaker
+        - Fluent
+        - Learning it
+    validations:
+      required: true
+  - type: textarea
+    id: strings
+    attributes:
+      label: Text with problems
+      description: Copy the text as it appears in the app, and say where you saw it (for example the alert, Settings or the tray menu). One item per line is fine. Screenshots help.
+      placeholder: |
+        Settings → Language: "Choisissez la langue de l'interface de l'application." is too long.
+        Alert: "Reporter tout" should be "Tout reporter".
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested text
+      description: What you would write instead. Keep words in braces, such as {count} or {title}, exactly as they are.
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Terms used inconsistently, tone (formal or informal), or text that is still in English.
+  - type: checkboxes
+    id: pull-request
+    attributes:
+      label: Pull request
+      options:
+        - label: I'd like to make this change myself in a pull request.

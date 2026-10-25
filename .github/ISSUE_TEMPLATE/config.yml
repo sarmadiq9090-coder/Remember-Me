@@ -1,5 +1,14 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Questions and ideas
+    url: https://github.com/sarmadiq9090-coder/Remember-Me/discussions
+    about: Ask how something works, share an idea or show how you use Remember Me in Discussions
+  - name: Privacy
+    url: https://github.com/sarmadiq9090-coder/Remember-Me#privacy
+    about: What Remember Me stores on your device and the only time it goes online
+  - name: Website
+    url: https://sarmadiq9090-coder.github.io/Remember-Me/
+    about: Downloads, screenshots and an overview of Remember Me
   - name: Security vulnerability
     url: https://github.com/sarmadiq9090-coder/Remember-Me/security/advisories/new
     about: Report security issues privately
