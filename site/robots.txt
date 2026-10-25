@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sarmadiq9090-coder.github.io/Remember-Me/sitemap.xml
