@@ -60,6 +60,8 @@ test('openLink takes a link ID from the fixed list, never a URL, and not from th
   assert.throws(() => checkRequest('openLink', { link: 'mailto:x' }), /Unknown link/);
   assert.throws(() => checkRequest('openLink', { link: 'github' }, { fromAlert: true }), /Request not allowed/);
   assert.throws(() => checkRequest('copyDiagnostics', {}, { fromAlert: true }), /Request not allowed/);
+  assert.deepEqual(checkRequest('reportProblem', {}), {});
+  assert.throws(() => checkRequest('reportProblem', {}, { fromAlert: true }), /Request not allowed/);
   assert.throws(() => checkRequest('openLogs', {}, { fromAlert: true }), /Request not allowed/);
 });
 

@@ -109,4 +109,6 @@ $('trash-list').addEventListener('click', async e => {
   catch (err) { toast(err.message); refresh().catch(() => {}); }
 });
 $('empty-trash').addEventListener('click', () => askPurge('emptyTrash'));
+// Opens a pre-filled GitHub issue in the browser; nothing is sent from the app.
+$('report-problem').addEventListener('click', async () => { try { await api('reportProblem'); toast(tr("The report opened in your browser. Nothing is sent until you submit it.")); } catch (err) { toast(err.message); } });
 for (const id of ['preview-alert', 'settings-preview']) $(id).addEventListener('click', async () => { try { await api('preview'); toast(tr("The alert appeared above the taskbar.")); } catch (err) { toast(err.message); } });

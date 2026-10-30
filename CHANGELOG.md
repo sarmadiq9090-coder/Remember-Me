@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Report a problem:** crashes and uncaught errors are now written to the local log, and after a crash or repeated errors Remember Me offers **Report this problem**. It opens a pre-filled GitHub issue in your browser with the app and Windows versions, language, theme and the last 30 log lines, with paths removed and never any task, note or file content. Nothing is sent until you submit the issue yourself. You can also report a problem at any time from Settings > About, the flag button at the top of the main window, or the tray menu. [#19]
+
 ## v1.5.0 (2026-10-25)
 
 Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0 load unchanged, and the data folder moves from `%APPDATA%\Waqt` to `%APPDATA%\Remember Me` by itself the first time v1.5.0 starts.
@@ -158,6 +164,7 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 [#15]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/15
 [#16]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/16
 [#17]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/17
+[#19]: https://github.com/sarmadiq9090-coder/Remember-Me/issues/19
 [#22]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/22
 [#23]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/23
 [#25]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/25

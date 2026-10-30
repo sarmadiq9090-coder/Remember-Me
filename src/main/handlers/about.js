@@ -13,6 +13,8 @@ module.exports = ctx => {
       clipboard.writeText(value);
       return value;
     } },
+    // Opens a pre-filled GitHub issue in the browser; the user reviews and submits it there.
+    reportProblem: { readOnly: true, run: async () => { await ctx.problems.openReport('manual'); } },
     openLogs: { readOnly: true, run: async () => {
       // The folder appears with the first log line; create it so the button always opens something.
       fs.mkdirSync(ctx.log.folder, { recursive: true });
