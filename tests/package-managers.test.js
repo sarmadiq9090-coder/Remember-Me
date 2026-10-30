@@ -34,10 +34,12 @@ test('the Chocolatey package downloads the checked installer and uninstalls thro
   assert.ok(!/<description>([^]*?)<\/description>/.exec(nuspec)[1].includes('<'), 'The Markdown description is XML-escaped');
 });
 
-test('docs/distribution holds the generated v1.5.0 files', async () => {
+// The committed files follow the latest release, so the version and hash come from the Scoop manifest.
+test('docs/distribution holds the generated files for the latest release', async () => {
   const { packageFiles } = await load();
-  const sha256 = JSON.parse(fs.readFileSync(path.join(docs, 'scoop/remember-me.json'), 'utf8')).architecture['64bit'].hash;
-  for (const [name, text] of Object.entries(packageFiles({ version: '1.5.0', sha256 }))) {
-    assert.equal(fs.readFileSync(path.join(docs, name), 'utf8').replace(/\r\n/g, '\n'), text, `Run: node tools/package-managers.mjs --sums SHA256SUMS.txt --version 1.5.0 --out docs/distribution (${name})`);
+  const { version, architecture } = JSON.parse(fs.readFileSync(path.join(docs, 'scoop/remember-me.json'), 'utf8'));
+  const sha256 = architecture['64bit'].hash;
+  for (const [name, text] of Object.entries(packageFiles({ version, sha256 }))) {
+    assert.equal(fs.readFileSync(path.join(docs, name), 'utf8').replace(/\r\n/g, '\n'), text, `Run: node tools/package-managers.mjs --sums SHA256SUMS.txt --version ${version} --out docs/distribution (${name})`);
   }
 });
