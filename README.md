@@ -65,13 +65,13 @@ The installer is built by GitHub Actions from the published source. It is not co
 Compare the file's fingerprint with `SHA256SUMS.txt` from the same release:
 
 ```powershell
-Get-FileHash .\Remember-Me-Setup-1.5.0-x64.exe -Algorithm SHA256
+Get-FileHash .\Remember-Me-Setup-1.6.0-x64.exe -Algorithm SHA256
 ```
 
 With the GitHub CLI you can also confirm the file was built by this repository's release workflow from the release tag:
 
 ```powershell
-gh attestation verify .\Remember-Me-Setup-1.5.0-x64.exe --repo sarmadiq9090-coder/Remember-Me --source-ref refs/tags/v1.5.0 --signer-workflow sarmadiq9090-coder/Remember-Me/.github/workflows/release.yml
+gh attestation verify .\Remember-Me-Setup-1.6.0-x64.exe --repo sarmadiq9090-coder/Remember-Me --source-ref refs/tags/v1.6.0 --signer-workflow sarmadiq9090-coder/Remember-Me/.github/workflows/release.yml
 ```
 
 ### Upgrading from v1.4.0 or earlier
