@@ -2,13 +2,13 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
   <metadata>
     <id>remember-me</id>
-    <version>1.5.0</version>
+    <version>1.6.0</version>
     <packageSourceUrl>https://github.com/sarmadiq9090-coder/Remember-Me/tree/main/docs/distribution/chocolatey</packageSourceUrl>
     <owners>Sarmad</owners>
     <title>Remember Me</title>
     <authors>Sarmad</authors>
     <projectUrl>https://github.com/sarmadiq9090-coder/Remember-Me</projectUrl>
-    <iconUrl>https://raw.githubusercontent.com/sarmadiq9090-coder/Remember-Me/v1.5.0/assets/icon.png</iconUrl>
+    <iconUrl>https://raw.githubusercontent.com/sarmadiq9090-coder/Remember-Me/v1.6.0/assets/icon.png</iconUrl>
     <copyright>Copyright (c) 2026 Sarmad</copyright>
     <licenseUrl>https://github.com/sarmadiq9090-coder/Remember-Me/blob/main/LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -31,7 +31,7 @@ Remember Me is an open-source (MIT) task, note and reminder app for 64-bit Windo
 - The installer installs per user, in `%LOCALAPPDATA%\Programs\Remember Me`, for the account whose administrator rights Chocolatey runs with.
 - Your data is kept in `%APPDATA%\Remember Me` and is not removed on uninstall.
 - If you allow it, the app updates itself from GitHub Releases; `choco upgrade remember-me` works as well.</description>
-    <releaseNotes>https://github.com/sarmadiq9090-coder/Remember-Me/releases/tag/v1.5.0</releaseNotes>
+    <releaseNotes>https://github.com/sarmadiq9090-coder/Remember-Me/releases/tag/v1.6.0</releaseNotes>
   </metadata>
   <files>
     <file src="tools\**" target="tools" />
