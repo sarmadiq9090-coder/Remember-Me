@@ -1,5 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const path = require('node:path');
 const load = () => import('../tools/chocolatey-pack.mjs');
 const source = path.join(__dirname, '../docs/distribution/chocolatey');
@@ -7,7 +8,8 @@ const source = path.join(__dirname, '../docs/distribution/chocolatey');
 test('the .nupkg has the Open Packaging Conventions layout choco pack writes', async () => {
   const { packFolder, unzip } = await load();
   const { name, bytes } = packFolder(source);
-  assert.equal(name, 'remember-me.1.5.0.nupkg');
+  const version = /<version>([^<]+)<\/version>/.exec(fs.readFileSync(path.join(source, 'remember-me.nuspec'), 'utf8'))[1];
+  assert.equal(name, `remember-me.${version}.nupkg`);
   const entries = unzip(bytes), names = entries.map(e => e.name);
   const psmdcp = names.find(n => /^package\/services\/metadata\/core-properties\/[0-9a-f]{32}\.psmdcp$/.test(n));
   assert.ok(psmdcp, 'Core properties part');
@@ -21,7 +23,7 @@ test('the .nupkg has the Open Packaging Conventions layout choco pack writes', a
   const nuspec = text('remember-me.nuspec');
   assert.match(nuspec, /<id>remember-me<\/id>/);
   assert.ok(!nuspec.includes('<files>'), 'The packed manifest has no <files> list');
-  assert.match(text(psmdcp), /<dc:identifier>remember-me<\/dc:identifier><version>1\.5\.0<\/version>/);
+  assert.ok(text(psmdcp).includes(`<dc:identifier>remember-me</dc:identifier><version>${version}</version>`), 'Core properties id and version');
   assert.match(text('tools/chocolateyinstall.ps1'), /Install-ChocolateyPackage @packageArgs/);
 });
 

@@ -27,7 +27,7 @@ The `remember-me` package ID was free on the community repository in October 202
    choco install remember-me --source . -y      # try it from the local .nupkg
    choco uninstall remember-me -y
    choco apikey --key <your API key> --source https://push.chocolatey.org/
-   choco push remember-me.1.5.0.nupkg --source https://push.chocolatey.org/
+   choco push remember-me.<version>.nupkg --source https://push.chocolatey.org/
    ```
 
    Without Chocolatey installed, `node tools/chocolatey-pack.mjs` builds the same package, `release/chocolatey/remember-me.<version>.nupkg`, in the layout `choco pack` writes. It can then be uploaded with NuGet's push request (`PUT https://push.chocolatey.org/api/v2/package/`, multipart/form-data, with the API key in the `X-NuGet-ApiKey` header).
