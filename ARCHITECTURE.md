@@ -13,9 +13,10 @@ true (see "Keeping this document current").
 |---|---|
 | App lifecycle: data folder, log, single-instance lock, start and quit | `src/main/index.js` |
 | Main and alert windows, theme, page options | `src/main/windows.js` |
-| Tray icon, menu (pause, About, exit) and tooltip | `src/main/tray.js` |
+| Tray icon, menu (pause, About, Report a problem, exit) and tooltip | `src/main/tray.js` |
 | Scan loop, alert queue, sounds, early notices, preview and undo window | `src/main/scheduler.js` |
 | Interface text in the main process (`tr()`, `errorText()`) | `src/main/i18n.js` |
+| Crash and error capture, the "Report this problem" offer | `src/main/problems.js` |
 | IPC entry point and handler registry | `src/main/handlers/index.js` |
 | IPC handlers, one file per area | `src/main/handlers/*.js` |
 | IPC allowlists and payload checks | `src/main/ipc.js` |
@@ -39,6 +40,7 @@ true (see "Keeping this document current").
 | Start with Windows entry | `src/platform/login-item.js` |
 | Update checks, download and install policy | `src/platform/updates.js` |
 | About card: link allowlist and diagnostic info | `src/platform/about.js` |
+| Pre-filled GitHub issue for a problem report, with redacted log lines | `src/platform/problem-report.js` |
 | Palette colors for window backgrounds, read from `ui/styles/theme.css` | `src/platform/themes.js` |
 | The two pages (main window, sticky alert) | `ui/index.html`, `ui/alert.html` |
 | Main window scripts: plain scripts loaded in order, sharing one scope (state, render, cards, editors, trash, settings, events, boot) | `ui/main/*.js` |
@@ -101,7 +103,7 @@ registry throws if an allowed action has no handler, has two, or a handler is no
 | Attachments | `attachFiles`, `openAttachment`, `imagePreview`, `cleanOrphans` |
 | Backups | `export`, `restore`, `chooseDriveFolder`, `driveBackupNow`, `driveAutomatic`, `driveKeep`, `driveHelp`, `openDriveFolder` |
 | Updates | `updateConsent`, `checkUpdates`, `installUpdate`, `dismissUpdate` |
-| About | `openLink`, `copyDiagnostics`, `openLogs` |
+| About | `openLink`, `copyDiagnostics`, `reportProblem`, `openLogs` |
 | App | `settings`, `relaunch`, `preview`, `dataFolder`, `open` |
 
 The alert window may only use `alerts`, `language`, `locale`, `complete`, `skip`, `undoComplete`,
@@ -290,6 +292,8 @@ Updates card), "Copy diagnostic info" and "Open log folder".
   have no clipboard permission): the app, Electron, Chromium and Node versions, the Windows version
   and architecture, the UI language and the theme. Never tasks, notes, file names or paths.
 - `openLogs` creates `logs/` if needed and opens it in File Explorer.
+- `reportProblem` opens a problem report (see Problem reports). The same report opens from the
+  flag button in the main window's top bar and from "Report a problem" in the tray menu.
 
 The alert window can use none of these actions.
 
@@ -309,7 +313,10 @@ Settings' "Open data folder" and About's "Open log folder" show it. It records:
   `trash-purge-failed`;
 - `action-failed` with the IPC action name, for any request that returned an error;
 - `export`, `restore`, `clean-orphans`, `trash-purged`, `drive-backup`, `drive-backup-failed` and
-  `backup-rotation-failed`, with counts.
+  `backup-rotation-failed`, with counts;
+- `uncaught-exception`, `unhandled-rejection`, `render-process-gone` and `child-process-gone`
+  (process type, reason and exit code; a warning for a clean exit or a kill), and
+  `problem-report-opened` (kind, line count, whether the log was cut).
 
 It never records task, note or attachment titles, bodies or file names. Callers pass only ids,
 counts and outcomes. Error messages have every «…», "…" and '…' quotation blanked, because the
@@ -322,6 +329,24 @@ and the app never calls it, so no crash dumps are written or uploaded and no `Cr
 created. No `debug.log` is written unless Chromium logging is turned on with `--enable-logging`.
 The data folder also holds Chromium's caches (GPU and shader caches, Local Storage and so on),
 which Chromium keeps bounded. Backups never include them.
+
+## Problem reports
+
+`src/main/problems.js` listens for `uncaughtException` and `unhandledRejection` on the main process
+and for Electron's `render-process-gone` and `child-process-gone`, and logs them. A crash (an
+uncaught exception, or a process that ended as `crashed`, `oom`, `launch-failed`,
+`integrity-failure` or `abnormal-exit`), or 3 logged errors within 10 minutes, shows a dialog
+offering "Report this problem", at most once per run and never in test runs. Users can also open a
+report at any time from the About card, the top bar or the tray.
+
+A report only calls `shell.openExternal` with `.../Remember-Me/issues/new?title=...&body=...`; the
+app has no reporting endpoint and sends nothing. `src/platform/problem-report.js` builds the body: an
+empty "What happened?" section, the app version, Windows version and architecture, UI language and
+theme, and the last 30 log lines. Each line is re-parsed as the logger's JSON (anything else is
+dropped), only numbers, booleans and strings are kept, and every string has the data folder, the
+user profile and any other `X:\Users\<name>` path replaced, then goes through the logger's
+`redact()`. The oldest lines are dropped until the URL is at most 7000 characters, and the body
+says how many were left out.
 
 ## Packaging and releases
 

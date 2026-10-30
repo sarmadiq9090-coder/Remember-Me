@@ -19,6 +19,7 @@ function createTray(ctx) {
       { label: tr("New task"), click: () => windows().openInMain('new') },
       pauseMenuItem(),
       aboutMenuItem(),
+      { label: tr("Report a problem"), click: () => ctx.problems.openReport().catch(error => ctx.log.warn('problem-report-failed', error)) },
       { type: 'separator' },
       exitMenuItem(),
     ];

@@ -16,7 +16,7 @@ test('every allowed IPC action has exactly one handler', () => {
 test('only actions that change nothing skip the rescan', () => {
   const readOnly = Object.entries(createHandlers(stub)).filter(([, handler]) => handler.readOnly).map(([action]) => action).sort();
   assert.deepEqual(readOnly, ['alerts', 'checkUpdates', 'copyDiagnostics', 'dataFolder', 'dismissUpdate', 'driveHelp', 'export', 'imagePreview', 'installUpdate',
-    'language', 'locale', 'open', 'openAttachment', 'openDriveFolder', 'openLink', 'openLogs', 'relaunch', 'state', 'storage', 'undoable']);
+    'language', 'locale', 'open', 'openAttachment', 'openDriveFolder', 'openLink', 'openLogs', 'relaunch', 'reportProblem', 'state', 'storage', 'undoable']);
 });
 
 // A context with a real state and a store whose change() applies the function, as Store does.
