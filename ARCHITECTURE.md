@@ -168,7 +168,8 @@ all data. The shape (`version` is always `1`):
     palette: 'lavender'|'ocean'|'forest'|'sunset'|'graphite'|'contrast',  // ui/styles/theme.css
     autoUpdate: null|true|false,  // consent to background update checks; null means not asked yet
     remindAgain?: 0|2|5|15,   // minutes between repeated alert sounds; absent means off
-    pausedUntil: null|'<ISO time>'|'manual'  // reminders paused from the tray; null means not paused
+    pausedUntil: null|'<ISO time>'|'manual',  // reminders paused from the tray; null means not paused
+    snoozePresets: [6 × { kind: 'in', minutes } | { kind: 'today'|'tomorrow', time: 'HH:MM' } | { kind: 'week'|'pick' }]  // the alert's 1-6 snooze choices (ui/lib/alert-format.js)
   }
 }
 ```

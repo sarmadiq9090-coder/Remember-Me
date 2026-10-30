@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createHandlers } = require('../src/main/handlers');
 const { ACTIONS, ALERT_ACTIONS } = require('../src/main/ipc');
+const { DEFAULT_SNOOZE_PRESETS } = require('../ui/lib/alert-format');
 
 // The handlers only read the context when an action runs, so a bare stub is enough to build them.
 const stub = { electron: {}, tr: text => text };
@@ -71,5 +72,5 @@ test('changing the language asks for a restart only when the native fields would
 
 test('the alert learns the first day of the week, so its repeat labels match the main window', () => {
   const ctx = { ...stub, language: () => 'en', store: { state: { settings: { palette: 'ocean', weekStart: 1 } } } };
-  assert.deepEqual(createHandlers(ctx).language.run({}), { language: 'en', palette: 'ocean', weekStart: 1 });
+  assert.deepEqual(createHandlers(ctx).language.run({}), { language: 'en', palette: 'ocean', weekStart: 1, snoozePresets: DEFAULT_SNOOZE_PRESETS });
 });

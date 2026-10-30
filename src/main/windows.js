@@ -41,10 +41,10 @@ function createWindows(ctx) {
     win.once('ready-to-show', () => { if (visible) win.show(); });
   }
   // The main window opens a task's editor (or a new one) on its next state read, which also
-  // covers a window that is still being created.
+  // covers a window that is still being created. field 'due' focuses the date and time (Reschedule).
   let openRequest = null;
   function takeOpenRequest() { const request = openRequest; openRequest = null; return request; }
-  function openInMain(request) { openRequest = request; showMain(); notifyViews(); }
+  function openInMain(task, field) { openRequest = task ? { task, field: field === 'due' ? 'due' : null } : null; showMain(); notifyViews(); }
   function showMain() {
     if (!mainWindow) { if (!ctx.quitting) createMain(true); return; }
     if (mainWindow.isMinimized()) mainWindow.restore();

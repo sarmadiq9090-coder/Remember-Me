@@ -41,6 +41,7 @@ function render() {
     if (!$('setting-language').options.length) $('setting-language').innerHTML = LOCALES.map(l => `<option value="${l.code}" lang="${l.code}" dir="${l.dir}">${esc(l.name)}</option>`).join('');
     $('setting-language').value = state.settings.language;
     renderRemindAgain();
+    renderSnoozeChoices();
     renderAppearance();
     $('setting-week').value = String(state.settings.weekStart);
     $('data-path').textContent = state.dataPath;

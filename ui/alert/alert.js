@@ -1,7 +1,7 @@
 // The sticky reminder window: one reminder at a time from the queue, with Done, snooze presets,
 // Skip for repeats, Snooze all and Open task. Every action carries the due time that was shown,
 // so the main process ignores it if that occurrence was already handled.
-let tasks = [], index = 0, shownId = null, busy = false, weekStart;
+let tasks = [], index = 0, shownId = null, busy = false, weekStart, presets = normalizeSnoozePresets();
 const $ = id => document.getElementById(id);
 const MARK = String.fromCharCode(1);
 const current = () => tasks[index];
@@ -10,6 +10,7 @@ async function refreshAlert() {
   try {
     const look = await api('language');
     await setLanguage(look); applyPalette(look.palette); weekStart = look.weekStart;
+    presets = normalizeSnoozePresets(look.snoozePresets);
     tasks = await api('alerts');
     // Shown before rendering: nothing in a hidden page can take the focus.
     showPage();
@@ -49,8 +50,9 @@ function render(navigated = false) {
   $('alert-note').textContent = task.body || '';
   $('alert-note').hidden = !task.body;
   renderFiles(task);
+  // After three snoozes, suggest a real new time: Reschedule opens the task's date and time in the main window.
   $('alert-nudge').hidden = !(task.snoozeCount >= 3);
-  if (task.snoozeCount >= 3) $('alert-nudge').textContent = tr('You have snoozed this {count} times. Maybe choose a better time?', { count: task.snoozeCount });
+  if (task.snoozeCount >= 3) $('alert-nudge-text').textContent = tr('You have snoozed this {count} times. Maybe choose a better time?', { count: task.snoozeCount });
   $('alert-next-time').hidden = !task.next;
   if (task.next) $('alert-next-time').textContent = tr('Next: {when}', { when: whenText(task.next, now) });
   renderPresets(now);
@@ -58,7 +60,7 @@ function render(navigated = false) {
   $('alert-snooze-all').hidden = tasks.length < 2;
   $('alert-snooze-all').textContent = tr('Snooze all {count} · {duration}', { count: tasks.length, duration: tr('1 hour') });
   // While an action runs, and for a moment after the next reminder appears, these wait visibly.
-  for (const id of ['alert-complete', 'alert-skip', 'alert-snooze-all']) $(id).disabled = busy;
+  for (const id of ['alert-complete', 'alert-skip', 'alert-snooze-all', 'alert-reschedule']) $(id).disabled = busy;
   $('alert-prev').disabled = busy || index === 0;
   $('alert-next').disabled = busy || index === tasks.length - 1;
   if (changed) {
@@ -72,29 +74,49 @@ function render(navigated = false) {
     $('alert-complete').focus({ preventScroll: true });
   }
 }
-// The six "Remind me again" choices, numbered for the 1-6 keys. The grid is drawn here rather than
-// by the page translator because its labels and tooltips depend on the clock.
+// The six "Remind me again" choices from Settings, numbered for the 1-6 keys. The grid is drawn here
+// rather than by the page translator because its labels, tooltips and previews depend on the clock.
+const atClock = time => { const [hour, minute] = time.split(':').map(Number); return new Date(2026, 0, 1, hour, minute); };
 function presetLabel(preset, now) {
-  switch (preset) {
-    case '10m': return tr('10 min');
-    case '1h': return tr('1 hour');
-    case 'evening': return tr('This evening');
-    case 'tomorrow': return tr('Tomorrow {time}', { time: timeLabel(snoozeTime('tomorrow', now)) });
+  switch (preset.kind) {
+    case 'in': return durationText(preset.minutes, locale());
+    // From 17:00 on, a time today reads as "This evening", like the default 18:00.
+    case 'today': return atClock(preset.time).getHours() >= 17 ? tr('This evening') : tr('Today {time}', { time: timeLabel(atClock(preset.time)) });
+    case 'tomorrow': return tr('Tomorrow {time}', { time: timeLabel(snoozeTime(preset, now)) });
     case 'week': return tr('Next week');
     default: return tr('Pick a time…');
   }
 }
+let gridKey = '', pickOpener = null;
 function renderPresets(now) {
-  const grid = $('snooze-grid'), open = !$('snooze-form').hidden;
-  if (!grid.children.length) grid.innerHTML = SNOOZE_PRESETS.map((preset, i) => `<button type="button" data-preset="${preset}"${preset === 'pick' ? ' aria-controls="snooze-form"' : ''}><span></span><kbd>${i + 1}</kbd></button>`).join('');
+  const grid = $('snooze-grid'), open = !$('snooze-form').hidden, key = JSON.stringify(presets);
+  if (gridKey !== key) {
+    // Rebuilt only when Settings changed the choices, so a focused button keeps the focus otherwise.
+    if (open) closePicker();
+    gridKey = key; pickOpener = null;
+    grid.innerHTML = presets.map((preset, i) => `<button type="button" data-slot="${i}" data-preset="${preset.kind}"${preset.kind === 'pick' ? ' aria-controls="snooze-form" aria-expanded="false"' : ''}><span></span><kbd>${i + 1}</kbd></button>`).join('');
+  }
   for (const button of grid.children) {
-    const preset = button.dataset.preset, at = snoozeTime(preset, now), off = preset !== 'pick' && !at;
+    const preset = presets[button.dataset.slot], at = snoozeTime(preset, now), off = preset.kind !== 'pick' && !at;
+    const preview = snoozePreview(preset, now, locale());
     button.firstChild.textContent = presetLabel(preset, now);
     button.disabled = busy || off;
-    if (preset === 'pick') button.setAttribute('aria-expanded', String(open));
-    button.title = off ? tr('Only before {time}', { time: timeLabel(new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17)) }) : at ? whenText(at.toISOString(), now) : '';
+    if (preset.kind === 'pick') button.setAttribute('aria-expanded', String(!$('snooze-form').hidden && button === pickOpener));
+    // Where each choice leads ("→ Today 18:00") shows next to "Remind me again" on hover and focus,
+    // as the tooltip, and as the button's description for screen readers.
+    button.dataset.preview = preview ? tr('→ {day} {time}', preview) : '';
+    button.title = off ? tr('Only before {time}', { time: timeLabel(snoozeCutoff(preset, now)) }) : button.dataset.preview;
+    if (preview) button.setAttribute('aria-description', button.dataset.preview); else button.removeAttribute('aria-description');
   }
+  showPreview();
 }
+// The hovered choice, or else the focused one, shows its preview.
+function showPreview() {
+  const grid = $('snooze-grid');
+  const button = grid.querySelector('[data-slot]:hover') || (grid.contains(document.activeElement) ? document.activeElement.closest('[data-slot]') : null);
+  $('snooze-preview').textContent = button?.dataset.preview || '';
+}
+for (const type of ['pointerover', 'pointerout', 'focusin', 'focusout']) $('snooze-grid').addEventListener(type, () => setTimeout(showPreview));
 // Attachments as compact chips; images get a small thumbnail when there is room for one.
 function renderFiles(task) {
   const files = task.files || [];
@@ -114,9 +136,10 @@ function allDone() {
   $('alert-live').textContent = undo ? `${$('alert-undo-text').textContent}. ${$('alert-all-done').textContent}` : $('alert-all-done').textContent;
   (undo ? $('alert-undo-button') : $('alert-all-done')).focus({ preventScroll: true });
 }
-function openPicker() {
+function openPicker(opener) {
+  pickOpener = opener;
   $('snooze-form').hidden = false;
-  document.querySelector('[data-preset="pick"]').setAttribute('aria-expanded', 'true');
+  opener.setAttribute('aria-expanded', 'true');
   if (!$('snooze-until').value) $('snooze-until').value = localDateValue(Date.now() + 3600000);
   $('snooze-until').focus();
 }
@@ -125,8 +148,9 @@ function closePicker() {
   const hadFocus = $('snooze-form').contains(document.activeElement);
   $('snooze-form').hidden = true;
   $('snooze-until').value = '';
-  document.querySelector('[data-preset="pick"]').setAttribute('aria-expanded', 'false');
-  if (hadFocus) document.querySelector('[data-preset="pick"]').focus({ preventScroll: true });
+  const opener = pickOpener?.isConnected ? pickOpener : document.querySelector('[data-preset="pick"]');
+  opener?.setAttribute('aria-expanded', 'false');
+  if (hadFocus) (opener || $('alert-complete')).focus({ preventScroll: true });
 }
 // Disabling the focused button during an action drops the focus; give it back to Done.
 function restoreFocus() { if (current() && (document.activeElement === document.body || !document.activeElement)) $('alert-complete').focus({ preventScroll: true }); }
@@ -177,8 +201,11 @@ $('alert-prev').addEventListener('click', () => move(-1));
 $('alert-next').addEventListener('click', () => move(1));
 $('snooze-grid').addEventListener('click', e => {
   const button = e.target.closest('[data-preset]'); if (!button || button.disabled || !userClick(e)) return;
-  if (button.dataset.preset === 'pick') return $('snooze-form').hidden ? openPicker() : closePicker();
-  act('snooze', snoozeTime(button.dataset.preset, new Date()).toISOString());
+  if (button.dataset.preset === 'pick') return $('snooze-form').hidden ? openPicker(button) : closePicker();
+  // A choice can stop applying between drawing and clicking (today's time came within the hour).
+  const at = snoozeTime(presets[button.dataset.slot], new Date());
+  if (!at) return render();
+  act('snooze', at.toISOString());
 });
 $('snooze-form').addEventListener('submit', e => {
   e.preventDefault();
@@ -186,7 +213,11 @@ $('snooze-form').addEventListener('submit', e => {
   if (!Number.isFinite(d.getTime())) { $('alert-error').textContent = tr('Choose a valid time.'); return; }
   act('snooze', d.toISOString());
 });
-$('alert-snooze-all').addEventListener('click', e => { if (userClick(e)) snoozeAll(snoozeTime('1h', new Date()).toISOString()); });
+$('alert-snooze-all').addEventListener('click', e => { if (userClick(e)) snoozeAll(snoozeTime({ kind: 'in', minutes: 60 }, new Date()).toISOString()); });
+$('alert-reschedule').addEventListener('click', async () => {
+  const task = current();
+  try { await api('open', task && task.id !== '__preview' ? { id: task.id, field: 'due' } : undefined); } catch (e) { $('alert-error').textContent = e.message; }
+});
 $('alert-open').addEventListener('click', async () => {
   const task = current();
   try { await api('open', task && task.id !== '__preview' ? { id: task.id } : undefined); } catch (e) { $('alert-error').textContent = e.message; }

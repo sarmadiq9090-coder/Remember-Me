@@ -10,9 +10,9 @@
 <p class="alert-when" id="alert-time" translate="no"></p>
 <p class="alert-note" id="alert-note" translate="no" dir="auto" hidden></p>
 <div id="alert-files" class="alert-files" translate="no" hidden></div>
-<p class="alert-nudge" id="alert-nudge" translate="no" hidden></p>
+<div class="alert-nudge" id="alert-nudge" hidden><p id="alert-nudge-text" translate="no"></p><button type="button" class="text-button" id="alert-reschedule" title="Open the task to choose a new date and time">Reschedule…</button></div>
 <button class="primary alert-done" id="alert-complete" title="I will stay here until you complete it or choose another time."><span class="alert-done-label"><span data-icon="check"></span> <span>Done</span></span><small id="alert-next-time" translate="no" hidden></small></button>
-<p class="alert-label">Remind me again</p>
+<p class="alert-label"><span>Remind me again</span><span class="snooze-preview" id="snooze-preview" translate="no" aria-hidden="true"></span></p>
 <div class="snooze-grid" id="snooze-grid" translate="no"></div>
 <form id="snooze-form" class="custom-snooze" hidden><input type="datetime-local" id="snooze-until" required aria-label="New reminder time"><button type="submit" title="Snooze until the chosen time" aria-label="Snooze until the chosen time"><span data-icon="arrowLeft"></span></button></form>
 <button type="button" class="text-button alert-skip" id="alert-skip" hidden>Skip this time <kbd>S</kbd></button>

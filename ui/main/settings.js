@@ -10,8 +10,83 @@ function renderRemindAgain() {
   for (const option of $('setting-remind-again').options) option.textContent = { 0: tr("Off"), 2: tr("2 minutes"), 5: tr("5 minutes"), 15: tr("15 minutes") }[option.value];
   $('setting-remind-again').value = String(state.settings.remindAgain || 0);
 }
+// Settings → Snooze choices: the six "Remind me again" buttons of the alert, on keys 1-6 (issue #20).
+// Each slot is a kind plus a length or a time; a length is shown in the largest whole unit.
+// [min, max, minutes per unit] for each length; all stay within 30 days (MAX_SNOOZE_MINUTES).
+const SNOOZE_UNITS = { minutes: [1, 1440, 1], hours: [1, 720, 60], days: [1, 30, 1440] };
+const SNOOZE_UNIT_DEFAULTS = { minutes: 30, hours: 2, days: 1, today: '18:00', tomorrow: '09:00' };
+const SNOOZE_KINDS = [['minutes', msg('Minutes later')], ['hours', msg('Hours later')], ['days', msg('Days later')], ['today', msg('Today at')], ['tomorrow', msg('Tomorrow at')], ['week', msg('Same time next week')], ['pick', msg('Pick a time…')]];
+const snoozeRow = document.createElement('div');
+snoozeRow.className = 'setting-row snooze-setting';
+remindAgainRow.after(snoozeRow);
+let snoozeLanguage, snoozeSaving = 0;
+const slotFields = li => ({ kind: li.querySelector('[data-snooze-kind]'), amount: li.querySelector('[data-snooze-amount]'), time: li.querySelector('[data-snooze-time]') });
+function slotKind(preset) { return preset.kind !== 'in' ? preset.kind : preset.minutes % 1440 === 0 ? 'days' : preset.minutes % 60 === 0 ? 'hours' : 'minutes'; }
+function renderSnoozeChoices(force = false) {
+  if (snoozeLanguage !== uiLanguage) {
+    snoozeLanguage = uiLanguage;
+    const slots = [1, 2, 3, 4, 5, 6].map(number => `<li data-slot="${number - 1}"><kbd aria-hidden="true">${number}</kbd><select data-snooze-kind aria-label="${esc(tr('Choice {number}', { number }))}">${SNOOZE_KINDS.map(([value, name]) => `<option value="${value}">${tr(name)}</option>`).join('')}</select><input type="number" step="1" required data-snooze-amount aria-label="${esc(tr('Amount for choice {number}', { number }))}"><input type="time" required data-snooze-time aria-label="${esc(tr('Time for choice {number}', { number }))}"></li>`).join('');
+    snoozeRow.innerHTML = `<div class="snooze-setting-head"><div><strong id="snooze-choices-label">${tr('Snooze choices')}</strong><p>${tr('The six choices in the alert under Remind me again, on keys 1 to 6.')}</p></div><button type="button" class="text-button" id="snooze-reset">${tr('Restore the default choices')}</button></div><ol class="snooze-choices" aria-labelledby="snooze-choices-label">${slots}</ol>`;
+    force = true;
+  }
+  if (snoozeSaving) return;
+  const presets = normalizeSnoozePresets(state.settings.snoozePresets);
+  for (const li of snoozeRow.querySelectorAll('[data-slot]')) {
+    // A slot being edited keeps what is typed; the 30-second redraw must not undo it.
+    if (!force && li.contains(document.activeElement)) continue;
+    const preset = presets[li.dataset.slot], fields = slotFields(li);
+    fields.kind.value = slotKind(preset);
+    fields.amount.value = preset.kind === 'in' ? String(preset.minutes / SNOOZE_UNITS[fields.kind.value][2]) : '';
+    fields.time.value = preset.time || '';
+    showSlotFields(li);
+  }
+}
+// Only the field the kind needs is shown, with the limits of its unit.
+function showSlotFields(li) {
+  const { kind, amount, time } = slotFields(li), unit = SNOOZE_UNITS[kind.value];
+  amount.hidden = amount.disabled = !unit;
+  if (unit) Object.assign(amount, { min: unit[0], max: unit[1] });
+  time.hidden = time.disabled = !['today', 'tomorrow'].includes(kind.value);
+}
+function slotPreset(li) {
+  const { kind, amount, time } = slotFields(li), unit = SNOOZE_UNITS[kind.value];
+  if (unit) return { kind: 'in', minutes: Number(amount.value) * unit[2] };
+  return ['today', 'tomorrow'].includes(kind.value) ? { kind: kind.value, time: time.value } : { kind: kind.value };
+}
+// The choices as the page shows them, or the saved ones while the list is not built yet.
+function snoozeChoices() {
+  const slots = [...snoozeRow.querySelectorAll('[data-slot]')];
+  return slots.length ? slots.map(slotPreset) : normalizeSnoozePresets(state.settings.snoozePresets);
+}
+async function saveSnoozeChoices(presets) {
+  snoozeSaving++;
+  try { await api('settings', { ...settingsPayload(), snoozePresets: presets }); toast(tr('Settings saved.')); }
+  catch (err) { toast(err.message); } finally { snoozeSaving--; }
+  await refresh();
+}
+snoozeRow.addEventListener('change', e => {
+  const li = e.target.closest('[data-slot]'); if (!li) return;
+  if (e.target.matches('[data-snooze-kind]')) {
+    // A new kind starts from a sensible value: 30 minutes, 2 hours, 1 day, 18:00 today or 09:00 tomorrow.
+    const { kind, amount, time } = slotFields(li), value = SNOOZE_UNIT_DEFAULTS[kind.value];
+    if (SNOOZE_UNITS[kind.value]) amount.value = String(value);
+    else if (value) time.value = value;
+    showSlotFields(li);
+  }
+  // Out-of-range or empty fields are reported in the app's language and not saved.
+  const invalid = [...snoozeRow.querySelectorAll('input:not([disabled])')].find(input => !input.checkValidity());
+  if (invalid) { invalid.reportValidity(); return; }
+  saveSnoozeChoices(snoozeChoices());
+});
+snoozeRow.addEventListener('click', async e => {
+  if (!e.target.closest('#snooze-reset')) return;
+  await saveSnoozeChoices(DEFAULT_SNOOZE_PRESETS.map(preset => ({ ...preset })));
+  renderSnoozeChoices(true);
+});
 function settingsPayload() {
-  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: Number($('setting-week').value), theme: checked('theme-mode', state.settings.theme), palette: checked('palette', state.settings.palette), remindAgain: Number($('setting-remind-again').value) };
+  // Invalid snooze fields still being edited are left out, so other settings save without them.
+  const presets = snoozeChoices(), valid = presets.every(preset => checkSnoozePreset(preset));
+  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: Number($('setting-week').value), theme: checked('theme-mode', state.settings.theme), palette: checked('palette', state.settings.palette), remindAgain: Number($('setting-remind-again').value), ...(valid ? { snoozePresets: presets } : {}) };
 }
 for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-week', 'setting-remind-again']) $(id).addEventListener('change', async () => {
   try {

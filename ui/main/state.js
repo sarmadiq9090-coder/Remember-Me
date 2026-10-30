@@ -60,10 +60,11 @@ async function refresh() {
     // Shown before rendering: nothing in a hidden page can take the focus.
     showPage();
     render();
-    // The tray's New task, or Open task in the alert, asked for an editor.
-    if (state.openTask && !document.querySelector('dialog[open]')) {
-      const task = state.openTask === 'new' ? null : state.tasks.find(t => t.id === state.openTask);
-      if (state.openTask === 'new' || (task && !task.completedAt)) openTaskEditor(task || undefined);
+    // The tray's New task, or Open task or Reschedule in the alert, asked for an editor.
+    const open = state.openTask;
+    if (open && !document.querySelector('dialog[open]')) {
+      const task = open.task === 'new' ? null : state.tasks.find(t => t.id === open.task);
+      if (open.task === 'new' || (task && !task.completedAt)) openTaskEditor(task || undefined, { focus: open.field });
     }
   } catch (e) { toast(e.message); } finally { showPage(); }
 }

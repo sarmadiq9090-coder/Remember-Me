@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Your own snooze choices:** Settings → Reminders and background → **Snooze choices** sets the six "Remind me again" buttons of the alert, still on keys 1–6. Each can be a number of minutes, hours or days, today or tomorrow at a set time, the same time next week, or Pick a time. The defaults are the v1.5.0 choices, and **Restore the default choices** brings them back. [#20]
+- **Reschedule** in the alert: after three snoozes, the nudge has a button that opens the task in the main window with its date and time ready to change. [#20]
+- **Snooze previews:** hovering or focusing a snooze button shows where it leads, such as "→ Today 6:00 PM", in your language's 12- or 24-hour clock with Western digits. Screen readers hear it too. [#21]
+- **Clear overdue wording** on task rows, such as "Overdue by 2 hours", in every language. [#21]
+- Completing a repeating task says when it comes back: **"Done. Next: …"**, with Undo. [#21]
+
 ## v1.5.0 (2026-10-25)
 
 Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0 load unchanged, and the data folder moves from `%APPDATA%\Waqt` to `%APPDATA%\Remember Me` by itself the first time v1.5.0 starts.

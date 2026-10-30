@@ -4,9 +4,10 @@ const { attachmentIds, validateAttachment } = require('./records');
 const { nextOccurrence } = require('./repeat');
 const { LOCALES, DEFAULT: DEFAULT_LOCALE } = require('../../ui/lib/translate');
 const { validPause } = require('./pause');
+const { DEFAULT_SNOOZE_PRESETS, normalizeSnoozePresets } = require('../../ui/lib/alert-format');
 
 function initialState() {
-  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: DEFAULT_LOCALE, weekStart: 6, theme: 'system', palette: 'lavender', autoUpdate: null, pausedUntil: null } };
+  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: DEFAULT_LOCALE, weekStart: 6, theme: 'system', palette: 'lavender', autoUpdate: null, pausedUntil: null, snoozePresets: DEFAULT_SNOOZE_PRESETS.map(p => ({ ...p })) } };
 }
 // Interface palettes in ui/styles/theme.css; anything else shows Lavender.
 const PALETTES = ['lavender', 'ocean', 'forest', 'sunset', 'graphite', 'contrast'];
@@ -331,6 +332,8 @@ function validateState(data) {
   if (data.settings.autoUpdate !== true && data.settings.autoUpdate !== false) data.settings.autoUpdate = null;
   // A pause from the tray survives a restart; anything that isn't one means no pause.
   data.settings.pausedUntil = validPause(data.settings.pausedUntil);
+  // The alert's six snooze choices; a missing or broken list, or slot, gets the defaults.
+  data.settings.snoozePresets = normalizeSnoozePresets(data.settings.snoozePresets);
   return data;
 }
 module.exports = { importTasks, normalizeChecklist, toggleStep, normalizeTags, PALETTES, NOTE_COLORS, NOTE_STYLES, noteLook, EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, alertQueue, validateState, REMIND_AGAIN, skipOccurrence };
