@@ -80,8 +80,8 @@ const atClock = time => { const [hour, minute] = time.split(':').map(Number); re
 function presetLabel(preset, now) {
   switch (preset.kind) {
     case 'in': return durationText(preset.minutes, locale());
-    // From 17:00 on, a time today reads as "This evening", like the default 18:00.
-    case 'today': return atClock(preset.time).getHours() >= 17 ? tr('This evening') : tr('Today {time}', { time: timeLabel(atClock(preset.time)) });
+    // The default 18:00 keeps its "This evening" label; other times name the time, so two choices never look alike.
+    case 'today': return preset.time === '18:00' ? tr('This evening') : tr('Today {time}', { time: timeLabel(atClock(preset.time)) });
     case 'tomorrow': return tr('Tomorrow {time}', { time: timeLabel(snoozeTime(preset, now)) });
     case 'week': return tr('Next week');
     default: return tr('Pick a time…');
@@ -92,9 +92,12 @@ function renderPresets(now) {
   const grid = $('snooze-grid'), open = !$('snooze-form').hidden, key = JSON.stringify(presets);
   if (gridKey !== key) {
     // Rebuilt only when Settings changed the choices, so a focused button keeps the focus otherwise.
-    if (open) closePicker();
+    // An open Pick a time form stays open, with what was typed, while a Pick a time choice remains.
+    const keepPicker = open && presets.some(preset => preset.kind === 'pick');
+    if (open && !keepPicker) closePicker();
     gridKey = key; pickOpener = null;
     grid.innerHTML = presets.map((preset, i) => `<button type="button" data-slot="${i}" data-preset="${preset.kind}"${preset.kind === 'pick' ? ' aria-controls="snooze-form" aria-expanded="false"' : ''}><span></span><kbd>${i + 1}</kbd></button>`).join('');
+    if (keepPicker) pickOpener = grid.querySelector('[data-preset="pick"]');
   }
   for (const button of grid.children) {
     const preset = presets[button.dataset.slot], at = snoozeTime(preset, now), off = preset.kind !== 'pick' && !at;

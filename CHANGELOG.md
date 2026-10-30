@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- A snooze choice for a time today before 01:00 could never be used, because it closes an hour before its time. Settings now asks for 01:00 or later.
+- Snooze choices for today show their time, such as "Today 9:00 PM", so two evening choices no longer share the label "This evening". The default 18:00 choice keeps it.
+- Overdue times round to the next unit: 59 and a half minutes reads "1 hour", not "60 minutes", in the alert and on task rows.
+- Changing the snooze choices while the alert's Pick a time form is open no longer closes it and clears the typed time.
+- Arabic: the overdue text on task rows is grammatical for every length ("مضى على موعدها ساعتان").
+
 ## v1.6.0 (2026-10-30)
 
 Everything since v1.5.0. Your tasks, notes, attachments and settings load unchanged, and the alert keeps the v1.5.0 snooze choices until you change them.

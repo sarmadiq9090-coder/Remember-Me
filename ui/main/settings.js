@@ -47,6 +47,8 @@ function showSlotFields(li) {
   amount.hidden = amount.disabled = !unit;
   if (unit) Object.assign(amount, { min: unit[0], max: unit[1] });
   time.hidden = time.disabled = !['today', 'tomorrow'].includes(kind.value);
+  // A time today closes an hour before it, so it starts at 01:00 (checkSnoozePreset agrees).
+  time.min = kind.value === 'today' ? '01:00' : '';
 }
 function slotPreset(li) {
   const { kind, amount, time } = slotFields(li), unit = SNOOZE_UNITS[kind.value];
