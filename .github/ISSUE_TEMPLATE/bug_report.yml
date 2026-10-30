@@ -22,7 +22,7 @@ body:
     attributes:
       label: App version
       description: Shown in Settings → About. **Copy diagnostic info** there copies it with the Windows version.
-      placeholder: 1.5.0
+      placeholder: 1.6.0
     validations:
       required: true
   - type: input

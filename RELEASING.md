@@ -1,6 +1,6 @@
 # Releasing
 
-A checklist for publishing v1.5.0. Later releases follow the same steps with their own version number.
+A checklist for publishing a release. The examples use v1.5.0 and the previous release v1.4.0; replace them with the new version number and the one before it.
 
 Releases are built only by `.github/workflows/release.yml` on GitHub Actions, never on a personal PC. Pushing a `v*` tag builds, attests and publishes the release; running the workflow by hand only builds the files, with no release and no attestation. The build job runs with a read-only token. Only the publish job, which runs no repository code, can create the release; it uses the `release` environment, where **Settings → Environments → release → Required reviewers** can add a manual approval before anything is published.
 
