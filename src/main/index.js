@@ -15,6 +15,7 @@ const { createI18n, startupControlsLocale } = require('./i18n');
 const { createWindows } = require('./windows');
 const { createTray } = require('./tray');
 const { createScheduler } = require('./scheduler');
+const { createProblems } = require('./problems');
 const testMode = process.env.WAQT_TEST === '1';
 // Lets the desktop tests read early notifications without showing them.
 if (testMode) globalThis.waqtTest = { get early() { return ctx.scheduler.earlyLog; } };
@@ -41,6 +42,9 @@ let interval, backupInterval;
 const ctx = { app, log, testMode, electron: { dialog, shell, clipboard }, UNDO_MS: 6000, imagePreview: createPreviewService(nativeImage),
   quitting: false, store: null, pause: null, driveBackup: null, updates: null, setLogin, controlsLocale };
 Object.assign(ctx, createI18n(() => ctx.store?.state?.settings?.language));
+// Crashes and uncaught errors go to the log; after one, or after repeated errors, the user is offered a pre-filled GitHub issue.
+ctx.problems = createProblems(ctx);
+ctx.problems.install();
 ctx.windows = createWindows(ctx);
 ctx.tray = createTray(ctx);
 ctx.scheduler = createScheduler(ctx);

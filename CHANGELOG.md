@@ -4,6 +4,7 @@
 
 ### Added
 
+- **Report a problem:** crashes and uncaught errors are now written to the local log, and after a crash or repeated errors Remember Me offers **Report this problem**. It opens a pre-filled GitHub issue in your browser with the app and Windows versions, language, theme and the last 30 log lines, with paths removed and never any task, note or file content. Nothing is sent until you submit the issue yourself. You can also report a problem at any time from Settings > About, the flag button at the top of the main window, or the tray menu. [#19]
 - **Your own snooze choices:** Settings → Reminders and background → **Snooze choices** sets the six "Remind me again" buttons of the alert, still on keys 1–6. Each can be a number of minutes, hours or days, today or tomorrow at a set time, the same time next week, or Pick a time. The defaults are the v1.5.0 choices, and **Restore the default choices** brings them back. [#20]
 - **Reschedule** in the alert: after three snoozes, the nudge has a button that opens the task in the main window with its date and time ready to change. [#20]
 - **Snooze previews:** hovering or focusing a snooze button shows where it leads, such as "→ Today 6:00 PM", in your language's 12- or 24-hour clock with Western digits. Screen readers hear it too. [#21]
@@ -168,6 +169,7 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 [#15]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/15
 [#16]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/16
 [#17]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/17
+[#19]: https://github.com/sarmadiq9090-coder/Remember-Me/issues/19
 [#22]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/22
 [#23]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/23
 [#25]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/25
