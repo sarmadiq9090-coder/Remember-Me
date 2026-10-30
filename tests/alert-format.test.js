@@ -59,6 +59,8 @@ test('saved snooze choices are validated: always six, and a bad slot gets its de
   for (const bad of [{ kind: 'in', minutes: 2.5 }, { kind: 'in', minutes: '10' }, { kind: 'in' }, { kind: 'today' }, { kind: 'today', time: 1800 }, { kind: 'tomorrow', time: '09:60' }, { kind: 'toString' }, null, 7]) assert.equal(checkSnoozePreset(bad), null, JSON.stringify(bad));
   assert.deepEqual(checkSnoozePreset({ kind: 'week', minutes: 5, extra: true }), { kind: 'week' }, 'Unknown fields are dropped');
   assert.deepEqual(checkSnoozePreset({ kind: 'today', time: '23:59', minutes: 3 }), { kind: 'today', time: '23:59' });
+  assert.equal(checkSnoozePreset({ kind: 'today', time: '00:30' }), null, 'A time today before 01:00 could never be chosen');
+  assert.deepEqual(checkSnoozePreset({ kind: 'tomorrow', time: '00:30' }), { kind: 'tomorrow', time: '00:30' }, 'Tomorrow has no such limit');
 });
 
 test('snooze previews name the day and time each choice leads to, with Western digits', () => {
@@ -92,6 +94,8 @@ test('lengths of time read naturally for snooze labels and overdue task rows', (
   assert.equal(overdueFor(ago(0.5), now, 'en-US'), '1 minute', 'Never "0 minutes"');
   assert.equal(overdueFor(ago(5), now, 'en-US'), '5 minutes');
   assert.equal(overdueFor(ago(59), now, 'en-US'), '59 minutes');
+  assert.equal(overdueFor(ago(59.6), now, 'en-US'), '1 hour', 'Never "60 minutes"');
+  assert.equal(overdueFor(ago(47.6 * 60), now, 'en-US'), '2 days', 'Never "48 hours"');
   assert.equal(overdueFor(ago(60), now, 'en-US'), '1 hour');
   assert.equal(overdueFor(ago(125), now, 'en-US'), '2 hours');
   assert.equal(overdueFor(ago(47 * 60), now, 'en-US'), '47 hours', 'Hours until two days');

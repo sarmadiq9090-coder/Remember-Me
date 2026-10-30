@@ -14,12 +14,13 @@
   const SNOOZE_KINDS = ['in', 'today', 'tomorrow', 'week', 'pick'];
   // Up to 30 days ahead; anything later is a new due date rather than a snooze.
   const MAX_SNOOZE_MINUTES = 30 * DAY_MINUTES;
-  const TIME = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  const TIME = /^([01]\d|2[0-3]):([0-5]\d)$/, TODAY_EARLIEST = '01:00';
   // A clean copy of one preset, or null when it is not a valid one.
   function checkSnoozePreset(value) {
     if (!value || typeof value !== 'object' || !SNOOZE_KINDS.includes(value.kind)) return null;
     if (value.kind === 'in') return Number.isInteger(value.minutes) && value.minutes >= 1 && value.minutes <= MAX_SNOOZE_MINUTES ? { kind: 'in', minutes: value.minutes } : null;
-    if (value.kind === 'today' || value.kind === 'tomorrow') return typeof value.time === 'string' && TIME.test(value.time) ? { kind: value.kind, time: value.time } : null;
+    // A time today closes an hour before it, so one before 01:00 could never be chosen.
+    if (value.kind === 'today' || value.kind === 'tomorrow') return typeof value.time === 'string' && TIME.test(value.time) && (value.kind === 'tomorrow' || value.time >= TODAY_EARLIEST) ? { kind: value.kind, time: value.time } : null;
     return { kind: value.kind };
   }
   // Always six presets: anything but a list of six keeps the defaults, and an invalid slot falls
@@ -57,9 +58,10 @@
   function isOverdue(dueAt, now = new Date()) { return !!dueAt && now.getTime() - Date.parse(dueAt) >= MINUTE; }
   // How late it is: whole minutes under an hour, hours under two days, then days.
   function lateness(dueAt, now) {
-    const late = Math.max(0, now.getTime() - Date.parse(dueAt));
-    if (late < HOUR) return ['minute', Math.max(1, Math.round(late / MINUTE))];
-    if (late < 2 * DAY) return ['hour', Math.round(late / HOUR)];
+    // Rounded first, so 59.5 minutes reads "1 hour" rather than "60 minutes".
+    const late = Math.max(0, now.getTime() - Date.parse(dueAt)), minutes = Math.round(late / MINUTE), hours = Math.round(late / HOUR);
+    if (minutes < 60) return ['minute', Math.max(1, minutes)];
+    if (hours < 48) return ['hour', hours];
     return ['day', Math.round(late / DAY)];
   }
   // How long ago it was due, such as "26 hr. ago", in the interface language.
