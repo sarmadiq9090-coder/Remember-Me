@@ -32,7 +32,7 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 ## Features
 
 - **Sticky reminders:** a persistent alert above the taskbar, shown on top of other windows until you choose **Done** or snooze it. It shows how overdue a reminder is, its priority and repeat, and the next occurrence; when several are waiting it shows them one at a time with a *1 of N* counter, and **Open task** opens the task itself.
-- **Smart snooze:** 10 minutes, 1 hour, this evening, tomorrow at 9 AM, next week, or any date and time you pick, on the 1–6 keys, plus **Snooze all** when several reminders are waiting. Snoozes survive restarts.
+- **Smart snooze:** 10 minutes, 1 hour, this evening, tomorrow at 9 AM, next week, or any date and time you pick, on the 1–6 keys, plus **Snooze all** when several reminders are waiting. You can set your own six choices in Settings, and each button previews where it leads, such as "→ Today 6:00 PM". After three snoozes, **Reschedule** opens the task to pick a better time. Snoozes survive restarts.
 - **Recurring tasks:** daily, weekly, monthly, yearly, on chosen weekdays (for example workdays), or every few days. Completing one logs it under *Completed* and schedules the next occurrence at the same wall-clock time, including across daylight-saving changes. Monthly repeats on the 31st and yearly repeats on February 29 fall back to the last day of the month without drifting.
 - **Skip this time and Only this time:** skip one occurrence of a repeating task without marking it done, or move just one occurrence and keep the rest of the series.
 - **Early notice:** an optional Windows notification from 5 minutes to 1 day before a reminder is due.
@@ -43,6 +43,7 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 - **Notes:** notes you can edit, search and delete, on ten paper colors as a plain card, a sticky note or lined paper.
 - **Attachments:** add PDFs, Excel sheets, documents, images or any other file to tasks and notes, up to 20 files per item and 50 MB per file. Images preview inline, including in the alert.
 - **Safe file handling:** programs, scripts, installers and shortcuts are revealed in File Explorer instead of being launched.
+- **Clear overdue status:** task rows say how late a reminder is, such as "Overdue by 2 hours", and finishing a repeating task tells you when it comes back ("Done. Next: …").
 - **Smart search (Ctrl+K):** searches tasks and notes, and matches Arabic text regardless of diacritics and common spelling variants.
 - **12 interface languages:** English (the default), العربية (a full right-to-left interface), Español, Français, Deutsch, Português (Brasil), Русский, 中文 (简体), 日本語, Türkçe, हिन्दी and Bahasa Indonesia, switchable in Settings. Dates, numbers and plurals follow the chosen language, and mixed-language text keeps its reading order. The translations other than English and Arabic are machine-assisted; corrections from native speakers are very welcome (see [Translations](#translations)).
 - **Tags and checklists:** tag tasks, filter the list by tag and find tags in search, sort tasks by due time, priority, newest or title, and break a task into steps you tick off from the list; a repeating task starts each occurrence with its steps unticked.
@@ -52,7 +53,8 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 - **Multi-monitor aware:** the alert sits above the taskbar wherever it is (bottom, top, left or right) and adapts to scaled and secondary displays.
 - **Runs in the background:** closing the window keeps Remember Me in the notification area, and it can start with Windows. The icon shows a dot while reminders are waiting, and Remember Me warns you if Start with Windows is off while reminders are still to come.
 - **Optional automatic updates:** with your permission, new versions are downloaded from GitHub Releases and installed when you restart.
-- **About and support:** the version, links to the source code, release notes and problem reports, a local log, and diagnostic info to copy into a report.
+- **Report a problem:** from Settings > About, the flag button in the top bar or the tray menu, and offered after a crash. It opens a pre-filled GitHub issue in your browser with the app and Windows versions and a cleaned-up log, never your tasks, notes, file names or paths. Nothing is sent until you submit it yourself.
+- **About and support:** the version, links to the source code and release notes, a local log, and diagnostic info to copy into a report.
 
 ## Install
 
@@ -101,12 +103,12 @@ v1.4.0 can't update itself: install the next version from Releases once by hand,
 - **Attachments:** while editing a task or note, choose **Add files**. Files are copied into Remember Me's data folder, so moving or deleting the original doesn't break the attachment. Removing an attachment from one item doesn't affect other items.
 - **Opening files:** click an attachment to open it with the default Windows app. Excel files need a compatible app such as Excel.
 - **Settings:**
-  - *Reminders and background:* alert sound, **Remind me again**, start with Windows, alert position (left or right), interface language, and a preview alert.
+  - *Reminders and background:* alert sound, **Remind me again**, the six **Snooze choices** of the alert, start with Windows, alert position (left or right), interface language, and a preview alert.
   - *Appearance:* light, dark or same as Windows, and one of six palettes, picked from preview cards. The change shows at once in the main window and the alert.
   - *Calendar:* the first day of the week.
   - *Your data:* export, restore, storage use and cleanup, the data folder, and Google Drive backups with how many automatic copies to keep.
   - *Updates:* automatic checks and **Check now**.
-- **About:** at the end of Settings, or **About Remember Me** in the tray menu. It shows the version, links to the source code, release notes, problem reports, the privacy notice and the MIT license, and has **Check for updates** and **Open log folder**. **Copy diagnostic info** copies the app, Electron, Chromium and Windows versions plus the interface language and theme, to paste into a problem report. It never includes your tasks, notes, files or folder paths.
+- **About:** at the end of Settings, or **About Remember Me** in the tray menu. It shows the version, links to the source code, release notes, ideas and feedback, the privacy notice and the MIT license, and has **Report a problem**, **Check for updates** and **Open log folder**. **Copy diagnostic info** copies the app, Electron, Chromium and Windows versions plus the interface language and theme, to paste into a problem report. It never includes your tasks, notes, files or folder paths.
 - **Shortcuts:** Ctrl+N creates a task or note, Ctrl+K focuses search.
 
 The bell button at the top shows a **preview alert**. Snoozing a preview only closes it, while reminders you set on tasks are real.
@@ -242,6 +244,7 @@ In detail:
 - Tasks, notes, attachments and settings are stored only on your device. Remember Me has no account, analytics or telemetry.
 - Backups are copied only to folders you choose. For a Google Drive folder, Google's own Drive app does the syncing, under Google's privacy policy.
 - Links you click, such as the Google Drive download page, open in your default browser.
+- **Report a problem** only opens a pre-filled GitHub issue in your browser. You can read and edit it, and nothing is sent unless you submit it. It contains the app and Windows versions, language, theme and recent log lines with paths removed, never your tasks, notes or file names.
 - If you allow automatic updates, or choose **Check now**, Remember Me contacts GitHub Releases for this repository to check for and download new versions. That's a standard HTTPS request, covered by [GitHub's privacy statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement), and none of your data is included.
 
 ## Acknowledgements
