@@ -2,6 +2,7 @@
 const { dueTasks } = require('../../core/tasks');
 const { nextOccurrence } = require('../../core/repeat');
 const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale } = require('../../../ui/lib/translate');
+const { normalizeSnoozePresets } = require('../../../ui/lib/alert-format');
 
 module.exports = ctx => ({
   state: { readOnly: true, run: () => ({ ...ctx.store.state, dataPath: ctx.app.getPath('userData'), packaged: ctx.app.isPackaged, recovered: ctx.store.recovered, driveBackup: ctx.driveBackup.status(), updates: ctx.updates.status(), openTask: ctx.takeOpenRequest() }) },
@@ -12,13 +13,14 @@ module.exports = ctx => ({
       next: t.repeat && t.repeat !== 'none' && t.scheduleAt ? nextOccurrence(t.scheduleAt, t.repeat, now, t) : null }));
   } },
   // What the alert window needs to look and read like the main window.
-  language: { readOnly: true, run: () => ({ language: ctx.language(), palette: ctx.store.state.settings.palette, weekStart: ctx.store.state.settings.weekStart }) },
+  language: { readOnly: true, run: () => { const { settings } = ctx.store.state; return { language: ctx.language(), palette: settings.palette, weekStart: settings.weekStart, snoozePresets: normalizeSnoozePresets(settings.snoozePresets) }; } },
   // Reads translations only; each window asks once per language inside its own refresh, before rendering.
   locale: { readOnly: true, run: payload => {
     const code = LOCALES.some(l => l.code === payload.code) ? payload.code : ctx.language();
     return { ...findLocale(code), messages: ctx.messages(code), fallback: ctx.messages(DEFAULT_LOCALE) };
   } },
-  open: { readOnly: true, run: payload => { ctx.openInMain(payload.id && ctx.store.state.tasks.some(t => t.id === payload.id && !t.deletedAt) ? payload.id : null); } },
+  // field 'due' is Reschedule in the alert: the editor opens with its date and time field focused.
+  open: { readOnly: true, run: payload => { ctx.openInMain(payload.id && ctx.store.state.tasks.some(t => t.id === payload.id && !t.deletedAt) ? payload.id : null, payload.field); } },
   preview: { run: () => {
     const { tr } = ctx;
     if (dueTasks(ctx.store.state).length) throw new Error(tr("A real reminder is showing now. Try the preview after you finish it."));

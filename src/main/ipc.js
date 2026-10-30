@@ -22,6 +22,7 @@ function checkRequest(action, payload, { fromAlert = false } = {}) {
   if (ID_ACTIONS.has(action) ? !isId(payload.id) : payload.id !== undefined && !isId(payload.id)) throw new Error('Invalid item ID.');
   // The due time the user saw: null for an undated task, left out by older callers.
   if (DUE_ACTIONS.has(action) && payload.expectedDueAt !== undefined && payload.expectedDueAt !== null && !isDate(payload.expectedDueAt)) throw new Error('Invalid time.');
+  if (action === 'open' && payload.field !== undefined && payload.field !== 'due') throw new Error('Invalid request data.');
   if (action === 'updateConsent' && typeof payload.enabled !== 'boolean') throw new Error('Invalid request data.');
   // A link ID from the About card's fixed list; the main process picks the URL.
   if (action === 'openLink' && (typeof payload.link !== 'string' || !LINKS.has(payload.link))) throw new Error('Unknown link.');

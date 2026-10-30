@@ -1,5 +1,6 @@
 // The task editor (repeat, steps, only this time) and opening the note editor.
-function openTaskEditor(task) {
+// focus 'due' starts on the date and time, for Reschedule in the alert.
+function openTaskEditor(task, { focus } = {}) {
   $('task-form').reset(); $('task-error').textContent = '';
   $('task-id').value = task?.id || '';
   $('task-title').value = task?.title || '';
@@ -22,7 +23,8 @@ function openTaskEditor(task) {
   if (editingSeries) $('task-only-once-label').textContent = tr("Only this time (keep the series at {value})", { value: timeLabel(editingSeries) });
   $('task-dialog-title').textContent = task?.id ? tr("Task details") : tr("Space for a new task");
   toggleReminder();
-  showDialog($('task-dialog')); $('task-title').focus();
+  showDialog($('task-dialog'));
+  (focus === 'due' && !$('reminder-fields').hidden ? $('task-due') : $('task-title')).focus();
 }
 // 'Only this time' moves one occurrence of a repeating task and keeps the series at its usual time.
 let editingSeries = null;

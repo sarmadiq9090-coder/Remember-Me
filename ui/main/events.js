@@ -86,8 +86,11 @@ $('task-list').addEventListener('click', async e => {
   try {
     // For 'complete', done is null when the occurrence was already handled; skip returns false then. No toast either way.
     const done = await api(action, action === 'reopen' ? { id } : { id, expectedDueAt: state.tasks.find(t => t.id === id)?.dueAt ?? null }); await refresh();
-    const next = state.tasks.find(t => t.id === id)?.dueAt;
-    if (action === 'reopen' || done) toast(action === 'complete' ? tr("Task completed. Well done—every step counts!") : action === 'skip' ? tr("Skipped this time. Next: {value}", { value: dateLabel(next) }) : tr("Task reopened without a due date. Open it to set a reminder."), action === 'complete' && done ? () => api('undoComplete', done) : undefined, { mark });
+    const after = state.tasks.find(t => t.id === id), next = after?.dueAt;
+    // A completed repeat stays open at its next occurrence: say when that is (issue #21).
+    const repeated = after && !after.completedAt && after.repeat !== 'none' && next;
+    const completed = repeated ? tr("Done. Next: {value}", { value: dateLabel(next) }) : tr("Task completed. Well done—every step counts!");
+    if (action === 'reopen' || done) toast(action === 'complete' ? completed : action === 'skip' ? tr("Skipped this time. Next: {value}", { value: dateLabel(next) }) : tr("Task reopened without a due date. Open it to set a reminder."), action === 'complete' && done ? () => api('undoComplete', done) : undefined, { mark });
   } catch (err) { toast(err.message); } finally { busyRows.delete(id); button.disabled = false; restoreFocus(mark); }
 });
 $('task-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('task-edit-target')) { e.preventDefault(); e.target.click(); } });

@@ -4,8 +4,10 @@ function attachmentChips(ids = []) {
   return records.filter(isImageFile).map(photoMarkup).join('') + records.filter(a => !isImageFile(a)).map(a => `<button type="button" class="file-chip" data-file-id="${esc(a.id)}" title="${esc(tr('Open {name}', { name: isolate(a.name) }))}">${icon('paperclip')}<bdi>${esc(a.name)}</bdi></button>`).join('');
 }
 function taskCard(t) {
-  const overdue = t.dueAt && Date.parse(t.dueAt) <= Date.now() && !t.completedAt;
-  const due = t.dueAt ? `<span class="${overdue ? 'overdue' : ''}">${icon('clock')}${esc(dateLabel(t.dueAt))}${overdue ? ` • ${tr("Due now")}` : ''}</span>` : `<span>${tr("No due date")}</span>`;
+  const now = new Date(), overdue = t.dueAt && Date.parse(t.dueAt) <= now.getTime() && !t.completedAt;
+  // "Due now" in its first minute, then how late it is, such as "Overdue by 2 hours" (issue #21).
+  const late = overdue && isOverdue(t.dueAt, now) ? tr("Overdue by {duration}", { duration: overdueFor(t.dueAt, now, locale()) }) : tr("Due now");
+  const due = t.dueAt ? `<span class="${overdue ? 'overdue' : ''}">${icon('clock')}${esc(dateLabel(t.dueAt))}${overdue ? ` • ${esc(late)}` : ''}</span>` : `<span>${tr("No due date")}</span>`;
   return `<article class="task-row ${t.completedAt ? 'completed' : ''}" data-id="${esc(t.id)}">
     <button class="task-check" data-action="${t.completedAt ? 'reopen' : 'complete'}" aria-label="${esc(t.completedAt ? tr("Reopen {title}", { title: isolate(t.title) }) : tr("Complete {title}", { title: isolate(t.title) }))}" title="${t.completedAt ? tr("Reopen without due date") : tr("Mark complete")}">${t.completedAt ? icon('check') : ''}</button>
     <div class="task-info"><div ${!t.completedAt ? 'data-action="edit" tabindex="0" role="button" class="task-edit-target"' : ''}><div class="task-name" dir="auto">${esc(t.title)}</div>${t.body ? `<p class="task-body" dir="auto">${esc(t.body)}</p>` : ''}<div class="task-meta">${due}${t.repeat !== 'none' ? `<span>${icon('repeat')}${esc(repeatLabel(t, state.settings.weekStart))}</span>` : ''}${(t.tags || []).map(tag => `<span class="tag-chip"><bdi>#${esc(tag)}</bdi></span>`).join('')}${t.remindBefore && !t.completedAt ? `<span title="${tr("Early notice")}">${icon('bell')}${esc($('task-before').querySelector(`option[value="${t.remindBefore}"]`)?.textContent || '')}</span>` : ''}${t.snoozedAt && !t.completedAt ? `<span>${tr("Snoozed")}</span>` : ''}</div></div>${stepsMarkup(t)}${t.attachments?.length ? `<div class="file-chips">${attachmentChips(t.attachments)}</div>` : ''}</div>
