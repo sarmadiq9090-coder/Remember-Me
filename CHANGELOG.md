@@ -1,14 +1,31 @@
 # Changelog
 
-## Unreleased
+## v1.6.1 (2026-11-01)
+
+Fixes for the v1.6.0 snooze choices and overdue wording, and clearer Hindi. Your tasks, notes, attachments, settings and snooze choices load unchanged.
 
 ### Fixed
 
-- A snooze choice for a time today before 01:00 could never be used, because it closes an hour before its time. Settings now asks for 01:00 or later.
-- Snooze choices for today show their time, such as "Today 9:00 PM", so two evening choices no longer share the label "This evening". The default 18:00 choice keeps it.
-- Overdue times round to the next unit: 59 and a half minutes reads "1 hour", not "60 minutes", in the alert and on task rows.
-- Changing the snooze choices while the alert's Pick a time form is open no longer closes it and clears the typed time.
-- Arabic: the overdue text on task rows is grammatical for every length ("مضى على موعدها ساعتان").
+- A snooze choice for a time today before 01:00 could never be used, because it closes an hour before its time. Settings now asks for 01:00 or later. [#67]
+- Snooze choices for today show their time, such as "Today 9:00 PM", so two evening choices no longer share the label "This evening". The default 18:00 choice keeps it. [#67]
+- Overdue times round to the next unit: 59 and a half minutes reads "1 hour", not "60 minutes", in the alert and on task rows. [#67]
+- Changing the snooze choices while the alert's Pick a time form is open no longer closes it and clears the typed time. [#67]
+- Arabic: the overdue text on task rows is grammatical for every length ("مضى على موعدها ساعتان"). [#67]
+
+### Changed
+
+- Hindi: clearer, more natural wording in 27 strings, such as "रोज़ाना" for Daily and "लोकल" instead of "स्थानीय". Thanks to @abhi478jeetur-rgb. [#70]
+- Electron 45.1.0. [#72]
+
+### For contributors
+
+- The distribution tests read the release version from `package.json`, and the Scoop and Chocolatey files point at v1.6.0. [#66]
+- The README and website describe the v1.6.0 features, and the README has a roadmap. [#68] [#91]
+- actions/checkout updated to 7.0.1. [#71]
+
+### Upgrading
+
+- v1.5.0 and v1.6.0 update themselves if you allowed automatic updates. Otherwise, install v1.6.1 over them; your data stays where it is.
 
 ## v1.6.0 (2026-10-30)
 
@@ -224,3 +241,10 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 [#61]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/61
 [#63]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/63
 [#64]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/64
+[#66]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/66
+[#67]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/67
+[#68]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/68
+[#70]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/70
+[#71]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/71
+[#72]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/72
+[#91]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/91
