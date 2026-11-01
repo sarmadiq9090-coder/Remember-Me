@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- A snooze time out of range in Settings now says "Choose a time from 01:00 to 23:59." instead of asking for a number.
+
 ## v1.6.1 (2026-11-01)
 
 Fixes for the v1.6.0 snooze choices and overdue wording, and clearer Hindi. Your tasks, notes, attachments, settings and snooze choices load unchanged.
