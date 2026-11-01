@@ -251,6 +251,18 @@ In detail:
 
 The task and note layout was inspired by [TickTick for Windows](https://www.ticktick.com/windows), and the Done and Snooze buttons by [its reminders](https://help.ticktick.com/articles/7055782395743567872). Remember Me's design and code are independent, with a particular focus on sticky alerts and snoozing to a custom time.
 
+## Roadmap
+
+Planned work is tracked in [milestones](https://github.com/sarmadiq9090-coder/Remember-Me/milestones):
+
+- **v1.6.1:** the snooze fixes, and the first end-to-end test of automatic updates.
+- **v1.7.0, trust and reach:** code signing, the Microsoft Store, Windows on ARM, and quality and accessibility work.
+- **v1.8.0, faster input:** quick add from anywhere, due dates in plain language, and templates.
+- **v1.9.0, planning:** a calendar view, a daily summary and local statistics.
+- **v2.0.0:** sync between PCs through a folder you choose, with no account.
+
+Ideas are welcome in [Discussions](https://github.com/sarmadiq9090-coder/Remember-Me/discussions/categories/ideas).
+
 ## Contributing and license
 
 Contributions are welcome through Issues and Pull Requests. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md) first. To review or improve a translation, see [TRANSLATING.md](TRANSLATING.md); for questions and ideas, use [Discussions](https://github.com/sarmadiq9090-coder/Remember-Me/discussions). Remember Me is licensed under the [MIT License](LICENSE).
