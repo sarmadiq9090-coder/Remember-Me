@@ -73,6 +73,7 @@
   "Choose a later time for the reminder.": "リマインダーにはもっと後の時刻を選んでください。",
   "Choose a later time.": "もっと後の時刻を選んでください。",
   "Choose a synced folder inside Google Drive": "Google ドライブ内の同期済みフォルダーを選択",
+  "Choose a time from {min} to {max}.": "{min}〜{max} の時刻を選んでください。",
   "Choose a valid time.": "有効な時刻を選んでください。",
   "Choose files only.": "ファイルのみを選んでください。",
   "Choose the app interface language.": "アプリの表示言語を選択します。",

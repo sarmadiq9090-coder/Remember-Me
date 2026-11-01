@@ -45,7 +45,7 @@ document.addEventListener('invalid', e => {
   const field = e.target;
   const v = field.validity;
   field.setCustomValidity(v.valueMissing ? tr('Please fill in this field.')
-    : v.rangeUnderflow || v.rangeOverflow ? tr('Enter a number from {min} to {max}.', { min: field.min, max: field.max })
+    : v.rangeUnderflow || v.rangeOverflow ? field.type === 'time' ? tr('Choose a time from {min} to {max}.', { min: field.min, max: field.max }) : tr('Enter a number from {min} to {max}.', { min: field.min, max: field.max })
     : v.badInput || v.typeMismatch || v.stepMismatch ? tr('Please enter a valid value.') : '');
 }, true);
 document.addEventListener('input', e => e.target.setCustomValidity?.(''), true);
