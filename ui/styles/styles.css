@@ -223,3 +223,8 @@ html:not([data-ready]) body{visibility:hidden}
 .snooze-choices kbd{color:var(--muted);border-color:var(--border-strong);min-width:20px;text-align:center}
 .snooze-choices select{flex:1;min-width:0;font-size:12px;padding:8px 10px}
 .snooze-choices input{width:84px;flex-shrink:0;font-size:12px;padding:8px 10px}.snooze-choices input[type=time]{width:118px}
+/* Settings → Quick add from anywhere: the shortcut recorder and its warnings. */
+.setting-row .quickadd-conflict{color:var(--danger)}.quickadd-conflict:empty{display:none}
+.setting-row .quickadd-rule.error{color:var(--danger)}
+.quickadd-shortcut{white-space:nowrap;flex-shrink:0}.quickadd-shortcut kbd{font-size:12px;border:0;padding:0}
+.quickadd-shortcut.recording{box-shadow:0 0 0 2px var(--focus)}

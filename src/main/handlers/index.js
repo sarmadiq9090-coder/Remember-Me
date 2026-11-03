@@ -19,16 +19,17 @@ function createHandlers(ctx) {
   return handlers;
 }
 
-// The single IPC entry point. Requests are accepted only from the main window or the alert window,
+// The single IPC entry point. Requests are accepted only from the main, alert or quick-add window,
 // and only from the page that window was created with; ipc.js validates the action and payload.
 function registerHandlers(ctx, { ipcMain, scan, notifyViews, pages }) {
   const handlers = createHandlers(ctx);
   ipcMain.handle('waqt:action', async (event, action, payload) => {
     try {
       const fromAlert = !!ctx.alertWindow && event.sender === ctx.alertWindow.webContents;
-      const page = fromAlert ? pages.alert : pages.main;
-      if ((!fromAlert && event.sender !== ctx.mainWindow?.webContents) || !fromPage(event.senderFrame?.url, page)) throw new Error(ctx.tr("Request not allowed."));
-      payload = checkRequest(action, payload, { fromAlert });
+      const fromQuickAdd = !!ctx.quickAddWindow && event.sender === ctx.quickAddWindow.webContents;
+      const page = fromAlert ? pages.alert : fromQuickAdd ? pages.quickAdd : pages.main;
+      if ((!fromAlert && !fromQuickAdd && event.sender !== ctx.mainWindow?.webContents) || !fromPage(event.senderFrame?.url, page)) throw new Error(ctx.tr("Request not allowed."));
+      payload = checkRequest(action, payload, { fromAlert, fromQuickAdd });
       const handler = handlers[action];
       if (!handler) throw new Error(ctx.tr('Unknown action.'));
       const value = await handler.run(payload, { event, fromAlert });

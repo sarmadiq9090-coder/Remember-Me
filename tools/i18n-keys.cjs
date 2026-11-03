@@ -8,13 +8,13 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const literal = String.raw`(['"])((?:\\.|(?!\1).)*)\1`;
 const unescape = text => text.replace(/\\(['"\\])/g, '$1').replace(/\\n/g, '\n');
 const scriptsIn = folder => fs.readdirSync(path.join(root, folder), { recursive: true }).map(String).filter(name => name.endsWith('.js')).map(name => folder + '/' + name.split(path.sep).join('/'));
-// Code that translates with tr() or marks keys with msg(): every file of the main window's and the
-// alert's scripts, the shared page helpers, and the main process (entry, windows, tray, IPC handlers).
-const SCRIPTS = [...scriptsIn('ui/main'), ...scriptsIn('ui/alert'), 'ui/lib/shared.js', 'ui/lib/i18n.js', ...scriptsIn('src/main')];
+// Code that translates with tr() or marks keys with msg(): every file of the main window's, the
+// alert's and the quick-add window's scripts, the shared page helpers, and the main process (entry, windows, tray, IPC handlers).
+const SCRIPTS = [...scriptsIn('ui/main'), ...scriptsIn('ui/alert'), ...scriptsIn('ui/quickadd'), 'ui/lib/shared.js', 'ui/lib/i18n.js', ...scriptsIn('src/main')];
 // The data modules throw English messages that the main process translates. Messages for users
 // start with a capital letter; lowercase ones ('invalid kind') are for developers only.
 const MODULES = ['src/core/tasks.js', 'src/core/store.js', 'src/core/records.js', 'src/data/attachments.js', 'src/data/backups.js', 'src/data/drive-backup.js', 'src/main/ipc.js', 'src/platform/updates.js'];
-const PAGES = ['ui/index.html', 'ui/alert.html'];
+const PAGES = ['ui/index.html', 'ui/alert.html', 'ui/quickadd.html'];
 function collectKeys() {
   const keys = new Set();
   for (const file of SCRIPTS) for (const m of read(file).matchAll(new RegExp(String.raw`\b(?:tr|msg)\(\s*` + literal, 'g'))) keys.add(unescape(m[2]));

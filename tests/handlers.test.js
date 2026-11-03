@@ -60,7 +60,7 @@ test('restoring an item the 30-day purge removed fails clearly, and the purge re
 
 test('changing the language asks for a restart only when the native fields would change', () => {
   const ctx = liveContext();
-  Object.assign(ctx, { controlsLocale: 'en-US', setLogin() {}, rebuildTrayMenu() {}, placeAlert() {}, applyTheme() {} });
+  Object.assign(ctx, { controlsLocale: 'en-US', setLogin() {}, rebuildTrayMenu() {}, placeAlert() {}, applyTheme() {}, quickAdd: { apply() {} } });
   const { settings } = createHandlers(ctx);
   const save = language => settings.run({ ...ctx.store.state.settings, language });
   assert.deepEqual(save('fr'), { restart: true });

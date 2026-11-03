@@ -1,21 +1,21 @@
 'use strict';
 const { BrowserWindow, screen, nativeTheme } = require('electron');
 const path = require('node:path');
-const { alertBounds } = require('../core/placement');
+const { alertBounds, quickAddBounds } = require('../core/placement');
 const { windowColors } = require('../platform/themes');
 const { findLocale } = require('../../ui/lib/translate');
 // Windows picks the matching size from the ICO for the title bar, taskbar and Alt+Tab.
 const windowIcon = path.join(__dirname, '../../assets/icon.ico');
 
-// The main window and the sticky alert window. ctx.quitting lets them close for real.
+// The main window, the sticky alert window and the quick-add window. ctx.quitting lets them close for real.
 function createWindows(ctx) {
-  let mainWindow, alertWindow;
+  let mainWindow, alertWindow, quickAddWindow;
   const { tr } = ctx;
   // Window backgrounds match the page's palette and mode (ui/styles/theme.css), so opening a window never flashes another theme.
   function background(kind) { return windowColors(ctx.store.state.settings.palette, nativeTheme.shouldUseDarkColors)[kind]; }
   function applyTheme() {
     nativeTheme.themeSource = ctx.store.state.settings.theme;
-    for (const [win, kind] of [[mainWindow, 'main'], [alertWindow, 'alert']]) if (win && !win.isDestroyed()) win.setBackgroundColor(background(kind));
+    for (const [win, kind] of [[mainWindow, 'main'], [alertWindow, 'alert'], [quickAddWindow, 'alert']]) if (win && !win.isDestroyed()) win.setBackgroundColor(background(kind));
   }
   // The preload hands the saved palette, language and direction to the page so its first paint already uses
   // them; later changes arrive with waqt:update. Page URLs stay plain file paths: the desktop tests and fromPage() match on them.
@@ -59,7 +59,7 @@ function createWindows(ctx) {
     alertWindow.setBounds(alertBounds(screen.getPrimaryDisplay(), ctx.store.state.settings.alertSide));
   }
   function notifyViews() {
-    for (const win of [mainWindow, alertWindow]) if (win && !win.isDestroyed()) win.webContents.send('waqt:update');
+    for (const win of [mainWindow, alertWindow, quickAddWindow]) if (win && !win.isDestroyed()) win.webContents.send('waqt:update');
   }
   // Only the main window shows update status; the alert window is never refreshed for it.
   function notifyMain() { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('waqt:update'); }
@@ -79,9 +79,21 @@ function createWindows(ctx) {
     } else if (!alertWindow.isVisible()) alertWindow.showInactive();
   }
   function closeAlert() { if (alertWindow) { alertWindow.destroy(); alertWindow = null; } }
+  // The quick-add window (global shortcut, issue #82) on the display under the mouse, centered above the
+  // taskbar and always on top. Pressing the shortcut again brings back the open one with what was typed.
+  function showQuickAdd() {
+    if (quickAddWindow && !quickAddWindow.isDestroyed()) { quickAddWindow.show(); quickAddWindow.focus(); return; }
+    const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+    const win = quickAddWindow = new BrowserWindow({ ...quickAddBounds(display), frame: false, resizable: false, minimizable: false, maximizable: false,
+      skipTaskbar: true, alwaysOnTop: true, show: false, title: tr('Remember Me • Quick add'), backgroundColor: background('alert'), icon: windowIcon, webPreferences: options() });
+    win.setAlwaysOnTop(true, 'pop-up-menu');
+    win.loadFile(path.join(__dirname, '../../ui/quickadd.html'));
+    win.once('ready-to-show', () => { win.show(); win.focus(); });
+    win.on('closed', () => { if (quickAddWindow === win) quickAddWindow = null; });
+  }
   return {
-    get mainWindow() { return mainWindow; }, get alertWindow() { return alertWindow; },
-    background, applyTheme, createMain, showMain, showSection, openInMain, takeOpenRequest, placeAlert, notifyViews, notifyMain, showAlert, closeAlert,
+    get mainWindow() { return mainWindow; }, get alertWindow() { return alertWindow; }, get quickAddWindow() { return quickAddWindow; },
+    background, applyTheme, createMain, showMain, showSection, openInMain, takeOpenRequest, placeAlert, notifyViews, notifyMain, showAlert, closeAlert, showQuickAdd,
   };
 }
 module.exports = { createWindows };
