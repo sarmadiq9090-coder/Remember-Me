@@ -49,6 +49,24 @@ test('Arabic is complete and every translation keeps the placeholders and plural
   }
 });
 
+// Translations are plain text. The pages escape them (esc(tr(…)), enforced by eslint.config.cjs) or set
+// them as textContent, and a < or > is refused here too, so a translation can never carry markup or a
+// script. A key that ever needs emphasis goes on this list, and the page builds that markup from nodes
+// (like "Due {when}" in the alert).
+const MARKUP_KEYS = [];
+test('no translation contains < or >, apart from the keys listed in MARKUP_KEYS', () => {
+  const found = [];
+  for (const { code } of LOCALES) {
+    for (const [key, value] of Object.entries(loadLocale(code))) {
+      if (MARKUP_KEYS.includes(key)) continue;
+      const texts = [key, ...(value && typeof value === 'object' ? Object.values(value) : [value])];
+      if (texts.some(text => /[<>]/.test(String(text)))) found.push(`${code}: "${key}"`);
+    }
+  }
+  assert.deepEqual(found, []);
+  assert.deepEqual(MARKUP_KEYS.filter(key => !(key in en)), [], 'MARKUP_KEYS lists only keys the app uses');
+});
+
 test('lookups fall back to English, then to the key, and choose plural forms by language', () => {
   const ar = loadLocale('ar');
   assert.equal(translate(ar, en, 'ar-IQ', 'Settings'), 'الإعدادات');

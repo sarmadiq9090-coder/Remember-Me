@@ -25,6 +25,15 @@ const safety = {
     { selector: 'Property[key.name=/^(contextIsolation|sandbox|webSecurity)$/][value.value=false]', message: 'Windows stay sandboxed and context-isolated.' }],
 };
 
+// Translations are text, never markup (tests/i18n.test.js keeps < and > out of ui/locales): in the
+// pages, tr() put into markup goes through esc(), or the text is set with textContent.
+const TR_AS_TEXT = 'Translations are text: write ${esc(tr(...))} in markup, or set textContent.';
+const markupSafety = [...safety['no-restricted-syntax'].slice(1),
+  { selector: "TemplateLiteral > CallExpression[callee.name='tr']", message: TR_AS_TEXT },
+  { selector: "TemplateLiteral > :matches(ConditionalExpression, LogicalExpression) > CallExpression[callee.name='tr']", message: TR_AS_TEXT },
+  { selector: "AssignmentExpression[left.property.name=/^(innerHTML|outerHTML)$/] > CallExpression[callee.name='tr']", message: TR_AS_TEXT },
+  { selector: "CallExpression[callee.property.name='insertAdjacentHTML'] > CallExpression[callee.name='tr']", message: TR_AS_TEXT }];
+
 // Classic <script> files in ui/ share one global scope. Every name declared at the top level of any
 // of them is a global for the others, collected here so moving or splitting files needs no edits.
 function splitTopLevel(list) {
@@ -80,7 +89,7 @@ module.exports = [
     files: ['ui/**/*.js'],
     languageOptions: { sourceType: 'script', globals: { ...globals.browser, ...scriptGlobals(path.join(__dirname, 'ui')) } },
     // Top-level names are used by the other ui scripts, so only unused locals are reported.
-    rules: { 'no-unused-vars': ['error', { vars: 'local' }], 'no-redeclare': ['error', { builtinGlobals: false }] },
+    rules: { 'no-unused-vars': ['error', { vars: 'local' }], 'no-redeclare': ['error', { builtinGlobals: false }], 'no-restricted-syntax': ['error', ...markupSafety] },
   },
   {
     // Pages split into ES modules later get browser globals and normal module scoping.

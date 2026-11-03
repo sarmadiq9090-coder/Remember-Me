@@ -16,6 +16,7 @@ const { createWindows } = require('./windows');
 const { createTray } = require('./tray');
 const { createScheduler } = require('./scheduler');
 const { createProblems } = require('./problems');
+const { secureContents, httpsShell } = require('./web-security');
 const testMode = process.env.WAQT_TEST === '1';
 // Lets the desktop tests read early notifications without showing them.
 if (testMode) globalThis.waqtTest = { get early() { return ctx.scheduler.earlyLog; } };
@@ -39,7 +40,8 @@ let interval, backupInterval;
 
 // Shared by the main-process modules and the IPC handlers. store, pause, driveBackup and updates are
 // set in start(); quitting lets windows close for real.
-const ctx = { app, log, testMode, electron: { dialog, shell, clipboard }, UNDO_MS: 6000, imagePreview: createPreviewService(nativeImage),
+// shell.openExternal opens only https:// addresses.
+const ctx = { app, log, testMode, electron: { dialog, shell: httpsShell(shell), clipboard }, UNDO_MS: 6000, imagePreview: createPreviewService(nativeImage),
   quitting: false, store: null, pause: null, driveBackup: null, updates: null, setLogin, controlsLocale };
 Object.assign(ctx, createI18n(() => ctx.store?.state?.settings?.language));
 // Crashes and uncaught errors go to the log; after one, or after repeated errors, the user is offered a pre-filled GitHub issue.
@@ -117,7 +119,8 @@ async function start() {
   screen.on('display-added', windows.placeAlert);
   scheduler.scan();
 }
-app.on('web-contents-created', (event, contents) => contents.on('will-attach-webview', e => e.preventDefault()));
+// Every page, in every window: no new windows, no navigation away from it, no webviews.
+app.on('web-contents-created', (event, contents) => secureContents(contents));
 app.on('activate', () => windows.showMain());
 app.on('window-all-closed', () => {});
 app.on('before-quit', event => {

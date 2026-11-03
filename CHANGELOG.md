@@ -6,6 +6,11 @@
 
 - A snooze time out of range in Settings now says "Choose a time from 01:00 to 23:59." instead of asking for a number.
 
+### Security
+
+- Translated text is always shown as text: it is escaped wherever the pages build markup, a test fails if a translation contains `<` or `>`, and ESLint rejects unescaped translations in markup. A bad translation can no longer add markup or scripts to the app.
+- Every window, including any added later, blocks new windows, navigation and webviews, and links open in the browser only when they are `https://` addresses.
+
 ## v1.6.1 (2026-11-01)
 
 Fixes for the v1.6.0 snooze choices and overdue wording, and clearer Hindi. Your tasks, notes, attachments, settings and snooze choices load unchanged.
