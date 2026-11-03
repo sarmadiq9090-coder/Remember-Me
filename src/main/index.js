@@ -6,9 +6,9 @@ const { createPreviewService } = require('../data/image-preview');
 const { DriveBackup } = require('../data/drive-backup');
 const { safetyBackup } = require('../data/backups');
 const { createLogger } = require('../platform/logger');
-const { Updates, configure: configureUpdater, installedByInstaller } = require('../platform/updates');
-const { migrateDataFolder } = require('../platform/data-folder');
-const { setLoginItem, refreshLoginItem } = require('../platform/login-item');
+const { Updates, updateSource, createUpdater } = require('../platform/updates');
+const { migrateDataFolder, storeDataFolder } = require('../platform/data-folder');
+const { setLoginItem, refreshLoginItem, STARTUP_SETTINGS } = require('../platform/login-item');
 const { createPause } = require('../core/pause');
 const { registerHandlers } = require('./handlers');
 const { createI18n, startupControlsLocale } = require('./i18n');
@@ -18,11 +18,16 @@ const { createScheduler } = require('./scheduler');
 const { createProblems } = require('./problems');
 const { secureContents, httpsShell } = require('./web-security');
 const testMode = process.env.WAQT_TEST === '1';
+// True in the Microsoft Store (MSIX) package: the Store updates it, Windows runs its startup task,
+// and its data lives in the package's own folder (see docs/distribution/microsoft-store.md).
+const windowsStore = process.windowsStore === true;
 // Lets the desktop tests read early notifications without showing them.
 if (testMode) globalThis.waqtTest = { get early() { return ctx.scheduler.earlyLog; } };
 app.setName('Remember Me');
 // Runs before anything (including the single-instance lock) creates files in the data folder.
-const dataFolder = testMode && process.env.WAQT_DATA_DIR ? { folder: process.env.WAQT_DATA_DIR, migrated: 'none' } : migrateDataFolder(app.getPath('appData'));
+const dataFolder = testMode && process.env.WAQT_DATA_DIR ? { folder: process.env.WAQT_DATA_DIR, migrated: 'none' }
+  : windowsStore ? storeDataFolder(app.getPath('appData'), { localAppData: process.env.LOCALAPPDATA, execPath: process.execPath })
+    : migrateDataFolder(app.getPath('appData'));
 if (dataFolder.error) console.error('Could not move the data folder; using the old one:', dataFolder.error);
 app.setPath('userData', dataFolder.folder);
 // Native date, time and number fields follow the app's language rather than Windows'. Chromium reads
@@ -42,7 +47,9 @@ let interval, backupInterval;
 // set in start(); quitting lets windows close for real.
 // shell.openExternal opens only https:// addresses.
 const ctx = { app, log, testMode, electron: { dialog, shell: httpsShell(shell), clipboard }, UNDO_MS: 6000, imagePreview: createPreviewService(nativeImage),
-  quitting: false, store: null, pause: null, driveBackup: null, updates: null, setLogin, controlsLocale };
+  quitting: false, store: null, pause: null, driveBackup: null, updates: null, setLogin, controlsLocale, windowsStore,
+  // Windows' own Startup apps page: the Store version's start with Windows is a startup task the user turns on there.
+  openStartupSettings: () => shell.openExternal(STARTUP_SETTINGS) };
 Object.assign(ctx, createI18n(() => ctx.store?.state?.settings?.language));
 // Crashes and uncaught errors go to the log; after one, or after repeated errors, the user is offered a pre-filled GitHub issue.
 ctx.problems = createProblems(ctx);
@@ -69,14 +76,14 @@ else {
 function setLogin(enabled) {
   if (testMode) return;
   if (!app.isPackaged) { if (enabled) throw new Error(ctx.tr('Use the installed version of the app to start it with Windows.')); return; }
-  setLoginItem(app, enabled, process.execPath);
+  setLoginItem(app, enabled, process.execPath, { windowsStore });
 }
 function createUpdates() {
-  // Test runs never contact GitHub, and neither do copies the installer didn't put there (portable or
-  // Scoop); electron-updater itself does nothing in development builds.
-  const available = !testMode && (!app.isPackaged || installedByInstaller(process.execPath));
-  const updater = !available ? Object.assign(new (require('node:events'))(), { checkForUpdates: async () => null, quitAndInstall() {} })
-    : configureUpdater(require('electron-updater').autoUpdater);
+  // Test runs never contact GitHub, and neither do the Microsoft Store package (the Store updates it) or
+  // copies the installer didn't put there (portable or Scoop); electron-updater itself does nothing in
+  // development builds.
+  const source = updateSource({ windowsStore, packaged: app.isPackaged, execPath: process.execPath });
+  const updater = createUpdater({ source, testMode });
   // Logs each change of update state with versions only; electron-updater's messages can hold paths and URLs.
   let loggedState = 'idle';
   const onChange = () => {
@@ -84,7 +91,7 @@ function createUpdates() {
     if (updates && updates.state !== loggedState) { loggedState = updates.state; log.info('update', { state: updates.state, version: app.getVersion(), ...(updates.next ? { next: String(updates.next).slice(0, 40) } : {}) }); }
     windows.notifyMain();
   };
-  return new Updates({ updater, available: available || testMode, version: app.getVersion(), consent: () => ctx.store.state.settings.autoUpdate, onChange,
+  return new Updates({ updater, source, available: testMode || source === 'github', version: app.getVersion(), consent: () => ctx.store.state.settings.autoUpdate, onChange,
     backup: () => safetyBackup(app.getPath('userData'), ctx.store.state, 'RememberMe-before-update-'),
     prepareQuit: () => { ctx.quitting = true; }, quit: () => app.quit() });
 }
@@ -102,7 +109,8 @@ async function start() {
   nativeTheme.on('updated', windows.applyTheme);
   const driveBackup = ctx.driveBackup = new DriveBackup(app.getPath('userData'), () => store.state, windows.notifyViews, { log });
   // After an upgrade the entry may still point at the old Waqt.exe, or at an old install folder.
-  if (store.state.settings.startAtLogin && app.isPackaged && !testMode) {
+  // The Store version's startup task belongs to Windows, so there is no entry to refresh.
+  if (store.state.settings.startAtLogin && app.isPackaged && !testMode && !windowsStore) {
     try { refreshLoginItem(app, process.execPath); } catch (error) { console.error('Could not update start with Windows:', error); log.warn('login-item-refresh-failed', error); }
   }
   const updates = ctx.updates = createUpdates();

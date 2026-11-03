@@ -22,4 +22,9 @@ module.exports = ctx => ({
     return { restart: old.language !== settings.language && findLocale(settings.language).chromium !== ctx.controlsLocale };
   } },
   relaunch: { readOnly: true, run: () => { ctx.quitting = true; ctx.app.relaunch(); ctx.app.quit(); } },
+  // Microsoft Store version only: Windows turns its startup task on or off, in Settings > Apps > Startup.
+  openStartupSettings: { readOnly: true, run: async () => {
+    if (!ctx.windowsStore) throw new Error('only the Microsoft Store version uses startup settings');
+    await ctx.openStartupSettings();
+  } },
 });

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- A Microsoft Store package, **Remember Me Reminders**: `pnpm run store` builds it and the **Store package** workflow uploads it as an artifact. In the Store version, updates come from the Store, Start with Windows is turned on in Windows' Startup apps settings, and the data lives in the package's folder, copied from the installer version on its first start. See `docs/distribution/microsoft-store.md`.
+
+### Changed
+
+- Spellcheck is off, so Chromium never downloads spelling dictionaries from Google's servers.
+- The installer's privacy notice now describes **Report a problem**.
+
 ## v1.6.2 (2026-11-03)
 
 A security update: translated text can no longer add markup to the app, and windows cannot open other pages. Your tasks, notes, attachments and settings load unchanged.

@@ -37,8 +37,8 @@ true (see "Keeping this document current").
 | Image thumbnails | `src/data/image-preview.js` |
 | CSV and iCalendar import and export | `src/data/interchange.js` |
 | Local log | `src/platform/logger.js` |
-| Moving the data folder from `Waqt` to `Remember Me` | `src/platform/data-folder.js` |
-| Start with Windows entry | `src/platform/login-item.js` |
+| Moving the data folder from `Waqt` to `Remember Me`; the Microsoft Store version's data folder | `src/platform/data-folder.js` |
+| Start with Windows entry, and the Store package's startup task | `src/platform/login-item.js` |
 | Update checks, download and install policy | `src/platform/updates.js` |
 | About card: link allowlist and diagnostic info | `src/platform/about.js` |
 | Pre-filled GitHub issue for a problem report, with redacted log lines | `src/platform/problem-report.js` |
@@ -49,7 +49,7 @@ true (see "Keeping this document current").
 | Shared by both windows: languages (`translate.js`, `i18n.js`), helpers and icons (`shared.js`), keeping keyboard focus when lists are rebuilt (`focus.js`), search, alert formatting | `ui/lib/*.js` |
 | Stylesheets and theme tokens | `ui/styles/*.css` |
 | Translations | `ui/locales/*.json` |
-| Packaging, installer, winget manifests, icon generator, screenshots, website images | `tools/` |
+| Packaging, installer, Microsoft Store package and its logos, winget manifests, icon generator, screenshots, website images | `tools/` |
 | Website (GitHub Pages, English and Arabic, no scripts) | `site/` |
 | Unit tests (`node --test`) and Playwright desktop suites (`*-desktop.cjs`, `desktop-smoke.cjs`) | `tests/` |
 | Lint rules (folder-agnostic) and editor settings | `eslint.config.cjs`, `.editorconfig` |
@@ -112,7 +112,7 @@ registry throws if an allowed action has no handler, has two, or a handler is no
 | Backups | `export`, `restore`, `chooseDriveFolder`, `driveBackupNow`, `driveAutomatic`, `driveKeep`, `driveHelp`, `openDriveFolder` |
 | Updates | `updateConsent`, `checkUpdates`, `installUpdate`, `dismissUpdate` |
 | About | `openLink`, `copyDiagnostics`, `reportProblem`, `openLogs` |
-| App | `settings`, `relaunch`, `preview`, `dataFolder`, `open` |
+| App | `settings`, `relaunch`, `preview`, `dataFolder`, `open`, `openStartupSettings` (Microsoft Store version only) |
 
 The alert window may only use `alerts`, `language`, `locale`, `complete`, `skip`, `undoComplete`,
 `undoable`, `snooze`, `open` (optionally with the shown task's `id`), `openAttachment` and
@@ -200,6 +200,21 @@ by a development build, say) is set aside as `Remember Me.unused-<time>` first. 
 deleted. If anything fails the old folder is used as it is, and the move is retried on the next
 start. `drive-backup.json` paths that pointed into the old folder are rewritten to the new one.
 
+### The Microsoft Store version
+
+Inside an MSIX package Windows virtualizes `%APPDATA%`: files the app creates there go to a hidden
+per-package copy that File Explorer, other programs and the installer version can't see. So the Store
+version (`process.windowsStore`) keeps its data in the package's own folder,
+`%LOCALAPPDATA%\Packages\<package family name>\LocalState\Remember Me`, which Settings shows and File
+Explorer opens (`storeDataFolder`). The family name comes from the install folder
+(`WindowsApps\<Name>_<Version>_<Arch>_<ResourceId>_<PublisherId>\app\`). On the first start, when that
+folder has no data, the installer version's data (`%APPDATA%\Remember Me`, or `Waqt`) is copied in and
+checked: only `data.json`, `data.json.bak`, `attachments`, `backups`, `drive-backup.json` and `logs`,
+never Chromium's caches. The original is never changed, so the installer version keeps working with
+it. If the copy fails, the Store version uses `%APPDATA%` as it is (it still sees the installer
+version's files there) and retries on the next start. Windows deletes the package folder when the
+Store app is uninstalled or reset. See `docs/distribution/microsoft-store.md`.
+
 ## Interface languages
 
 Source text is English: pages and scripts hold English strings, and each English string is the key
@@ -271,6 +286,15 @@ tray. After an upgrade the entry may still point at the old `Waqt.exe` or an old
 at startup (packaged builds, setting on) the old entries are removed and the current executable is
 registered again, keeping the entry disabled if the user disabled it in Task Manager.
 
+The Microsoft Store version can't use that entry: `app.setLoginItemSettings` writes the HKCU Run key,
+and a packaged app's registry writes go to its private copy of the registry, which Windows doesn't
+read at sign-in. Its package declares a startup task instead (`RememberMeStartup`, `Enabled="false"`,
+written by `tools/store.cjs`), which the user turns on in Settings → Apps → Startup or Task Manager.
+Electron has no API to switch a startup task, so Settings replaces the switch with "Open startup
+settings" (`openStartupSettings`, which opens `ms-settings:startupapps`), and the "Start with Windows
+is off" warning becomes a dismissible banner with the same button. Windows starts the task without
+`--background`, so the main window opens at sign-in.
+
 ## Updates
 
 The updates module wraps electron-updater with the app's policy:
@@ -284,6 +308,10 @@ The updates module wraps electron-updater with the app's policy:
 - A downloaded update installs only when the user chooses "Restart now", or on the next normal quit.
   The app never restarts on its own. Either way a safety copy of the data
   (`RememberMe-before-update-<time>`) is made first; if it fails, nothing is installed.
+- The Microsoft Store version (`process.windowsStore`) is updated by the Store, and Store policy
+  forbids an app updating itself, so electron-updater is never loaded (`updateSource`,
+  `createUpdater`): nothing is checked, downloaded or installed, no consent is asked, and Settings
+  and About say "Updates come from Microsoft Store."
 - Test mode replaces the updater with a stub that never contacts GitHub. So does a copy without
   `Uninstall Remember Me.exe` next to its exe (the portable build, or one Scoop unpacked): its
   updates come from elsewhere, so it reports updates as unavailable and the window asks no consent.
@@ -313,7 +341,7 @@ rotating at 1 MB and keeping three files (at most 3 MB), so a user can attach it
 Settings' "Open data folder" and About's "Open log folder" show it. It records:
 
 - `start` (version, whether packaged, and task, note and attachment counts), `quit` and `resume`;
-- `data-folder-migrated` (renamed or copied) and `data-folder-migration-failed`, and
+- `data-folder-migrated` (renamed, copied, or imported into the Store version's folder) and `data-folder-migration-failed`, and
   `login-item-refresh-failed`;
 - `update` on each change of update state (checking, downloading, ready, installing, latest,
   unavailable, error), with the current and next version only, never feed URLs or paths;
@@ -370,6 +398,13 @@ says how many were left out.
 - `pnpm run installer` (`tools/installer.cjs`) turns that folder into a per-user NSIS installer,
   `release/installer/Remember-Me-Setup-<version>-x64.exe`, with the `latest.yml` and `.blockmap`
   files the updater reads. The installer keeps the v1.4 app ID, so it upgrades older installs.
+- `pnpm run store` (`tools/store.cjs`) turns the same folder into the Microsoft Store package,
+  `release/store/Remember-Me-<version>-x64.appx` (MSIX), with electron-builder's `appx` target and the
+  installer's shared settings. The package identity is in `store/identity.json`; the build refuses a
+  placeholder there unless run with `--dry-run`, which uses test values (`CN=FastKiwiTest`). The Store
+  logos are drawn from `assets/icon.png` and `icon.ico` by `tools/store-logos.cjs` in plain Node. The
+  package is not signed: the Store signs it. `.github/workflows/store.yml` builds it on Windows for
+  `v*` tags and by hand, and uploads it as the `store-package` artifact.
 - `.github/workflows/test.yml` runs the unit tests and ESLint on Windows for every pull request.
   `.github/workflows/desktop.yml` packages a desktop test build and runs `tests/desktop-smoke.cjs`
   against it with Playwright.

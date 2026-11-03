@@ -1,0 +1,87 @@
+name: Store package
+
+# Builds the Microsoft Store package (MSIX, as an .appx file) and uploads it as the `store-package`
+# workflow artifact, for the owner to upload in Partner Center. It publishes nothing: the Store signs
+# the package itself, so no certificate or secret is used. While store/identity.json still has the
+# placeholder identity name, the job builds a --dry-run package with test values instead, which
+# proves the package builds but can't be uploaded. See docs/distribution/microsoft-store.md.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  store:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 10
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check the tag matches package.json
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($env:TAG -ne "v$version") { throw "Tag $env:TAG does not match package.json version $version" }
+      - run: pnpm test
+      - run: pnpm run package
+      - name: Build the Store package
+        id: build
+        shell: pwsh
+        run: |
+          $status = node tools/store.cjs --identity-status
+          if ($LASTEXITCODE -ne 0) { throw 'Could not read store/identity.json' }
+          if ($status -eq 'ready') {
+            "mode=store" >> $env:GITHUB_OUTPUT
+            pnpm run store
+          } else {
+            "mode=dry-run" >> $env:GITHUB_OUTPUT
+            Write-Output '::warning title=Dry run::store/identity.json still has the placeholder identity name, so this is a --dry-run package with test values (CN=FastKiwiTest). It proves the package builds but cannot be uploaded to Partner Center. Fill in store/identity.json from Partner Center > Product identity.'
+            "### Dry run`n`nstore/identity.json still has the placeholder identity name, so the package was built with test values (``CN=FastKiwiTest``) and **cannot be uploaded** to Partner Center. Fill in ``store/identity.json`` (see docs/distribution/microsoft-store.md) and run this workflow again." >> $env:GITHUB_STEP_SUMMARY
+            pnpm run store -- --dry-run
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'The Store package build failed' }
+      - name: Check the package manifest
+        shell: pwsh
+        working-directory: release/store
+        env:
+          MODE: ${{ steps.build.outputs.mode }}
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $packages = @(Get-ChildItem -Filter 'Remember-Me-*.appx')
+          if ($packages.Count -ne 1) { throw "Expected one .appx, found $($packages.Count)" }
+          $zip = [IO.Compression.ZipFile]::OpenRead($packages[0].FullName)
+          try {
+            $reader = New-Object IO.StreamReader($zip.GetEntry('AppxManifest.xml').Open())
+            [xml]$manifest = $reader.ReadToEnd(); $reader.Close()
+            if (-not $zip.GetEntry('resources.pri')) { throw 'resources.pri is missing: the scaled logos were not indexed' }
+          } finally { $zip.Dispose() }
+          $identity = Get-Content ../../store/identity.json -Raw | ConvertFrom-Json
+          $expected = if ($env:MODE -eq 'store') { $identity.identityName } else { 'FastKiwiTest.RememberMe' }
+          if ($manifest.Package.Identity.Name -ne $expected) { throw "Identity name is $($manifest.Package.Identity.Name), expected $expected" }
+          if ($env:MODE -eq 'store' -and $manifest.Package.Identity.Publisher -ne $identity.publisher) { throw 'Publisher does not match store/identity.json' }
+          if ($manifest.Package.Dependencies.TargetDeviceFamily.MinVersion -ne '10.0.17763.0') { throw 'MinVersion is not Windows 10 1809' }
+          if ($manifest.OuterXml -notmatch 'Name="runFullTrust"') { throw 'runFullTrust is missing' }
+          if ($manifest.OuterXml -notmatch 'TaskId="RememberMeStartup" Enabled="false"') { throw 'The startup task is missing' }
+          "Package: $($packages[0].Name), $([math]::Round($packages[0].Length / 1MB, 1)) MB"
+          "Identity: $($manifest.Package.Identity.Name) $($manifest.Package.Identity.Version) $($manifest.Package.Identity.Publisher)"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: store-package
+          path: release/store/Remember-Me-*.appx
+          if-no-files-found: error

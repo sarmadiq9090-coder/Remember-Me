@@ -76,6 +76,10 @@ With the GitHub CLI you can also confirm the file was built by this repository's
 gh attestation verify .\Remember-Me-Setup-1.6.2-x64.exe --repo sarmadiq9090-coder/Remember-Me --source-ref refs/tags/v1.6.2 --signer-workflow sarmadiq9090-coder/Remember-Me/.github/workflows/release.yml
 ```
 
+### Microsoft Store
+
+A Microsoft Store version, **Remember Me Reminders**, is being prepared. It is the same app, with three differences: the Store installs its updates, **Start with Windows** is turned on in Windows' **Settings → Apps → Startup** (Settings has a button that opens it), and its data is in `%LOCALAPPDATA%\Packages\FastKiwi.RememberMeReminders_sm1xjmj6v76yc\LocalState\Remember Me`. The first time it starts it copies your data from the installer version, which keeps its own copy. Uninstalling the Store version deletes its data, so export a backup first. See [docs/distribution/microsoft-store.md](docs/distribution/microsoft-store.md).
+
 ### Upgrading from v1.4.0 or earlier
 
 Older versions stored their data in `%APPDATA%\Waqt`. The first time a newer version starts, it moves that folder to `%APPDATA%\Remember Me` automatically. If the folder can't be moved, Remember Me copies it, checks the copy and keeps the original as `%APPDATA%\Waqt.migrated-<date>`. It never deletes the old folder.
@@ -174,11 +178,11 @@ pnpm run package
 pnpm run installer
 ```
 
-Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable build in `release/v<version>`, and `pnpm run installer` produces an NSIS installer in `release/installer`.
+Requires Node.js 22 or newer and pnpm 10. `pnpm run package` produces a portable build in `release/v<version>`, and `pnpm run installer` produces an NSIS installer in `release/installer`. On Windows, `pnpm run store` produces the Microsoft Store package in `release/store` (see [docs/distribution/microsoft-store.md](docs/distribution/microsoft-store.md)).
 
 The website at <https://sarmadiq9090-coder.github.io/Remember-Me/> is plain HTML and CSS in `site/`, in English and Arabic, with no scripts, trackers or files from other hosts. `.github/workflows/pages.yml` publishes it when `site/` changes on `main`. `pnpm run site-assets` (`tools/build-site-assets.cjs`) makes its WebP screenshots from `docs/screenshots` and its 1200×630 social preview images, and `tests/site.test.js` checks the version, links, language alternates and page weight.
 
-`pnpm run screenshots` retakes the pictures in `docs/screenshots` (`tools/desktop-screenshots.cjs`): it runs the app in test mode with made-up sample tasks and notes in a temporary data folder, in English and Arabic, light and dark, so no personal data ends up in the repository. It needs Playwright, a devDependency.
+`pnpm run screenshots` retakes the pictures in `docs/screenshots` (`tools/desktop-screenshots.cjs`): it runs the app in test mode with made-up sample tasks and notes in a temporary data folder, in English and Arabic, light and dark, so no personal data ends up in the repository. It needs Playwright, a devDependency. `pnpm run screenshots -- --store` makes the 1366×768 Store listing set in `docs/screenshots/store`.
 
 `pnpm run assets` redraws the icons in `assets/` with Electron: `icon.ico` with 10 sizes from 16 to 256 px (16-32 px use the simpler `icon-small.svg` glyph without rays), `icon.png`, and the tray images `tray.png` and `tray-waiting.png` with `@1.5x` and `@2x` versions. It also writes [`docs/icon-preview.png`](docs/icon-preview.png), every size on a light and a dark taskbar.
 
@@ -199,7 +203,8 @@ The website at <https://sarmadiq9090-coder.github.io/Remember-Me/> is plain HTML
 - `tests/early-notices.test.js`: each "coming up" notice shows once per due time, none pile up after a pause, and clicked or old notices are let go.
 - `tests/focus.test.js`: a rebuilt list gives focus back to the same control of the same item, or to the next item when it is gone.
 - `tests/structure.test.js`: every `require` and import, every script and stylesheet the pages load, and every fixed path the main process builds exists.
-- `tests/web-security.test.js`: every page denies new windows, navigation and webviews, windows stay sandboxed with the strict CSP, and only `https://` links open in the browser.
+- `tests/web-security.test.js`: every page denies new windows, navigation and webviews, windows stay sandboxed with the strict CSP and spellcheck off, and only `https://` links open in the browser.
+- `tests/store.test.js`: the Microsoft Store version never loads the updater or writes the Run key, its startup task and package data folder (including the copy from the installer version), the Store identity check and package settings, and the generated logos.
 - `tests/handlers.test.js`: every allowed IPC action has exactly one handler, and only actions that change nothing skip the rescan.
 - `tests/site.test.js`: the website shows the current version, its local links work, it loads nothing from other hosts, its language alternates and structured data are right, and it stays under 200 KB without screenshots.
 - `tests/winget-manifest.test.js`: the winget manifests written from a release's `SHA256SUMS.txt`.
@@ -246,6 +251,7 @@ In detail:
 - Backups are copied only to folders you choose. For a Google Drive folder, Google's own Drive app does the syncing, under Google's privacy policy.
 - Links you click, such as the Google Drive download page, open in your default browser.
 - **Report a problem** only opens a pre-filled GitHub issue in your browser. You can read and edit it, and nothing is sent unless you submit it. It contains the app and Windows versions, language, theme and recent log lines with paths removed, never your tasks, notes or file names.
+- The Microsoft Store version never contacts GitHub: the Store updates it.
 - If you allow automatic updates, or choose **Check now**, Remember Me contacts GitHub Releases for this repository to check for and download new versions. That's a standard HTTPS request, covered by [GitHub's privacy statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement), and none of your data is included.
 
 ## Acknowledgements

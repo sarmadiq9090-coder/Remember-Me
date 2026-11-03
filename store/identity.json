@@ -1,0 +1,7 @@
+{
+  "README": "Values from Partner Center > Remember Me Reminders > Product management > Product identity (Store ID 9NGB1F7T7JGN, package family name FastKiwi.RememberMeReminders_sm1xjmj6v76yc). Copy them exactly; displayName must be the reserved Store name. See docs/distribution/microsoft-store.md.",
+  "identityName": "FastKiwi.RememberMeReminders",
+  "publisher": "CN=8EFD6949-D088-481F-886D-82300679C5E5",
+  "publisherDisplayName": "FastKiwi",
+  "displayName": "Remember Me Reminders"
+}
