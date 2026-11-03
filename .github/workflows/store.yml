@@ -8,6 +8,9 @@ name: Store package
 on:
   push:
     tags: ['v*']
+  # Builds the package on pull requests that touch it too, so a broken Store build shows before merging.
+  pull_request:
+    paths: ['store/**', 'tools/store.cjs', 'tools/installer.cjs', '.github/workflows/store.yml', 'package.json', 'src/**']
   workflow_dispatch:
 
 permissions:
