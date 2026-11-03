@@ -37,7 +37,7 @@ async function alertPage() {
 (async () => {
   try {
     let page = await launch();
-    // A new install starts in English, left to right.
+    // A new install starts in Windows' preferred language (English on the CI runner), left to right.
     assert.ok((await page.title()).includes('Remember Me'));
     assert.equal(await page.evaluate(() => [document.documentElement.lang, document.documentElement.dir].join()), 'en,ltr');
     assert.equal(await page.locator('.local-label').count(), 0);
@@ -69,6 +69,8 @@ async function alertPage() {
     await page.locator('#setting-language').selectOption('ar');
     await page.waitForFunction(() => document.documentElement.dir === 'rtl');
     await page.locator('[data-view="today"]').click();
+    // An empty field's hint follows the interface, so the ellipsis ends the Arabic hint; dir=auto alone lays it out left to right.
+    assert.equal(await page.locator('#search').evaluate(el => getComputedStyle(el).direction), 'rtl', 'Arabic search hint is right to left');
     await page.locator('#new-task').click();
     await page.locator('#task-title').fill('مراجعة خطة الأسبوع');
     await page.locator('#task-body').fill('تحديد ثلاث أولويات والعمل على أهمها أولًا.');

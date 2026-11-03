@@ -20,6 +20,12 @@ function startupTaskExtension(executable, displayName) {
           <desktop:StartupTask TaskId="${STARTUP_TASK_ID}" Enabled="false" DisplayName="${xml(displayName)}" />
         </desktop:Extension>`;
 }
+// The AppUserModelID of the installer version. It predates the Remember Me name: it names the start-with-Windows
+// entry and taskbar group of v1.4.0, and matches the installer's appId, so it must stay the same for upgrades.
+// The Store package has its own, <package family name>!RememberMe, which Windows gives it from the package
+// identity; setting this one there would split its taskbar button from its pinned tile and Start entry.
+const APP_USER_MODEL_ID = 'com.waqt.reminder';
+function appUserModelId({ windowsStore = false } = {}) { return windowsStore ? null : APP_USER_MODEL_ID; }
 // Returns false when nothing was registered (the Store version, whose startup task Windows manages).
 function setLoginItem(app, enabled, execPath, { windowsStore = false } = {}) {
   if (windowsStore) return false;
@@ -38,4 +44,4 @@ function refreshLoginItem(app, execPath) {
   for (const item of items) app.setLoginItemSettings({ openAtLogin: false, name: item.name, path: item.path, args: item.args });
   app.setLoginItemSettings({ openAtLogin: true, path: execPath, args: ARGS, enabled });
 }
-module.exports = { STARTUP_TASK_ID, STARTUP_SETTINGS, startupTaskExtension, setLoginItem, refreshLoginItem };
+module.exports = { APP_USER_MODEL_ID, appUserModelId, STARTUP_TASK_ID, STARTUP_SETTINGS, startupTaskExtension, setLoginItem, refreshLoginItem };

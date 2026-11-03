@@ -6,11 +6,20 @@
 
 - Quick add from anywhere: turn it on in Settings, then press Ctrl+Alt+R in any app to add a task with an optional time from a small window above the taskbar. Enter saves, Esc closes. The shortcut can be changed in Settings, which also says when another app already uses it. It is off until you turn it on. [#82]
 - A Microsoft Store package, **Remember Me Reminders**: `pnpm run store` builds it and the **Store package** workflow uploads it as an artifact. In the Store version, updates come from the Store, Start with Windows is turned on in Windows' Startup apps settings, and the data lives in the package's folder, copied from the installer version on its first start. See `docs/distribution/microsoft-store.md`.
+- A new install opens in your Windows language when Remember Me has it (one of its 12), instead of always in English. A language you already chose is never changed.
+- Arabic interface: Settings → Calendar can show the month names used in Iraq and the Levant («تشرين الثاني») or in Egypt and the Gulf («نوفمبر»). By default they follow your Windows region. Arabic-Indic digits (١٢٣) are back as an option; Western digits stay the default.
+- Microsoft Store version: after it copies your data from the version installed from the website, a banner suggests uninstalling that version, because with both running every reminder shows twice.
 
 ### Changed
 
 - Spellcheck is off, so Chromium never downloads spelling dictionaries from Google's servers.
 - The installer's privacy notice now describes **Report a problem**.
+- Microsoft Store version: the help for Start with Windows names the entry as Windows lists it, **Remember Me Reminders**, in every language. The Store version uses its package's own taskbar identity, so its taskbar button groups with its pinned and Start menu entries.
+- Microsoft Store listing: new Arabic and dark screenshots, with the alert at the bottom left in Arabic and the purple palette in dark, captions for each, and listing fixes (only English and Arabic listings, Arabic name «ذكّرني - تذكير ومهام», no other product names in the search terms). The Store workflow now installs and starts the package on Windows to check it.
+
+### Fixed
+
+- Arabic: the hint in the search box and other empty fields now ends with its ellipsis («ابحث عن مهمة أو ملاحظة…»), instead of starting with it.
 
 ## v1.6.2 (2026-11-03)
 

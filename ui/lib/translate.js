@@ -23,6 +23,24 @@
   ];
   const DEFAULT = 'en';
   function findLocale(code) { return LOCALES.find(l => l.code === code) || LOCALES[0]; }
+  // The interface language for a fresh install: the first of Windows' preferred languages (BCP 47
+  // tags, most preferred first, e.g. 'ar-IQ', 'zh-Hans-CN', 'es-419') that the app has, else English.
+  // A language matches by its main part ('ar-SA' is Arabic); Portuguese is pt-BR, and Chinese only in
+  // Simplified script (Traditional moves on to the next preferred language).
+  function matchLocale(tags) {
+    for (const tag of Array.isArray(tags) ? tags : [tags]) {
+      if (typeof tag !== 'string') continue;
+      const [language, ...rest] = tag.trim().toLowerCase().split(/[-_]/);
+      if (language === 'pt') return 'pt-BR';
+      if (language === 'zh') {
+        if (rest.includes('hant') || (!rest.includes('hans') && rest.some(part => ['tw', 'hk', 'mo'].includes(part)))) continue;
+        return 'zh-CN';
+      }
+      const found = LOCALES.find(l => l.code === language);
+      if (found) return found.code;
+    }
+    return DEFAULT;
+  }
   function format(template, params) {
     return params ? String(template).replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match)) : String(template);
   }
@@ -39,6 +57,22 @@
     for (const [name, value] of Object.entries(params)) shown[name] = typeof value === 'number' ? display(value) : value;
     return format(entry, shown);
   }
+  // Arabic month names differ by country: Iraq and the Levant say «تشرين الثاني», Egypt and the Gulf «نوفمبر».
+  // months is 'levant', 'standard' or 'auto' (from the Windows region); digits is 'latn' (0-9, the default) or
+  // 'arab' (Arabic-Indic, the Arabic interface only). Returns the locale every date, time and count uses.
+  const LEVANT_REGIONS = ['IQ', 'SY', 'LB', 'JO', 'PS'];
+  const ARABIC_MONTHS = ['auto', 'levant', 'standard'], DIGITS = ['latn', 'arab'];
+  // The region of a BCP 47 tag ('en-IQ', 'ar-Arab-IQ', 'ar_SY'), or '' when it has none.
+  function regionOf(tag) {
+    const part = String(tag ?? '').split(/[-_]/).slice(1).find(p => /^[A-Za-z]{2}$/.test(p));
+    return part ? part.toUpperCase() : '';
+  }
+  function levantMonths(months, region) { return months === 'levant' || (months !== 'standard' && LEVANT_REGIONS.includes(String(region || '').toUpperCase())); }
+  function dateLocale(code, { months = 'auto', digits = 'latn', region = '' } = {}) {
+    const locale = findLocale(code);
+    if (locale.code !== 'ar') return locale.intl + '-u-nu-latn';
+    return (levantMonths(months, region) ? 'ar-IQ' : 'ar-EG') + '-u-nu-' + (digits === 'arab' ? 'arab' : 'latn');
+  }
   // Wraps user text (a title, a file name) placed in a sentence in first-strong isolate marks, so its
   // own direction never reorders the punctuation around it, e.g. "Call Bob!" in an Arabic sentence.
   const FSI = String.fromCharCode(0x2068), PDI = String.fromCharCode(0x2069);
@@ -48,7 +82,7 @@
     const [value, unit] = bytes < 1024 ? [bytes, 'byte'] : bytes < 1048576 ? [bytes / 1024, 'kilobyte'] : [bytes / 1048576, 'megabyte'];
     return new Intl.NumberFormat(intl, { style: 'unit', unit, unitDisplay: 'short', maximumFractionDigits: 1 }).format(value);
   }
-  const api = { LOCALES, DEFAULT, findLocale, format, translate, isolate, formatSize };
+  const api = { LOCALES, DEFAULT, ARABIC_MONTHS, DIGITS, LEVANT_REGIONS, findLocale, matchLocale, regionOf, dateLocale, format, translate, isolate, formatSize };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else Object.assign(root, { LOCALES, findLocale, translate, isolate, formatSize });
 })(this);

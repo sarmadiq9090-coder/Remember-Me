@@ -182,15 +182,20 @@ test('the week starts on Saturday unless Sunday or Monday was chosen', () => {
   for (const weekStart of [3, 'auto', '6', null]) assert.equal(validateState({ ...base, settings: { ...base.settings, weekStart } }).settings.weekStart, 6, String(weekStart));
   assert.equal(validateState({ ...base, settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'en' } }).settings.weekStart, 6, 'v1.4.0 data has no weekStart and gets Saturday');
 });
-test('data saved with the removed Hijri date and digit style options still loads, without those fields', () => {
+test('data saved with the removed Hijri date option still loads without it; the restored digit option keeps a valid choice', () => {
   const { validateState } = require('../src/core/tasks');
   const old = JSON.parse(JSON.stringify({ ...initialState(), settings: { ...initialState().settings, hijri: true, digits: 'arab' } }));
   saveTask(old, { title: 'kept' });
   const loaded = validateState(old);
-  assert.ok(!('hijri' in loaded.settings) && !('digits' in loaded.settings));
+  assert.ok(!('hijri' in loaded.settings));
+  assert.equal(loaded.settings.digits, 'arab');
   assert.equal(loaded.tasks[0].title, 'kept');
-  const odd = validateState({ ...initialState(), settings: { hijri: 'yes', digits: 'roman' } }).settings;
-  assert.ok(!('hijri' in odd) && !('digits' in odd));
+  const odd = validateState({ ...initialState(), settings: { hijri: 'yes', digits: 'roman', arabicMonths: 'syriac' } }).settings;
+  assert.ok(!('hijri' in odd));
+  assert.deepEqual([odd.digits, odd.arabicMonths], ['latn', 'auto']);
+  assert.equal(validateState({ ...initialState(), settings: { digits: 'auto' } }).settings.digits, 'latn', "The earlier option's 'auto' meant Western digits");
+  assert.deepEqual([initialState().settings.digits, initialState().settings.arabicMonths], ['latn', 'auto']);
+  assert.equal(validateState({ ...initialState(), settings: { arabicMonths: 'levant' } }).settings.arabicMonths, 'levant');
 });
 test('tags are trimmed, de-duplicated, limited and kept through edits, repeats and loading', () => {
   const { normalizeTags, validateState } = require('../src/core/tasks');

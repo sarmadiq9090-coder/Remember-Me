@@ -1,17 +1,19 @@
 // Interface language. Pages and scripts hold English source text; translations come from
 // ui/locales/<code>.json through the main process (the windows have no network or file access).
-let uiLanguage = 'en', uiLocale = findLocale('en'), uiMessages = {}, uiFallback = {};
+// uiDates is the locale for dates, times and counts that the main process worked out (dateLocale() in translate.js).
+let uiLanguage = 'en', uiLocale = findLocale('en'), uiMessages = {}, uiFallback = {}, uiDates = null;
 const originalText = new WeakMap();
 const originalAttrs = new WeakMap();
 const localeCache = new Map();
 function tr(key, params) { return translate(uiMessages, uiFallback, uiLocale.intl, key, params, value => num(value)); }
-// Accepts a language code, or { language } as the alert window receives it.
+// Accepts a language code, or { language, dates } as the windows receive it.
 async function setLanguage(language) {
-  if (language && typeof language === 'object') ({ language } = language);
+  let dates = null;
+  if (language && typeof language === 'object') ({ language, dates } = language);
   const code = findLocale(language).code;
   if (!localeCache.has(code)) localeCache.set(code, api('locale', { code }).catch(error => { localeCache.delete(code); throw error; }));
   const data = await localeCache.get(code);
-  uiLanguage = code; uiLocale = data; uiMessages = data.messages || {}; uiFallback = data.fallback || {};
+  uiLanguage = code; uiLocale = data; uiMessages = data.messages || {}; uiFallback = data.fallback || {}; uiDates = typeof dates === 'string' ? dates : null;
   document.documentElement.lang = code; document.documentElement.dir = data.dir;
   document.title = tr(document.body.classList.contains('alert-body') ? 'Remember Me • Reminder' : 'Remember Me • Your day');
   // Static text keeps its English source and is translated on every switch. User content sits in

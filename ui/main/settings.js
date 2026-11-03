@@ -89,9 +89,24 @@ snoozeRow.addEventListener('click', async e => {
 function settingsPayload() {
   // Invalid snooze fields still being edited are left out, so other settings save without them.
   const presets = snoozeChoices(), valid = presets.every(preset => checkSnoozePreset(preset));
-  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: Number($('setting-week').value), theme: checked('theme-mode', state.settings.theme), palette: checked('palette', state.settings.palette), remindAgain: Number($('setting-remind-again').value), ...(valid ? { snoozePresets: presets } : {}) };
+  // The Arabic month names and digits are only shown, and so only sent, in the Arabic interface.
+  const arabic = state.settings.language === 'ar' ? { arabicMonths: $('setting-arabic-months').value, digits: $('setting-digits').value } : {};
+  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: Number($('setting-week').value), theme: checked('theme-mode', state.settings.theme), palette: checked('palette', state.settings.palette), remindAgain: Number($('setting-remind-again').value), ...arabic, ...(valid ? { snoozePresets: presets } : {}) };
 }
-for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-week', 'setting-remind-again']) $(id).addEventListener('change', async () => {
+// Settings → Calendar, Arabic interface only: month names («تشرين الثاني» or «نوفمبر») and digits. The choices
+// show real samples from Intl, so they need no translation; other interfaces leave the lists empty.
+function renderArabicDates() {
+  const arabic = state.settings.language === 'ar';
+  $('arabic-months-row').hidden = $('digits-row').hidden = !arabic;
+  if (!arabic) { $('setting-arabic-months').replaceChildren(); $('setting-digits').replaceChildren(); return; }
+  const months = tag => [0, 1, 2].map(m => new Date(2026, m, 15).toLocaleDateString(tag, { month: 'long' })).join('، ') + '…';
+  const option = (value, text) => textElement('option', text, { value });
+  $('setting-arabic-months').replaceChildren(option('auto', tr("Same as the Windows region")), option('levant', months('ar-IQ-u-nu-latn')), option('standard', months('ar-EG-u-nu-latn')));
+  $('setting-digits').replaceChildren(option('latn', tr("Western {sample}", { sample: '123' })), option('arab', tr("Arabic-Indic {sample}", { sample: (123).toLocaleString('ar-EG-u-nu-arab') })));
+  $('setting-arabic-months').value = state.settings.arabicMonths || 'auto';
+  $('setting-digits').value = state.settings.digits || 'latn';
+}
+for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-language', 'setting-week', 'setting-arabic-months', 'setting-digits', 'setting-remind-again']) $(id).addEventListener('change', async () => {
   try {
     const saved = await api('settings', settingsPayload()); await refresh();
     // Native date and time fields take a new language only when the app starts again.
