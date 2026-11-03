@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Quick add from anywhere: turn it on in Settings, then press Ctrl+Alt+R in any app to add a task with an optional time from a small window above the taskbar. Enter saves, Esc closes. The shortcut can be changed in Settings, which also says when another app already uses it. It is off until you turn it on. [#82]
+
 ### Fixed
 
 - A snooze time out of range in Settings now says "Choose a time from 01:00 to 23:59." instead of asking for a number.

@@ -12,7 +12,8 @@ true (see "Keeping this document current").
 | Responsibility | Where |
 |---|---|
 | App lifecycle: data folder, log, single-instance lock, start and quit | `src/main/index.js` |
-| Main and alert windows, theme, page options | `src/main/windows.js` |
+| Main, alert and quick-add windows, theme, page options | `src/main/windows.js` |
+| Quick add from anywhere: registering the global shortcut and reporting a conflict | `src/main/quick-add.js` |
 | Tray icon, menu (pause, About, Report a problem, exit) and tooltip | `src/main/tray.js` |
 | Scan loop, alert queue, sounds, early notices, preview and undo window | `src/main/scheduler.js` |
 | Interface text in the main process (`tr()`, `errorText()`) | `src/main/i18n.js` |
@@ -27,7 +28,7 @@ true (see "Keeping this document current").
 | Attachment ids, record checks and limits | `src/core/records.js` |
 | English errors with a translation key (`UserError`) | `src/core/errors.js` |
 | "Remind me again" sound timer | `src/core/repeat-beep.js` |
-| Alert window placement next to the taskbar | `src/core/placement.js` |
+| Alert and quick-add window placement next to the taskbar | `src/core/placement.js` |
 | Pausing reminders from the tray | `src/core/pause.js` |
 | "Coming up" notifications, each once and kept clickable | `src/core/early-notices.js` |
 | Attachment files: import, lookup, orphan cleanup, backup export | `src/data/attachments.js` |
@@ -42,10 +43,11 @@ true (see "Keeping this document current").
 | About card: link allowlist and diagnostic info | `src/platform/about.js` |
 | Pre-filled GitHub issue for a problem report, with redacted log lines | `src/platform/problem-report.js` |
 | Palette colors for window backgrounds, read from `ui/styles/theme.css` | `src/platform/themes.js` |
-| The two pages (main window, sticky alert) | `ui/index.html`, `ui/alert.html` |
+| The three pages (main window, sticky alert, quick add) | `ui/index.html`, `ui/alert.html`, `ui/quickadd.html` |
 | Main window scripts: plain scripts loaded in order, sharing one scope (state, render, cards, editors, trash, settings, events, boot) | `ui/main/*.js` |
 | Alert window script | `ui/alert/alert.js` |
-| Shared by both windows: languages (`translate.js`, `i18n.js`), helpers and icons (`shared.js`), keeping keyboard focus when lists are rebuilt (`focus.js`), search, alert formatting | `ui/lib/*.js` |
+| Quick-add window script | `ui/quickadd/quickadd.js` |
+| Shared by both windows: languages (`translate.js`, `i18n.js`), helpers and icons (`shared.js`), keeping keyboard focus when lists are rebuilt (`focus.js`), search, alert formatting, the quick-add shortcut rules and due time (`quickadd.js`) | `ui/lib/*.js` |
 | Stylesheets and theme tokens | `ui/styles/*.css` |
 | Translations | `ui/locales/*.json` |
 | Packaging, installer, winget manifests, icon generator, screenshots, website images | `tools/` |
@@ -56,7 +58,12 @@ true (see "Keeping this document current").
 ## Processes and windows
 
 The main process holds a single-instance lock, creates the main window (hidden to the tray when closed),
-the tray icon and, when reminders are due, a frameless always-on-top alert window. Both windows use
+the tray icon and, when reminders are due, a frameless always-on-top alert window. When Quick add from
+anywhere is on in Settings, a global shortcut (`settings.quickAddShortcut`, Ctrl+Alt+R by default) opens a
+small frameless always-on-top quick-add window centered above the taskbar of the display under the mouse:
+a title and an optional time, Enter saves, Escape closes (as does losing focus while it is empty). If
+Windows refuses the shortcut because another app holds it, Settings says so and the log records
+`quick-add-shortcut-unavailable`; the shortcut is let go when the app quits. All windows use
 `contextIsolation`, `sandbox`, `nodeIntegration: false`, a strict CSP in their HTML, and deny new
 windows, navigation, webviews and every browser permission request.
 
@@ -79,10 +86,11 @@ works for a window that is still being created.
 Every request goes through one `ipcMain.handle('waqt:action')`, registered by the handler registry,
 which:
 
-1. accepts it only from the main window or the alert window, and only when the sending frame is the
+1. accepts it only from the main, alert or quick-add window, and only when the sending frame is the
    window's own bundled page (`fromPage`);
-2. runs `checkRequest(action, payload, { fromAlert })`, which rejects unknown actions (`ACTIONS`),
-   limits the alert window to `ALERT_ACTIONS`, requires a plain-object payload, requires a short
+2. runs `checkRequest(action, payload, { fromAlert, fromQuickAdd })`, which rejects unknown actions (`ACTIONS`),
+   limits the alert window to `ALERT_ACTIONS` and the quick-add window to `QUICK_ADD_ACTIONS` (`language`,
+   `locale` and `quickAdd`, which takes only a string `title` and an optional `dueAt`), requires a plain-object payload, requires a short
    string `id` for `ID_ACTIONS`, checks `expectedDueAt` for `DUE_ACTIONS`, and accepts `openLink`
    only with a `link` ID from the About module's fixed list;
 3. runs the action's handler. Anything that changes data goes through `store.change()`, after which
@@ -97,7 +105,7 @@ registry throws if an allowed action has no handler, has two, or a handler is no
 | Group | Actions |
 |---|---|
 | Read | `state`, `alerts`, `language`, `locale`, `undoable`, `storage` |
-| Tasks | `saveTask`, `complete`, `skip`, `snooze`, `undoComplete`, `reopen`, `toggleStep` |
+| Tasks | `saveTask`, `quickAdd`, `complete`, `skip`, `snooze`, `undoComplete`, `reopen`, `toggleStep` |
 | Trash | `deleteTask`, `restoreTask`, `purgeTask`, `deleteNote`, `restoreNote`, `purgeNote`, `emptyTrash` |
 | Notes | `saveNote` |
 | Attachments | `attachFiles`, `openAttachment`, `imagePreview`, `cleanOrphans` |
@@ -171,7 +179,9 @@ all data. The shape (`version` is always `1`):
     autoUpdate: null|true|false,  // consent to background update checks; null means not asked yet
     remindAgain?: 0|2|5|15,   // minutes between repeated alert sounds; absent means off
     pausedUntil: null|'<ISO time>'|'manual',  // reminders paused from the tray; null means not paused
-    snoozePresets: [6 × { kind: 'in', minutes } | { kind: 'today'|'tomorrow', time: 'HH:MM' } | { kind: 'week'|'pick' }]  // the alert's 1-6 snooze choices (ui/lib/alert-format.js)
+    snoozePresets: [6 × { kind: 'in', minutes } | { kind: 'today'|'tomorrow', time: 'HH:MM' } | { kind: 'week'|'pick' }],  // the alert's 1-6 snooze choices (ui/lib/alert-format.js)
+    quickAdd: false|true,     // the global quick-add shortcut; absent in older files means off
+    quickAddShortcut: 'Ctrl+Alt+R'  // an Electron accelerator checked by normalizeAccelerator (ui/lib/quickadd.js); invalid or absent means the default
   }
 }
 ```
@@ -247,7 +257,7 @@ occurrence that falls in a spring-forward gap fires an hour later, and the next 
 - **Restore** (`readBackup`, `restoreBackup`) verifies every file against its checksum (older
   backups without checksums are checked for presence and size), exports a safety copy of the current
   data, copies the attachments in, and replaces the state in one `Store` commit. Settings about this
-  PC (`autoUpdate`, `startAtLogin`, `pausedUntil`) keep their current values; the rest come from the
+  PC (`autoUpdate`, `startAtLogin`, `pausedUntil`, `quickAdd`, `quickAddShortcut`) keep their current values; the rest come from the
   backup and apply at once.
 - **Google Drive** (`DriveBackup`) needs no Google account access: the user picks a folder synced
   by Google Drive for desktop, and the app copies a fresh local snapshot there once a day (or on
@@ -310,6 +320,7 @@ Settings' "Open data folder" and About's "Open log folder" show it. It records:
 - `update` on each change of update state (checking, downloading, ready, installing, latest,
   unavailable, error), with the current and next version only, never feed URLs or paths;
 - `data-recovered-from-bak` when `data.json` could not be read and the `.bak` copy was loaded;
+- `quick-add-shortcut-unavailable` (the shortcut only) when Windows refuses the quick-add shortcut;
 - `start-failed`, `scan-failed` (once per distinct error, then at most every 10 minutes) and
   `trash-purge-failed`;
 - `action-failed` with the IPC action name, for any request that returned an error;
