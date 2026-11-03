@@ -44,6 +44,7 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 - **Attachments:** add PDFs, Excel sheets, documents, images or any other file to tasks and notes, up to 20 files per item and 50 MB per file. Images preview inline, including in the alert.
 - **Safe file handling:** programs, scripts, installers and shortcuts are revealed in File Explorer instead of being launched.
 - **Clear overdue status:** task rows say how late a reminder is, such as "Overdue by 2 hours", and finishing a repeating task tells you when it comes back ("Done. Next: …").
+- **Quick add from anywhere:** turn it on in Settings, then press Ctrl+Alt+R (or a shortcut you choose) in any app to type a task and an optional time in a small window above the taskbar. Enter saves, Esc closes. Settings tells you if another app already uses the shortcut.
 - **Smart search (Ctrl+K):** searches tasks and notes, and matches Arabic text regardless of diacritics and common spelling variants.
 - **12 interface languages:** English (the default), العربية (a full right-to-left interface), Español, Français, Deutsch, Português (Brasil), Русский, 中文 (简体), 日本語, Türkçe, हिन्दी and Bahasa Indonesia, switchable in Settings. Dates, numbers and plurals follow the chosen language, and mixed-language text keeps its reading order. The translations other than English and Arabic are machine-assisted; corrections from native speakers are very welcome (see [Translations](#translations)).
 - **Tags and checklists:** tag tasks, filter the list by tag and find tags in search, sort tasks by due time, priority, newest or title, and break a task into steps you tick off from the list; a repeating task starts each occurrence with its steps unticked.
@@ -107,13 +108,13 @@ v1.4.0 can't update itself: install the next version from Releases once by hand,
 - **Attachments:** while editing a task or note, choose **Add files**. Files are copied into Remember Me's data folder, so moving or deleting the original doesn't break the attachment. Removing an attachment from one item doesn't affect other items.
 - **Opening files:** click an attachment to open it with the default Windows app. Excel files need a compatible app such as Excel.
 - **Settings:**
-  - *Reminders and background:* alert sound, **Remind me again**, the six **Snooze choices** of the alert, start with Windows, alert position (left or right), interface language, and a preview alert.
+  - *Reminders and background:* alert sound, **Remind me again**, the six **Snooze choices** of the alert, start with Windows, **Quick add from anywhere** and its shortcut (click it and press the new one), alert position (left or right), interface language, and a preview alert.
   - *Appearance:* light, dark or same as Windows, and one of six palettes, picked from preview cards. The change shows at once in the main window and the alert.
   - *Calendar:* the first day of the week.
   - *Your data:* export, restore, storage use and cleanup, the data folder, and Google Drive backups with how many automatic copies to keep.
   - *Updates:* automatic checks and **Check now**.
 - **About:** at the end of Settings, or **About Remember Me** in the tray menu. It shows the version, links to the source code, release notes, ideas and feedback, the privacy notice and the MIT license, and has **Report a problem**, **Check for updates** and **Open log folder**. **Copy diagnostic info** copies the app, Electron, Chromium and Windows versions plus the interface language and theme, to paste into a problem report. It never includes your tasks, notes, files or folder paths.
-- **Shortcuts:** Ctrl+N creates a task or note, Ctrl+K focuses search.
+- **Shortcuts:** Ctrl+N creates a task or note, Ctrl+K focuses search. With Quick add from anywhere on, Ctrl+Alt+R (or your own shortcut) opens the quick-add window from any app; a time already past today means tomorrow.
 
 The bell button at the top shows a **preview alert**. Snoozing a preview only closes it, while reminders you set on tasks are real.
 
@@ -203,6 +204,7 @@ The website at <https://sarmadiq9090-coder.github.io/Remember-Me/> is plain HTML
 - `tests/early-notices.test.js`: each "coming up" notice shows once per due time, none pile up after a pause, and clicked or old notices are let go.
 - `tests/focus.test.js`: a rebuilt list gives focus back to the same control of the same item, or to the next item when it is gone.
 - `tests/structure.test.js`: every `require` and import, every script and stylesheet the pages load, and every fixed path the main process builds exists.
+- `tests/quick-add.test.js`: the quick-add shortcut rules and recorder, the due time, registering and releasing the global shortcut and reporting a conflict, the window's placement and limited IPC actions, and the setting's defaults.
 - `tests/web-security.test.js`: every page denies new windows, navigation and webviews, windows stay sandboxed with the strict CSP and spellcheck off, and only `https://` links open in the browser.
 - `tests/store.test.js`: the Microsoft Store version never loads the updater or writes the Run key, its startup task and package data folder (including the copy from the installer version), the Store identity check and package settings, and the generated logos.
 - `tests/handlers.test.js`: every allowed IPC action has exactly one handler, and only actions that change nothing skip the rescan.

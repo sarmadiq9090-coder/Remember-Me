@@ -8,7 +8,7 @@ const { DEFAULT_SNOOZE_PRESETS } = require('../ui/lib/alert-format');
 // and the alert's Reschedule opening the task's date and time in the main window.
 
 function context() {
-  const ctx = { electron: {}, tr: text => text, language: () => 'en', setLogin() {}, rebuildTrayMenu() {}, placeAlert() {}, applyTheme() {}, controlsLocale: 'en-US' };
+  const ctx = { electron: {}, tr: text => text, language: () => 'en', setLogin() {}, rebuildTrayMenu() {}, placeAlert() {}, applyTheme() {}, quickAdd: { apply() {} }, controlsLocale: 'en-US' };
   ctx.store = { state: initialState(), change(fn) { const draft = structuredClone(this.state); const result = fn(draft); this.state = validateState(draft); return result; } };
   return ctx;
 }

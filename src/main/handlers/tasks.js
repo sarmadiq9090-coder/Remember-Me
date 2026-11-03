@@ -3,6 +3,8 @@ const { saveTask, completeTask, skipOccurrence, undoComplete, toggleStep, snooze
 
 module.exports = ctx => ({
   saveTask: { run: payload => { ctx.store.change(s => saveTask(s, payload)); } },
+  // From the quick-add window: a new task with a title and an optional due time; the window then closes.
+  quickAdd: { run: payload => { ctx.store.change(s => saveTask(s, { title: payload.title, dueAt: payload.dueAt || null })); } },
   complete: { run: (payload, { fromAlert }) => {
     if (payload.id === '__preview') { ctx.preview = null; return undefined; }
     // done is null when the reminder was already handled (a double click or another window).

@@ -5,7 +5,7 @@ const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale } = require('../../../ui/li
 const { normalizeSnoozePresets } = require('../../../ui/lib/alert-format');
 
 module.exports = ctx => ({
-  state: { readOnly: true, run: () => ({ ...ctx.store.state, dataPath: ctx.app.getPath('userData'), packaged: ctx.app.isPackaged, recovered: ctx.store.recovered, driveBackup: ctx.driveBackup.status(), updates: ctx.updates.status(), windowsStore: ctx.windowsStore === true, openTask: ctx.takeOpenRequest() }) },
+  state: { readOnly: true, run: () => ({ ...ctx.store.state, dataPath: ctx.app.getPath('userData'), packaged: ctx.app.isPackaged, recovered: ctx.store.recovered, driveBackup: ctx.driveBackup.status(), updates: ctx.updates.status(), windowsStore: ctx.windowsStore === true, quickAdd: ctx.quickAdd.status(), openTask: ctx.takeOpenRequest() }) },
   alerts: { readOnly: true, run: () => {
     const now = new Date(), { store } = ctx;
     // next is when a repeating reminder comes back after Done, shown under the Done button.

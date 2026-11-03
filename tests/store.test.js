@@ -129,7 +129,7 @@ test('the Startup apps page opens only in the Store version, and the page learns
   await handlers.openStartupSettings.run({});
   assert.equal(opened, 1);
   Object.assign(ctx, { store: { state: { settings: {} }, recovered: false }, app: { getPath: () => 'C:\\data', isPackaged: true },
-    driveBackup: { status: () => ({}) }, updates: { status: () => ({ source: 'store' }) }, takeOpenRequest: () => null });
+    driveBackup: { status: () => ({}) }, updates: { status: () => ({ source: 'store' }) }, quickAdd: { status: () => ({}) }, takeOpenRequest: () => null });
   assert.equal(handlers.state.run({}).windowsStore, true);
   ctx.windowsStore = undefined;
   assert.equal(handlers.state.run({}).windowsStore, false);

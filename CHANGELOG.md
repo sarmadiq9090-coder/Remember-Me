@@ -4,6 +4,7 @@
 
 ### Added
 
+- Quick add from anywhere: turn it on in Settings, then press Ctrl+Alt+R in any app to add a task with an optional time from a small window above the taskbar. Enter saves, Esc closes. The shortcut can be changed in Settings, which also says when another app already uses it. It is off until you turn it on. [#82]
 - A Microsoft Store package, **Remember Me Reminders**: `pnpm run store` builds it and the **Store package** workflow uploads it as an artifact. In the Store version, updates come from the Store, Start with Windows is turned on in Windows' Startup apps settings, and the data lives in the package's folder, copied from the installer version on its first start. See `docs/distribution/microsoft-store.md`.
 
 ### Changed

@@ -5,9 +5,10 @@ const { nextOccurrence } = require('./repeat');
 const { LOCALES, DEFAULT: DEFAULT_LOCALE } = require('../../ui/lib/translate');
 const { validPause } = require('./pause');
 const { DEFAULT_SNOOZE_PRESETS, normalizeSnoozePresets } = require('../../ui/lib/alert-format');
+const { DEFAULT_QUICK_ADD_SHORTCUT, normalizeAccelerator } = require('../../ui/lib/quickadd');
 
 function initialState() {
-  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: DEFAULT_LOCALE, weekStart: 6, theme: 'system', palette: 'lavender', autoUpdate: null, pausedUntil: null, snoozePresets: DEFAULT_SNOOZE_PRESETS.map(p => ({ ...p })) } };
+  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: DEFAULT_LOCALE, weekStart: 6, theme: 'system', palette: 'lavender', autoUpdate: null, pausedUntil: null, snoozePresets: DEFAULT_SNOOZE_PRESETS.map(p => ({ ...p })), quickAdd: false, quickAddShortcut: DEFAULT_QUICK_ADD_SHORTCUT } };
 }
 // Interface palettes in ui/styles/theme.css; anything else shows Lavender.
 const PALETTES = ['lavender', 'ocean', 'forest', 'sunset', 'graphite', 'contrast'];
@@ -334,6 +335,9 @@ function validateState(data) {
   data.settings.pausedUntil = validPause(data.settings.pausedUntil);
   // The alert's six snooze choices; a missing or broken list, or slot, gets the defaults.
   data.settings.snoozePresets = normalizeSnoozePresets(data.settings.snoozePresets);
+  // Quick add from anywhere is off until the user turns it on; a shortcut that isn't valid gets the default.
+  if (typeof data.settings.quickAdd !== 'boolean') data.settings.quickAdd = false;
+  data.settings.quickAddShortcut = normalizeAccelerator(data.settings.quickAddShortcut) || DEFAULT_QUICK_ADD_SHORTCUT;
   return data;
 }
 module.exports = { importTasks, normalizeChecklist, toggleStep, normalizeTags, PALETTES, NOTE_COLORS, NOTE_STYLES, noteLook, EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, alertQueue, validateState, REMIND_AGAIN, skipOccurrence };

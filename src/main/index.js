@@ -1,5 +1,5 @@
 'use strict';
-const { app, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, nativeTheme, clipboard } = require('electron');
+const { app, nativeImage, ipcMain, screen, powerMonitor, shell, dialog, session, nativeTheme, clipboard, globalShortcut } = require('electron');
 const path = require('node:path');
 const { Store } = require('../core/store');
 const { createPreviewService } = require('../data/image-preview');
@@ -16,6 +16,7 @@ const { createWindows } = require('./windows');
 const { createTray } = require('./tray');
 const { createScheduler } = require('./scheduler');
 const { createProblems } = require('./problems');
+const { createQuickAdd } = require('./quick-add');
 const { secureContents, httpsShell } = require('./web-security');
 const testMode = process.env.WAQT_TEST === '1';
 // True in the Microsoft Store (MSIX) package: the Store updates it, Windows runs its startup task,
@@ -57,16 +58,17 @@ ctx.problems.install();
 ctx.windows = createWindows(ctx);
 ctx.tray = createTray(ctx);
 ctx.scheduler = createScheduler(ctx);
+ctx.quickAdd = createQuickAdd(ctx, globalShortcut);
 // The flat names the handlers use.
 const { windows, tray, scheduler } = ctx;
 Object.assign(ctx, { activeAlerts: scheduler.activeAlerts, openInMain: windows.openInMain, takeOpenRequest: windows.takeOpenRequest,
   rebuildTrayMenu: tray.rebuildTrayMenu, placeAlert: windows.placeAlert, applyTheme: windows.applyTheme });
 Object.defineProperties(ctx, {
-  mainWindow: { get: () => windows.mainWindow }, alertWindow: { get: () => windows.alertWindow },
+  mainWindow: { get: () => windows.mainWindow }, alertWindow: { get: () => windows.alertWindow }, quickAddWindow: { get: () => windows.quickAddWindow },
   preview: { get: () => scheduler.preview, set: value => { scheduler.preview = value; } },
   undoable: { get: () => scheduler.undoable, set: value => { scheduler.undoable = value; } },
 });
-const PAGES = { main: path.join(__dirname, '../../ui/index.html'), alert: path.join(__dirname, '../../ui/alert.html') };
+const PAGES = { main: path.join(__dirname, '../../ui/index.html'), alert: path.join(__dirname, '../../ui/alert.html'), quickAdd: path.join(__dirname, '../../ui/quickadd.html') };
 
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
@@ -117,6 +119,8 @@ async function start() {
   windows.createMain();
   tray.create();
   registerHandlers(ctx, { ipcMain, scan: scheduler.scan, notifyViews: windows.notifyViews, pages: PAGES });
+  // Quick add from anywhere: the global shortcut, when it is turned on in Settings.
+  ctx.quickAdd.apply();
   interval = setInterval(scheduler.scan, 1000);
   scheduler.purgeExpiredTrash();
   backupInterval = setInterval(() => { driveBackup.tick(); try { scheduler.purgeExpiredTrash(); } catch (error) { console.error('Trash purge failed:', error); log.error('trash-purge-failed', error); } }, 60000);
@@ -133,6 +137,7 @@ async function start() {
 app.on('web-contents-created', (event, contents) => secureContents(contents));
 app.on('activate', () => windows.showMain());
 app.on('window-all-closed', () => {});
+app.on('will-quit', () => ctx.quickAdd.stop());
 app.on('before-quit', event => {
   log.info('quit');
   ctx.quitting = true; clearInterval(interval); clearInterval(backupInterval);
