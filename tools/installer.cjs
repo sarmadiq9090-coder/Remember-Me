@@ -48,4 +48,8 @@ build({
       include: path.join(root, 'installer', 'installer.nsh'),
     },
   },
-}).then(files => files.forEach(file => console.log(file))).catch(error => { console.error(error.message); process.exitCode = 1; });
+}).then(files => files.forEach(file => console.log(file))).catch(error => {
+  console.error(error.message);
+  // electron-builder's exit hook resets process.exitCode to 0, so exit explicitly.
+  process.exit(1);
+});
