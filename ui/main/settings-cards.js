@@ -56,6 +56,8 @@ const ABOUT_LINKS = [
   ['issues', 'edit', msg('Ideas and feedback'), msg('Report a bug or suggest an idea')],
   ['privacy', 'shield', msg('Privacy'), msg('No account, no tracking, your data stays on your PC')],
   ['license', 'file', msg('License: MIT'), msg('Free and open source')],
+  ['help', 'info', msg('Help and support'), msg('Answers and contact, no GitHub account needed'), null],
+  ['moreApps', 'layers', msg('More from FastKiwi'), msg('Other free apps in the Microsoft Store')],
 ];
 function renderAboutCard() {
   const updates = state.updates, busy = ['checking', 'downloading', 'installing'].includes(updates.state);

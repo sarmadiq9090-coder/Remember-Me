@@ -1,12 +1,13 @@
 'use strict';
 const fs = require('node:fs');
 const os = require('node:os');
-const { linkUrl, diagnostics } = require('../../platform/about');
+const { linkUrl, diagnostics, STORE_LINKS } = require('../../platform/about');
 
 module.exports = ctx => {
   const { shell, clipboard } = ctx.electron;
   return {
-    openLink: { readOnly: true, run: async payload => { await shell.openExternal(linkUrl(payload.link)); } },
+    // Web pages open in the browser (https only); "More from FastKiwi" opens the publisher's page in the Microsoft Store.
+    openLink: { readOnly: true, run: async payload => { if (payload.link === 'moreApps') await ctx.openStoreLink(STORE_LINKS.get('moreApps')); else await shell.openExternal(linkUrl(payload.link)); } },
     copyDiagnostics: { readOnly: true, run: () => {
       const value = diagnostics({ version: ctx.app.getVersion(), packaged: ctx.app.isPackaged, versions: process.versions, windows: os.release(), arch: process.arch,
         language: ctx.language(), theme: ctx.store.state.settings.theme });
