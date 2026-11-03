@@ -24,15 +24,11 @@ function createWindows(ctx) {
     return { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true,
       additionalArguments: [`--waqt-palette=${store.state.settings.palette}`, `--waqt-language=${locale.code}`, `--waqt-dir=${locale.dir}`] };
   }
-  function secure(win) {
-    win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-    win.webContents.on('will-navigate', e => e.preventDefault());
-  }
+  // New windows, navigation and webviews are denied for every page in index.js (src/main/web-security.js).
   function createMain(visible = !process.argv.includes('--background')) {
     const win = mainWindow = new BrowserWindow({ width: 1250, height: 850, minWidth: 900, minHeight: 650,
       title: tr('Remember Me • Your day'), icon: windowIcon, show: false, backgroundColor: background('main'), autoHideMenuBar: true, webPreferences: options() });
     win.setMenu(null);
-    secure(win);
     win.loadFile(path.join(__dirname, '../../ui/index.html'));
     win.on('session-end', () => { ctx.quitting = true; });
     win.on('close', e => { if (!ctx.quitting) { e.preventDefault(); win.hide(); } });
@@ -73,7 +69,6 @@ function createWindows(ctx) {
       const activeAlerts = () => ctx.scheduler.activeAlerts();
       alertWindow = new BrowserWindow({ width: 410, height: 570, frame: false, resizable: false, minimizable: false,
         maximizable: false, skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: background('alert'), icon: windowIcon, webPreferences: options() });
-      secure(alertWindow);
       alertWindow.setAlwaysOnTop(true, 'pop-up-menu');
       placeAlert();
       alertWindow.loadFile(path.join(__dirname, '../../ui/alert.html'));

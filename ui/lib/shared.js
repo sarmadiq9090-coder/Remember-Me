@@ -34,6 +34,8 @@ const icons = {
 };
 function icon(name) { return `<svg class="icon-${name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || icons.note}</svg>`; }
 function hydrateIcons(root = document) { root.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = icon(el.dataset.icon); }); }
+// An element holding plain text, for translated text that sits next to markup.
+function textElement(tag, text, props = {}) { return Object.assign(document.createElement(tag), props, { textContent: text }); }
 function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 // Locale for every date, time and number. Digits are always Western (0-9), in Arabic too
 // (ar-IQ would otherwise use Arabic-Indic digits), so labels keep their width and layout.
@@ -66,7 +68,7 @@ function repeatLabel(t, weekStart) {
 function localDateValue(date) { const d = new Date(date); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }
 function isToday(value) { return value && new Date(value).toDateString() === new Date().toDateString(); }
 function timeLabel(value) { return new Date(value).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }); }
-function dateLabel(value) { if (!value) return ''; const d = new Date(value); return `${isToday(value) ? tr("Today") : d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' })}${tr(", ")}${timeLabel(value)}`; }
+function dateLabel(value) { if (!value) return ''; const d = new Date(value); return (isToday(value) ? tr("Today") : d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' })) + tr(", ") + timeLabel(value); }
 // Interface palettes (ui/styles/theme.css). The preload carries the saved one, so the first paint already uses it.
 const PALETTES = ['lavender', 'ocean', 'forest', 'sunset', 'graphite', 'contrast'];
 function applyPalette(palette) { document.documentElement.dataset.palette = PALETTES.includes(palette) ? palette : 'lavender'; }
@@ -99,7 +101,7 @@ function fileSize(bytes) { return formatSize(bytes, locale()); }
 function fileBadge(name) { const ext = name.includes('.') ? name.split('.').pop().toUpperCase() : tr('FILE@badge'); return ext.slice(0, 5); }
 function isImageFile(record) { return /\.(png|jpe?g|webp|gif|bmp|ico|avif)$/i.test(record.name); }
 function photoMarkup(record) {
-  return `<button type="button" class="inline-photo" data-file-id="${esc(record.id)}" title="${esc(tr("Open {name}", { name: isolate(record.name) }))}"><img data-preview-id="${esc(record.id)}" alt="${esc(record.name)}" decoding="async"><span class="photo-placeholder">${tr("Loading image…")}</span><span class="photo-caption"><bdi>${esc(record.name)}</bdi></span></button>`;
+  return `<button type="button" class="inline-photo" data-file-id="${esc(record.id)}" title="${esc(tr("Open {name}", { name: isolate(record.name) }))}"><img data-preview-id="${esc(record.id)}" alt="${esc(record.name)}" decoding="async"><span class="photo-placeholder">${esc(tr("Loading image…"))}</span><span class="photo-caption"><bdi>${esc(record.name)}</bdi></span></button>`;
 }
 const previewCache = new Map();
 let previewObserver;
@@ -132,7 +134,7 @@ function hydratePreviews(root = document) {
 }
 function fileMarkup(record, removable = false) {
   const kind = /\.(xlsx?|xlsm|csv)$/i.test(record.name) ? 'excel' : /\.pdf$/i.test(record.name) ? 'pdf' : 'other';
-  const row = `<div class="attachment-item"><button type="button" class="attachment-open" data-file-id="${esc(record.id)}" title="${esc(tr("Open {name}", { name: isolate(record.name) }))}"><span class="file-badge ${kind}">${esc(fileBadge(record.name))}</span><span class="attachment-name"><bdi>${esc(record.name)}</bdi><small dir="ltr">${fileSize(record.size)}</small></span>${icon('arrowLeft')}</button>${removable ? `<button type="button" class="attachment-remove icon-button" data-remove-file="${esc(record.id)}" aria-label="${esc(tr("Remove {name}", { name: isolate(record.name) }))}" title="${tr("Remove attachment")}">${icon('x')}</button>` : ''}</div>`;
+  const row = `<div class="attachment-item"><button type="button" class="attachment-open" data-file-id="${esc(record.id)}" title="${esc(tr("Open {name}", { name: isolate(record.name) }))}"><span class="file-badge ${kind}">${esc(fileBadge(record.name))}</span><span class="attachment-name"><bdi>${esc(record.name)}</bdi><small dir="ltr">${fileSize(record.size)}</small></span>${icon('arrowLeft')}</button>${removable ? `<button type="button" class="attachment-remove icon-button" data-remove-file="${esc(record.id)}" aria-label="${esc(tr("Remove {name}", { name: isolate(record.name) }))}" title="${esc(tr("Remove attachment"))}">${icon('x')}</button>` : ''}</div>`;
   return isImageFile(record) ? `<div class="image-attachment">${photoMarkup(record)}${row}</div>` : row;
 }
 hydrateIcons();

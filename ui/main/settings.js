@@ -25,8 +25,8 @@ function slotKind(preset) { return preset.kind !== 'in' ? preset.kind : preset.m
 function renderSnoozeChoices(force = false) {
   if (snoozeLanguage !== uiLanguage) {
     snoozeLanguage = uiLanguage;
-    const slots = [1, 2, 3, 4, 5, 6].map(number => `<li data-slot="${number - 1}"><kbd aria-hidden="true">${number}</kbd><select data-snooze-kind aria-label="${esc(tr('Choice {number}', { number }))}">${SNOOZE_KINDS.map(([value, name]) => `<option value="${value}">${tr(name)}</option>`).join('')}</select><input type="number" step="1" required data-snooze-amount aria-label="${esc(tr('Amount for choice {number}', { number }))}"><input type="time" required data-snooze-time aria-label="${esc(tr('Time for choice {number}', { number }))}"></li>`).join('');
-    snoozeRow.innerHTML = `<div class="snooze-setting-head"><div><strong id="snooze-choices-label">${tr('Snooze choices')}</strong><p>${tr('The six choices in the alert under Remind me again, on keys 1 to 6.')}</p></div><button type="button" class="text-button" id="snooze-reset">${tr('Restore the default choices')}</button></div><ol class="snooze-choices" aria-labelledby="snooze-choices-label">${slots}</ol>`;
+    const slots = [1, 2, 3, 4, 5, 6].map(number => `<li data-slot="${number - 1}"><kbd aria-hidden="true">${number}</kbd><select data-snooze-kind aria-label="${esc(tr('Choice {number}', { number }))}">${SNOOZE_KINDS.map(([value, name]) => `<option value="${value}">${esc(tr(name))}</option>`).join('')}</select><input type="number" step="1" required data-snooze-amount aria-label="${esc(tr('Amount for choice {number}', { number }))}"><input type="time" required data-snooze-time aria-label="${esc(tr('Time for choice {number}', { number }))}"></li>`).join('');
+    snoozeRow.innerHTML = `<div class="snooze-setting-head"><div><strong id="snooze-choices-label">${esc(tr('Snooze choices'))}</strong><p>${esc(tr('The six choices in the alert under Remind me again, on keys 1 to 6.'))}</p></div><button type="button" class="text-button" id="snooze-reset">${esc(tr('Restore the default choices'))}</button></div><ol class="snooze-choices" aria-labelledby="snooze-choices-label">${slots}</ol>`;
     force = true;
   }
   if (snoozeSaving) return;
@@ -112,8 +112,8 @@ function renderAppearance() {
   const card = $('appearance-card');
   if (appearanceLanguage !== uiLanguage) {
     appearanceLanguage = uiLanguage;
-    card.innerHTML = `<h2>${tr('Appearance')}</h2><div class="setting-row"><div><strong id="mode-label">${tr('Mode')}</strong><p>${tr('Light or dark, or the same as Windows.')}</p></div><div class="segmented" role="radiogroup" aria-labelledby="mode-label">${MODE_NAMES.map(([value, name]) => `<label><input type="radio" name="theme-mode" value="${value}"><span>${tr(name)}</span></label>`).join('')}</div></div>`
-      + `<div class="palette-picker"><strong id="palette-label">${tr('Colors')}</strong><div class="palette-grid" role="radiogroup" aria-labelledby="palette-label">${PALETTE_NAMES.map(([id, name]) => `<label class="palette-card"><input type="radio" name="palette" value="${id}"><span class="palette-mock" data-palette="${id}" aria-hidden="true">${paletteMock()}</span><span class="palette-name">${tr(name)}</span><span class="palette-tick" aria-hidden="true">${icon('check')}</span></label>`).join('')}</div></div>`;
+    card.innerHTML = `<h2>${esc(tr('Appearance'))}</h2><div class="setting-row"><div><strong id="mode-label">${esc(tr('Mode'))}</strong><p>${esc(tr('Light or dark, or the same as Windows.'))}</p></div><div class="segmented" role="radiogroup" aria-labelledby="mode-label">${MODE_NAMES.map(([value, name]) => `<label><input type="radio" name="theme-mode" value="${value}"><span>${esc(tr(name))}</span></label>`).join('')}</div></div>`
+      + `<div class="palette-picker"><strong id="palette-label">${esc(tr('Colors'))}</strong><div class="palette-grid" role="radiogroup" aria-labelledby="palette-label">${PALETTE_NAMES.map(([id, name]) => `<label class="palette-card"><input type="radio" name="palette" value="${id}"><span class="palette-mock" data-palette="${id}" aria-hidden="true">${paletteMock()}</span><span class="palette-name">${esc(tr(name))}</span><span class="palette-tick" aria-hidden="true">${icon('check')}</span></label>`).join('')}</div></div>`;
   }
   if (appearanceSaving) return;
   for (const [name, value] of [['theme-mode', state.settings.theme], ['palette', state.settings.palette]]) card.querySelector(`input[name="${name}"][value="${value}"]`).checked = true;
@@ -125,8 +125,8 @@ let noteLookLanguage;
 function renderNoteLook() {
   if (noteLookLanguage === uiLanguage) return;
   noteLookLanguage = uiLanguage;
-  $('note-look').innerHTML = `<div><span class="look-label" id="note-color-label">${tr('Note color')}</span><div class="swatches" role="radiogroup" aria-labelledby="note-color-label">${NOTE_COLORS.map(([id, name]) => `<label class="swatch" title="${tr(name)}"><input type="radio" name="note-color" value="${id}" aria-label="${tr(name)}"><span class="swatch-paper" data-paper="${id}">${icon('check')}</span></label>`).join('')}</div>`
-    + `<span class="look-label" id="note-style-label">${tr('Style')}</span><div class="style-tiles" role="radiogroup" aria-labelledby="note-style-label">${NOTE_STYLES.map(([id, name]) => `<label class="style-tile"><input type="radio" name="note-style" value="${id}"><span class="style-sample paper" data-paper="cream" data-note-style="${id}" aria-hidden="true"><i></i><i></i><i></i></span>${tr(name)}</label>`).join('')}</div></div>`
+  $('note-look').innerHTML = `<div><span class="look-label" id="note-color-label">${esc(tr('Note color'))}</span><div class="swatches" role="radiogroup" aria-labelledby="note-color-label">${NOTE_COLORS.map(([id, name]) => `<label class="swatch" title="${esc(tr(name))}"><input type="radio" name="note-color" value="${id}" aria-label="${esc(tr(name))}"><span class="swatch-paper" data-paper="${id}">${icon('check')}</span></label>`).join('')}</div>`
+    + `<span class="look-label" id="note-style-label">${esc(tr('Style'))}</span><div class="style-tiles" role="radiogroup" aria-labelledby="note-style-label">${NOTE_STYLES.map(([id, name]) => `<label class="style-tile"><input type="radio" name="note-style" value="${id}"><span class="style-sample paper" data-paper="cream" data-note-style="${id}" aria-hidden="true"><i></i><i></i><i></i></span>${esc(tr(name))}</label>`).join('')}</div></div>`
     + '<div class="note-preview paper" data-paper="cream" data-note-style="plain" aria-hidden="true" translate="no"><strong dir="auto"></strong><p dir="auto"></p></div>';
 }
 function setNoteLook(color, style) {
@@ -157,7 +157,7 @@ function skippedText(skipped = []) {
 }
 $('export-data').addEventListener('click', async () => {
   $('export-data').disabled = true;
-  try { const result = await api('export'); if (result) toast(result.skipped?.length ? `${tr("The backup folder was saved.")} ${skippedText(result.skipped)}` : tr("The backup folder was saved with all attachments.")); }
+  try { const result = await api('export'); if (result) toast(result.skipped?.length ? tr("The backup folder was saved.") + ' ' + skippedText(result.skipped) : tr("The backup folder was saved with all attachments.")); }
   catch (err) { toast(err.message); } finally { $('export-data').disabled = false; }
 });
 $('restore-data').addEventListener('click', async () => {
