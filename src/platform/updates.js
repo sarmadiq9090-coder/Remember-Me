@@ -13,6 +13,24 @@ const FIRST_CHECK = 30 * 1000, CHECK_EVERY = 24 * 60 * 60 * 1000, TICK = 60 * 60
 // is kept up to date by whatever put it there, so it offers no updates of its own.
 const UNINSTALLER = 'Uninstall Remember Me.exe';
 function installedByInstaller(execPath, exists = fs.existsSync) { return exists(path.join(path.dirname(execPath), UNINSTALLER)); }
+// Where this copy's new versions come from:
+// - 'store': a Microsoft Store (MSIX) package (Electron sets process.windowsStore). The Store updates
+//   it, and Store policy forbids an app updating itself, so electron-updater is never loaded.
+// - 'github': installed by the NSIS installer, or a development build (where electron-updater does nothing).
+// - 'elsewhere': the portable build or one Scoop unpacked, kept up to date by whatever put it there.
+function updateSource({ windowsStore, packaged, execPath, exists = fs.existsSync }) {
+  if (windowsStore === true) return 'store';
+  return !packaged || installedByInstaller(execPath, exists) ? 'github' : 'elsewhere';
+}
+// Stands in for electron-updater where the app must not update itself: it never contacts GitHub.
+function offlineUpdater() {
+  return Object.assign(new (require('node:events'))(), { checkForUpdates: async () => null, quitAndInstall() {} });
+}
+// electron-updater's autoUpdater for 'github' copies only. `load` requires electron-updater, so a
+// Store package or a test run never even loads it.
+function createUpdater({ source, testMode = false, load = () => require('electron-updater').autoUpdater }) {
+  return testMode || source !== 'github' ? offlineUpdater() : configure(load());
+}
 
 // Applies the app's update policy to electron-updater's autoUpdater.
 function configure(updater) {
@@ -34,8 +52,11 @@ function configure(updater) {
 // user chooses Restart now, or on the next normal quit; the app never restarts on its own.
 class Updates {
   // available: false for a copy that gets its updates elsewhere; the window then doesn't ask for consent.
-  constructor({ updater, consent, version, backup, prepareQuit, quit, available = true, onChange = () => {}, clock = () => Date.now(), timers = globalThis }) {
-    Object.assign(this, { updater, consent, version, backup, prepareQuit, quit, available, onChange, clock, timers });
+  // source 'store': Microsoft Store updates this copy, so nothing is ever checked, downloaded or
+  // installed here, and the window says updates come from the Store.
+  constructor({ updater, consent, version, backup, prepareQuit, quit, available = true, source = 'github', onChange = () => {}, clock = () => Date.now(), timers = globalThis }) {
+    if (source === 'store') available = false;
+    Object.assign(this, { updater, consent, version, backup, prepareQuit, quit, available, source, onChange, clock, timers });
     this.state = 'idle';
     this.next = null; this.percent = 0; this.checkedAt = null; this.dismissed = false;
     this.running = null; this.timeout = null; this.interval = null;
@@ -54,10 +75,11 @@ class Updates {
   }
   set(fields) { Object.assign(this, fields); this.onChange(); }
   status() {
-    return { state: this.state, version: this.version, next: this.next, percent: this.percent, checkedAt: this.checkedAt, banner: this.state === 'ready' && !this.dismissed, available: this.available };
+    return { state: this.state, version: this.version, next: this.next, percent: this.percent, checkedAt: this.checkedAt, banner: this.state === 'ready' && !this.dismissed, available: this.available, source: this.source };
   }
   start() {
     this.stop();
+    if (this.source === 'store') return;
     this.timeout = this.timers.setTimeout(() => { this.interval = this.timers.setInterval(() => this.tick(), TICK); return this.tick(); }, FIRST_CHECK);
   }
   stop() { this.timers.clearTimeout(this.timeout); this.timers.clearInterval(this.interval); this.timeout = this.interval = null; }
@@ -70,6 +92,7 @@ class Updates {
   }
   // Offline and other failures only show as the 'error' state in Settings.
   check() {
+    if (this.source === 'store') return Promise.resolve(this.status());
     if (this.running) return this.running;
     if (['downloading', 'ready', 'installing'].includes(this.state)) return Promise.resolve(this.status());
     this.set({ state: 'checking' });
@@ -98,7 +121,7 @@ class Updates {
   }
   // "Restart now": the only way the app restarts for an update, even while a reminder is showing.
   async restart() {
-    if (this.state !== 'ready') return false;
+    if (this.state !== 'ready' || this.source === 'store') return false;
     this.set({ state: 'installing' });
     try { await this.safetyBackup(); }
     catch (error) { this.set({ state: 'ready' }); throw error; }
@@ -114,7 +137,7 @@ class Updates {
   // From app 'before-quit'. With an update ready, the quit waits for a safety backup, then installs
   // without starting the app again. If the backup fails the app just quits and offers it next time.
   beforeQuit(event) {
-    if (this.state !== 'ready') return false;
+    if (this.state !== 'ready' || this.source === 'store') return false;
     event.preventDefault();
     this.set({ state: 'installing' });
     this.safetyBackup().then(() => this.install(false), error => {
@@ -126,4 +149,4 @@ class Updates {
     return true;
   }
 }
-module.exports = { FEED, UPDATER_CACHE, FIRST_CHECK, CHECK_EVERY, UNINSTALLER, installedByInstaller, configure, Updates };
+module.exports = { FEED, UPDATER_CACHE, FIRST_CHECK, CHECK_EVERY, UNINSTALLER, installedByInstaller, updateSource, createUpdater, configure, Updates };

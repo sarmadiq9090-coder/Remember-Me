@@ -89,7 +89,8 @@ test('the preview images are 1200×630 PNGs and every screenshot has a WebP copy
     assert.equal(png.toString('latin1', 1, 4), 'PNG', name);
     assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [1200, 630], name);
   }
-  for (const shot of fs.readdirSync(path.join(__dirname, '..', 'docs', 'screenshots'))) {
+  // docs/screenshots/store holds the Microsoft Store listing set, which the website doesn't use.
+  for (const shot of fs.readdirSync(path.join(__dirname, '..', 'docs', 'screenshots')).filter(name => name.endsWith('.png'))) {
     const webp = fs.readFileSync(path.join(site, 'images', shot.replace(/\.png$/, '.webp')));
     assert.equal(webp.toString('latin1', 8, 12), 'WEBP', shot);
   }

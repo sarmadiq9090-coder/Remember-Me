@@ -1,6 +1,8 @@
 // Regenerates docs/screenshots with made-up sample data, so no personal data ever reaches the
 // repository. It runs the app from the sources in test mode with a temporary data folder:
 //   pnpm run screenshots
+//   pnpm run screenshots -- --store   Microsoft Store listing images: 1366x768 main window shots, and
+//                                     the alert over the main window, in docs/screenshots/store
 // Needs Playwright (a devDependency). Set WAQT_PLAYWRIGHT to use another copy, and
 // ELECTRON_OVERRIDE_DIST_PATH to use an Electron outside node_modules.
 const fs = require('node:fs');
@@ -8,7 +10,9 @@ const os = require('node:os');
 const path = require('node:path');
 const { _electron: electron } = require(process.env.WAQT_PLAYWRIGHT || 'playwright');
 const root = path.resolve(__dirname, '..');
-const out = path.join(root, 'docs', 'screenshots');
+// Partner Center takes desktop screenshots of 1366x768 or larger.
+const STORE_SIZE = process.argv.includes('--store') ? [1366, 768] : null;
+const out = path.join(root, 'docs', 'screenshots', ...(STORE_SIZE ? ['store'] : []));
 
 const SAMPLES = {
   en: {
@@ -80,7 +84,7 @@ const settle = page => page.evaluate(() => new Promise(resolve => setTimeout(() 
 async function shot(page, name) {
   await settle(page);
   await page.screenshot({ path: path.join(out, name) });
-  console.log('Wrote docs/screenshots/' + name);
+  console.log('Wrote ' + path.relative(root, path.join(out, name)));
 }
 
 // When this script itself runs under Electron's Node, the app must not inherit that switch.
@@ -94,8 +98,14 @@ async function run(language) {
   try {
     const main = await waitFor(app, 'index.html');
     await main.waitForFunction(() => document.getElementById('date-label')?.textContent);
+    if (STORE_SIZE) await app.evaluate(({ BrowserWindow }, [width, height]) => {
+      for (const win of BrowserWindow.getAllWindows()) if (win.webContents.getURL().endsWith('index.html')) win.setContentSize(width, height);
+    }, STORE_SIZE);
     await shot(main, `main-${language}.png`);
     await shot(await waitFor(app, 'alert.html'), `alert-${language}.png`);
+    // The Store wants every image at 1366x768 or larger: the alert goes over the main window, at the
+    // bottom right (the sample data's alertSide), as on screen.
+    if (STORE_SIZE) overlay(`main-${language}.png`, `alert-${language}.png`, `alert-${language}.png`);
     if (language === 'en') {
       await main.evaluate(() => globalThis.setView('notes'));
       await shot(main, 'notes-en.png');
@@ -110,6 +120,14 @@ async function run(language) {
     await app.close();
     fs.rmSync(data, { recursive: true, force: true });
   }
+}
+
+function overlay(backgroundName, foregroundName, name) {
+  const { decodePng, encodePng } = require('./store-logos.cjs');
+  const back = decodePng(fs.readFileSync(path.join(out, backgroundName))), front = decodePng(fs.readFileSync(path.join(out, foregroundName)));
+  const margin = 24, left = back.width - front.width - margin, top = back.height - front.height - margin;
+  for (let y = 0; y < front.height; y++) front.data.copy(back.data, ((top + y) * back.width + left) * 4, y * front.width * 4, (y + 1) * front.width * 4);
+  fs.writeFileSync(path.join(out, name), encodePng(back));
 }
 
 (async () => {

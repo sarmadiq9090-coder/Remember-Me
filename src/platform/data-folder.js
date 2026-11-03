@@ -18,17 +18,18 @@ function renameWithRetry(rename, from, to, attempts = 5) {
     }
   }
 }
-// Every file below folder with its size, keyed by its relative path.
-function inventory(folder, prefix = '', files = new Map()) {
+// Every file below folder with its size, keyed by its relative path. `only` limits the top level to those names.
+function inventory(folder, prefix = '', files = new Map(), only = null) {
   for (const entry of fs.readdirSync(path.join(folder, prefix), { withFileTypes: true })) {
+    if (only && !prefix && !only.includes(entry.name)) continue;
     const name = path.join(prefix, entry.name);
     if (entry.isDirectory()) inventory(folder, name, files);
     else if (entry.isFile()) files.set(name, fs.statSync(path.join(folder, name)).size);
   }
   return files;
 }
-function verifyCopy(source, copy) {
-  const expected = inventory(source), actual = inventory(copy);
+function verifyCopy(source, copy, only = null) {
+  const expected = inventory(source, '', new Map(), only), actual = inventory(copy);
   if (expected.size !== actual.size) throw new Error('The copied data folder is missing files.');
   for (const [name, size] of expected) if (actual.get(name) !== size) throw new Error(`The copy of "${name}" is incomplete.`);
   const data = path.join(copy, 'data.json');
@@ -84,4 +85,49 @@ function migrateDataFolder(appData, { rename = fs.renameSync, copy = (from, to) 
     return { folder: legacy, migrated: 'failed', error };
   }
 }
-module.exports = { FOLDER, LEGACY, migrateDataFolder };
+
+// The Microsoft Store (MSIX) version keeps its data in its package's own folder,
+// %LOCALAPPDATA%\Packages\<package family name>\LocalState\Remember Me. Inside a package, Windows
+// virtualizes %APPDATA%: new files land in a hidden per-package copy that File Explorer, other
+// programs and the installer version can't see. The package folder is real, so Settings shows
+// a path that File Explorer opens. Windows removes it when the Store app is uninstalled or reset.
+const STORE_ITEMS = ['data.json', 'data.json.bak', 'attachments', 'backups', 'drive-backup.json', 'logs'];
+// A Store package is installed in ...\WindowsApps\<Name>_<Version>_<Arch>_<ResourceId>_<PublisherId>\app\,
+// and its family name is <Name>_<PublisherId>. Returns null for any other layout.
+function packageFamilyName(execPath) {
+  const parts = String(execPath).split(/[\\/]/);
+  if (parts.length < 3 || parts[parts.length - 2].toLowerCase() !== 'app') return null;
+  const match = /^([A-Za-z0-9.-]{3,50})_\d+(?:\.\d+){3}_[A-Za-z0-9]+_[^_]*_([a-z0-9]{13})$/.exec(parts[parts.length - 3]);
+  return match ? `${match[1]}_${match[2]}` : null;
+}
+// Returns the data folder for the Store version. The first time, the data of an installer version on
+// this PC (%APPDATA%\Remember Me, or %APPDATA%\Waqt from v1.4) is copied in and checked: only the app's
+// own files (STORE_ITEMS), never Chromium's caches. The original is never changed or deleted, so the
+// installer version keeps working with it. If the copy fails, the Store version uses %APPDATA% as it is
+// (virtualized, but it still sees the installer version's files) and tries again on the next start.
+function storeDataFolder(appData, { localAppData = path.join(appData, '..', 'Local'), execPath, copy = (from, to) => fs.cpSync(from, to, { recursive: true, errorOnExist: true, force: false }), rename = fs.renameSync, now = () => new Date() } = {}) {
+  const family = packageFamilyName(execPath);
+  const packageFolder = family && localAppData ? path.join(localAppData, 'Packages', family) : null;
+  // Not a Store layout we know (a package registered from a folder, say): behave like the installer version.
+  if (!packageFolder || !fs.existsSync(packageFolder)) return { ...migrateDataFolder(appData, { rename, now }), store: 'appdata' };
+  const folder = path.join(packageFolder, 'LocalState', FOLDER);
+  if (hasData(folder)) return { folder, migrated: 'none', store: 'package' };
+  const source = [path.join(appData, FOLDER), path.join(appData, LEGACY)].find(hasData);
+  if (!source) return { folder, migrated: 'none', store: 'package' };
+  const staging = folder + '.importing';
+  try {
+    fs.rmSync(staging, { recursive: true, force: true });
+    fs.mkdirSync(staging, { recursive: true });
+    const items = STORE_ITEMS.filter(name => fs.existsSync(path.join(source, name)));
+    for (const name of items) copy(path.join(source, name), path.join(staging, name));
+    verifyCopy(source, staging, items);
+    moveDrivePaths(staging, folder, source);
+    if (fs.existsSync(folder)) renameWithRetry(rename, folder, `${folder}.unused-${stamp(now())}`);
+    renameWithRetry(rename, staging, folder);
+    return { folder, migrated: 'imported', store: 'package' };
+  } catch (error) {
+    fs.rmSync(staging, { recursive: true, force: true });
+    return { folder: source, migrated: 'failed', error, store: 'appdata' };
+  }
+}
+module.exports = { FOLDER, LEGACY, STORE_ITEMS, migrateDataFolder, packageFamilyName, storeDataFolder };

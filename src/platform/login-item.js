@@ -4,8 +4,27 @@ const ARGS = ['--background'];
 // Executables older versions registered, next to the current one in the install folder.
 const LEGACY_EXECUTABLES = ['Waqt.exe'];
 
-function setLoginItem(app, enabled, execPath) {
+// The Microsoft Store (MSIX) version can't use the HKCU Run key that app.setLoginItemSettings
+// writes: a packaged app's registry writes go to its private copy of the registry, which Windows
+// never reads at sign-in. Its package declares a startup task instead (tools/store.cjs), disabled
+// until the user turns it on in Settings > Apps > Startup or Task Manager. Electron has no API to
+// turn a startup task on, so the app opens that page for the user.
+const STARTUP_TASK_ID = 'RememberMeStartup';
+const STARTUP_SETTINGS = 'ms-settings:startupapps';
+// The <desktop:Extension> the package manifest gets. Enabled="false": Remember Me starts with
+// Windows only after the user turns it on, as the installer version does.
+function startupTaskExtension(executable, displayName) {
+  const xml = text => String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `
+        <desktop:Extension Category="windows.startupTask" Executable="${xml(executable)}" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="${STARTUP_TASK_ID}" Enabled="false" DisplayName="${xml(displayName)}" />
+        </desktop:Extension>`;
+}
+// Returns false when nothing was registered (the Store version, whose startup task Windows manages).
+function setLoginItem(app, enabled, execPath, { windowsStore = false } = {}) {
+  if (windowsStore) return false;
   app.setLoginItemSettings({ openAtLogin: enabled, path: execPath, args: ARGS });
+  return true;
 }
 // Points start with Windows at this executable again. Entries for the exe of an older version
 // (Waqt.exe until v1.4) are removed first; if the user disabled the entry in Task Manager it
@@ -19,4 +38,4 @@ function refreshLoginItem(app, execPath) {
   for (const item of items) app.setLoginItemSettings({ openAtLogin: false, name: item.name, path: item.path, args: item.args });
   app.setLoginItemSettings({ openAtLogin: true, path: execPath, args: ARGS, enabled });
 }
-module.exports = { setLoginItem, refreshLoginItem };
+module.exports = { STARTUP_TASK_ID, STARTUP_SETTINGS, startupTaskExtension, setLoginItem, refreshLoginItem };

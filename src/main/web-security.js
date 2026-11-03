@@ -9,6 +9,10 @@ function secureContents(contents) {
   for (const event of ['will-navigate', 'will-frame-navigate', 'will-redirect', 'will-attach-webview']) contents.on(event, e => e.preventDefault());
 }
 
+// webPreferences shared by every window. Spellcheck is off: Chromium's spellchecker can download
+// Hunspell dictionaries from Google's servers, and the app makes no network requests the user didn't ask for.
+const PAGE_PREFERENCES = Object.freeze({ contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false });
+
 // Web pages open in the default browser only as https:// addresses; anything else (file:, a custom
 // protocol, a mistyped address) is refused before Windows sees it.
 function isHttpsUrl(url) {
@@ -23,4 +27,4 @@ function httpsShell(shell) {
     showItemInFolder: target => shell.showItemInFolder(target),
   };
 }
-module.exports = { secureContents, isHttpsUrl, httpsShell };
+module.exports = { PAGE_PREFERENCES, secureContents, isHttpsUrl, httpsShell };

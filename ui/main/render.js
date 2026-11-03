@@ -37,6 +37,9 @@ function render() {
   else if (view === 'settings') {
     $('setting-sound').checked = state.settings.sound;
     $('setting-startup').checked = state.settings.startAtLogin;
+    // The Microsoft Store version's startup task is switched on in Windows' own settings.
+    $('startup-row').hidden = !!state.windowsStore;
+    $('startup-store-row').hidden = !state.windowsStore;
     $('setting-side').value = state.settings.alertSide;
     // Each language is listed in its own script, whatever the interface language.
     if (!$('setting-language').options.length) $('setting-language').innerHTML = LOCALES.map(l => `<option value="${l.code}" lang="${l.code}" dir="${l.dir}">${esc(l.name)}</option>`).join('');
