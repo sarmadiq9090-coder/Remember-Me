@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## v1.6.2 (2026-11-03)
+
+A security update: translated text can no longer add markup to the app, and windows cannot open other pages. Your tasks, notes, attachments and settings load unchanged.
 
 ### Fixed
 
