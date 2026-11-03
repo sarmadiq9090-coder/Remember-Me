@@ -68,13 +68,13 @@ The installer is built by GitHub Actions from the published source. It is not co
 Compare the file's fingerprint with `SHA256SUMS.txt` from the same release:
 
 ```powershell
-Get-FileHash .\Remember-Me-Setup-1.6.1-x64.exe -Algorithm SHA256
+Get-FileHash .\Remember-Me-Setup-1.6.2-x64.exe -Algorithm SHA256
 ```
 
 With the GitHub CLI you can also confirm the file was built by this repository's release workflow from the release tag:
 
 ```powershell
-gh attestation verify .\Remember-Me-Setup-1.6.1-x64.exe --repo sarmadiq9090-coder/Remember-Me --source-ref refs/tags/v1.6.1 --signer-workflow sarmadiq9090-coder/Remember-Me/.github/workflows/release.yml
+gh attestation verify .\Remember-Me-Setup-1.6.2-x64.exe --repo sarmadiq9090-coder/Remember-Me --source-ref refs/tags/v1.6.2 --signer-workflow sarmadiq9090-coder/Remember-Me/.github/workflows/release.yml
 ```
 
 ### Upgrading from v1.4.0 or earlier
@@ -191,7 +191,7 @@ The website at <https://sarmadiq9090-coder.github.io/Remember-Me/> is plain HTML
 - `tests/about.test.js`: the About links are exact GitHub addresses, and diagnostic info holds only versions, language and theme.
 - `tests/icons.test.js`: every size in `icon.ico` and the tray images' dimensions.
 - `tests/search.test.js`: Arabic-aware search matching.
-- `tests/i18n.test.js`: every message has English text, every locale is complete, translations keep placeholders and plural forms, fallbacks to English, and saved languages are kept.
+- `tests/i18n.test.js`: every message has English text, every locale is complete, translations keep placeholders and plural forms and contain no `<` or `>` (no markup), fallbacks to English, and saved languages are kept.
 - `tests/placement.test.js`: placing the alert next to a taskbar on any edge, on scaled and secondary displays.
 - `tests/interchange.test.js`: CSV and iCalendar import and export.
 - `tests/alert-format.test.js`: the alert's snooze presets, overdue age and due day, across daylight-saving changes.
@@ -201,6 +201,7 @@ The website at <https://sarmadiq9090-coder.github.io/Remember-Me/> is plain HTML
 - `tests/focus.test.js`: a rebuilt list gives focus back to the same control of the same item, or to the next item when it is gone.
 - `tests/structure.test.js`: every `require` and import, every script and stylesheet the pages load, and every fixed path the main process builds exists.
 - `tests/quick-add.test.js`: the quick-add shortcut rules and recorder, the due time, registering and releasing the global shortcut and reporting a conflict, the window's placement and limited IPC actions, and the setting's defaults.
+- `tests/web-security.test.js`: every page denies new windows, navigation and webviews, windows stay sandboxed with the strict CSP, and only `https://` links open in the browser.
 - `tests/handlers.test.js`: every allowed IPC action has exactly one handler, and only actions that change nothing skip the rescan.
 - `tests/site.test.js`: the website shows the current version, its local links work, it loads nothing from other hosts, its language alternates and structured data are right, and it stays under 200 KB without screenshots.
 - `tests/winget-manifest.test.js`: the winget manifests written from a release's `SHA256SUMS.txt`.

@@ -22,6 +22,7 @@ true (see "Keeping this document current").
 | IPC handlers, one file per area | `src/main/handlers/*.js` |
 | IPC allowlists and payload checks | `src/main/ipc.js` |
 | Bridge into the pages (`window.waqt`) | `src/main/preload.js` |
+| Guards for every page (no new windows, navigation or webviews) and https-only external links | `src/main/web-security.js` |
 | Task logic and data validation (`saveTask`, `completeTask`, `validateState`, …) | `src/core/tasks.js` |
 | The data.json file layer (`Store`, `writeDurable`) | `src/core/store.js` |
 | When a repeating task comes back (`nextOccurrence`) | `src/core/repeat.js` |
@@ -65,7 +66,14 @@ a title and an optional time, Enter saves, Escape closes (as does losing focus w
 Windows refuses the shortcut because another app holds it, Settings says so and the log records
 `quick-add-shortcut-unavailable`; the shortcut is let go when the app quits. All windows use
 `contextIsolation`, `sandbox`, `nodeIntegration: false`, a strict CSP in their HTML, and deny new
-windows, navigation, webviews and every browser permission request.
+windows, navigation, webviews and every browser permission request. The navigation guards are set on
+every webContents as it is created (`web-contents-created`), so a new window is covered without any
+extra code, and `shell.openExternal` only ever receives `https://` addresses.
+
+Translations are text, never markup: the pages escape `tr()` output placed in markup (`esc(tr(…))`,
+which ESLint enforces) or set it with `textContent`, and `tests/i18n.test.js` fails if any locale
+value contains `<` or `>`, unless its key is listed in `MARKUP_KEYS` (none today). Emphasis inside a
+translated sentence is built from DOM nodes, as the alert does for "Due {when}".
 
 The preload script exposes these functions to the pages:
 

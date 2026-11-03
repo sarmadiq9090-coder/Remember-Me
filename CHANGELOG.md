@@ -6,9 +6,18 @@
 
 - Quick add from anywhere: turn it on in Settings, then press Ctrl+Alt+R in any app to add a task with an optional time from a small window above the taskbar. Enter saves, Esc closes. The shortcut can be changed in Settings, which also says when another app already uses it. It is off until you turn it on. [#82]
 
+## v1.6.2 (2026-11-03)
+
+A security update: translated text can no longer add markup to the app, and windows cannot open other pages. Your tasks, notes, attachments and settings load unchanged.
+
 ### Fixed
 
 - A snooze time out of range in Settings now says "Choose a time from 01:00 to 23:59." instead of asking for a number.
+
+### Security
+
+- Translated text is always shown as text: it is escaped wherever the pages build markup, a test fails if a translation contains `<` or `>`, and ESLint rejects unescaped translations in markup. A bad translation can no longer add markup or scripts to the app.
+- Every window, including any added later, blocks new windows, navigation and webviews, and links open in the browser only when they are `https://` addresses.
 
 ## v1.6.1 (2026-11-01)
 

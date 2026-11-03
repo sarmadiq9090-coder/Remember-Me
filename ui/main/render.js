@@ -12,7 +12,8 @@ function render() {
   document.querySelectorAll('[data-filter]').forEach(b => { b.classList.toggle('active', b.dataset.filter === filter); b.setAttribute('aria-pressed', b.dataset.filter === filter); });
   const names = views[view].map(key => (key ? tr(key) : ''));
   $('breadcrumb').textContent = names[0];
-  $('page-title').innerHTML = `${names[1]}<span class="title-dot">.</span>`;
+  // Translations are text, never markup: headings are built from nodes (tests/i18n.test.js keeps < and > out of the locales).
+  $('page-title').replaceChildren(names[1], textElement('span', '.', { className: 'title-dot' }));
   $('page-description').textContent = names[2];
   $('date-label').textContent = new Date().toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   $('dashboard').hidden = view !== 'today';
@@ -57,7 +58,7 @@ function render() {
     if (query) tasks = tasks.filter(t => matchesSearch(t, query));
     const rank = { high: 0, medium: 1, normal: 2 };
     tasks = [...tasks].sort((a, b) => $('sort').value === 'priority' ? rank[a.priority] - rank[b.priority] : $('sort').value === 'newest' ? Date.parse(b.createdAt) - Date.parse(a.createdAt) : $('sort').value === 'title' ? a.title.localeCompare(b.title, locale()) : (Date.parse(a.dueAt) || Infinity) - (Date.parse(b.dueAt) || Infinity));
-    $('list-title').innerHTML = `${names[3]} <span id="list-count">${num(tasks.length)}</span>`;
+    $('list-title').replaceChildren(names[3] + ' ', textElement('span', num(tasks.length), { id: 'list-count' }));
     $('quick-form').hidden = view === 'completed';
     setMarkup($('task-list'), tasks.map(task => taskCard(task)).join(''), $('page-title'));
     $('task-empty').hidden = !!tasks.length;

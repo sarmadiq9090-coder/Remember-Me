@@ -15,7 +15,7 @@ document.addEventListener('change', async e => {
   try { await api('updateConsent', { enabled: e.target.checked }); toast(tr("Settings saved.")); } catch (error) { toast(error.message); }
   await refresh();
 });
-$('drive-now').addEventListener('click', async () => { $('drive-now').disabled = true; const status = await driveAction('driveBackupNow'); if (status) toast(`${tr("Saved locally and to the Drive folder. Google Drive finishes the upload.")} ${skippedText(status.skipped)}`.trim()); });
+$('drive-now').addEventListener('click', async () => { $('drive-now').disabled = true; const status = await driveAction('driveBackupNow'); if (status) toast((tr("Saved locally and to the Drive folder. Google Drive finishes the upload.") + ' ' + skippedText(status.skipped)).trim()); });
 $('drive-automatic').addEventListener('change', () => driveAction('driveAutomatic', { enabled: $('drive-automatic').checked }));
 $('drive-keep').addEventListener('change', () => driveAction('driveKeep', { keep: Number($('drive-keep').value) }));
 $('drive-install').addEventListener('click', () => driveAction('driveHelp'));
