@@ -92,6 +92,8 @@ async function start() {
   // The UI needs no camera, microphone, notifications, location or other browser permissions.
   session.defaultSession.setPermissionRequestHandler((contents, permission, callback) => callback(false));
   session.defaultSession.setPermissionCheckHandler(() => false);
+  // No spellchecker, so Chromium never downloads dictionaries (the windows also set spellcheck: false).
+  session.defaultSession.setSpellCheckerEnabled(false);
   const store = ctx.store = new Store(app.getPath('userData'));
   log.info('start', { version: app.getVersion(), packaged: app.isPackaged, tasks: store.state.tasks.length, notes: store.state.notes.length, attachments: store.state.attachments.length });
   if (store.recovered) log.warn('data-recovered-from-bak');

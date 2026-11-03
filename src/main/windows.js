@@ -4,6 +4,7 @@ const path = require('node:path');
 const { alertBounds } = require('../core/placement');
 const { windowColors } = require('../platform/themes');
 const { findLocale } = require('../../ui/lib/translate');
+const { PAGE_PREFERENCES } = require('./web-security');
 // Windows picks the matching size from the ICO for the title bar, taskbar and Alt+Tab.
 const windowIcon = path.join(__dirname, '../../assets/icon.ico');
 
@@ -21,7 +22,7 @@ function createWindows(ctx) {
   // them; later changes arrive with waqt:update. Page URLs stay plain file paths: the desktop tests and fromPage() match on them.
   function options() {
     const { store } = ctx, locale = findLocale(store.state.settings.language);
-    return { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true,
+    return { preload: path.join(__dirname, 'preload.js'), ...PAGE_PREFERENCES,
       additionalArguments: [`--waqt-palette=${store.state.settings.palette}`, `--waqt-language=${locale.code}`, `--waqt-dir=${locale.dir}`] };
   }
   // New windows, navigation and webviews are denied for every page in index.js (src/main/web-security.js).

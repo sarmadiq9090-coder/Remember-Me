@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { EventEmitter } = require('node:events');
-const { secureContents, isHttpsUrl, httpsShell } = require('../src/main/web-security');
+const { PAGE_PREFERENCES, secureContents, isHttpsUrl, httpsShell } = require('../src/main/web-security');
 const root = path.join(__dirname, '..');
 
 test('every page denies new windows, navigation in any frame, redirects and webviews', () => {
@@ -23,7 +23,10 @@ test('every page denies new windows, navigation in any frame, redirects and webv
 
 test('every window stays sandboxed and context-isolated, with the strict CSP in its page', () => {
   const windows = fs.readFileSync(path.join(root, 'src/main/windows.js'), 'utf8');
-  assert.match(windows, /contextIsolation: true, nodeIntegration: false, sandbox: true/);
+  assert.deepEqual({ ...PAGE_PREFERENCES }, { contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false });
+  assert.ok(Object.isFrozen(PAGE_PREFERENCES));
+  assert.match(windows, /preload: path\.join\(__dirname, 'preload\.js'\), \.\.\.PAGE_PREFERENCES,/);
+  assert.doesNotMatch(windows, /spellcheck: true|contextIsolation: false|sandbox: false|nodeIntegration: true/);
   const created = [...windows.matchAll(/new BrowserWindow\(\{[\s\S]*?\}\);/g)].map(m => m[0]);
   assert.ok(created.length >= 2);
   for (const call of created) assert.match(call, /webPreferences: options\(\)/);
@@ -31,6 +34,12 @@ test('every window stays sandboxed and context-isolated, with the strict CSP in 
     const html = fs.readFileSync(path.join(root, 'ui', page), 'utf8');
     assert.match(html, /http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self';[^"]*object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"/, page);
   }
+});
+
+test('spellcheck is off, so Chromium never downloads Hunspell dictionaries from Google', () => {
+  assert.equal(PAGE_PREFERENCES.spellcheck, false);
+  const index = fs.readFileSync(path.join(root, 'src/main/index.js'), 'utf8');
+  assert.match(index, /session\.defaultSession\.setSpellCheckerEnabled\(false\)/);
 });
 
 test('only https:// addresses open in the browser', async () => {
