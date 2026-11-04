@@ -355,7 +355,6 @@
   "Room for new plans": "مساحة لخطط جديدة",
   "Same as Windows": "حسب ويندوز",
   "Same time next week": "الوقت نفسه الأسبوع القادم",
-  "Sarmad": "سرمد",
   "Saturday": "السبت",
   "Save note": "حفظ الملاحظة",
   "Save task": "حفظ المهمة",
@@ -580,11 +579,7 @@
   "→ {day} {time}": "← {day} {time}",
   "Month names": "أسماء الأشهر",
   "In dates. Iraq and the Levant name the months differently from Egypt and the Gulf.": "في التواريخ. للأشهر في العراق والشام أسماء تختلف عنها في مصر والخليج.",
-  "Digits": "شكل الأرقام",
-  "In dates, times and counts. Date and time fields always show 0-9.": "في التواريخ والأوقات والعدّادات. حقول اختيار التاريخ والوقت تبقى بالأرقام 0-9.",
   "Same as the Windows region": "حسب منطقة ويندوز",
-  "Western {sample}": "غربية {sample}",
-  "Arabic-Indic {sample}": "عربية {sample}",
   "Uninstall the old Remember Me": "أزل نسخة ذكرني القديمة",
   "Your tasks and notes were copied from the Remember Me installed from the website, and they are safe here. If both copies run, every reminder shows twice. Uninstall the old one in Windows Settings → Apps → Installed apps, where it is listed as Remember Me, not Remember Me Reminders.": "نُسخت مهامك وملاحظاتك من نسخة ذكرني المثبّتة من الموقع، وهي محفوظة هنا. إذا عملت النسختان معًا فسيظهر كل تذكير مرتين. أزل النسخة القديمة من إعدادات ويندوز ← التطبيقات ← التطبيقات المثبّتة، واسمها هناك «Remember Me» وليس «Remember Me Reminders»."
 }

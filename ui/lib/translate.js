@@ -58,20 +58,20 @@
     return format(entry, shown);
   }
   // Arabic month names differ by country: Iraq and the Levant say «تشرين الثاني», Egypt and the Gulf «نوفمبر».
-  // months is 'levant', 'standard' or 'auto' (from the Windows region); digits is 'latn' (0-9, the default) or
-  // 'arab' (Arabic-Indic, the Arabic interface only). Returns the locale every date, time and count uses.
+  // months is 'levant', 'standard' or 'auto' (from the Windows region). Returns the locale every date, time and
+  // count uses, always with Western digits (0-9), in Arabic too, so the layout never shifts.
   const LEVANT_REGIONS = ['IQ', 'SY', 'LB', 'JO', 'PS'];
-  const ARABIC_MONTHS = ['auto', 'levant', 'standard'], DIGITS = ['latn', 'arab'];
+  const ARABIC_MONTHS = ['auto', 'levant', 'standard'];
   // The region of a BCP 47 tag ('en-IQ', 'ar-Arab-IQ', 'ar_SY'), or '' when it has none.
   function regionOf(tag) {
     const part = String(tag ?? '').split(/[-_]/).slice(1).find(p => /^[A-Za-z]{2}$/.test(p));
     return part ? part.toUpperCase() : '';
   }
   function levantMonths(months, region) { return months === 'levant' || (months !== 'standard' && LEVANT_REGIONS.includes(String(region || '').toUpperCase())); }
-  function dateLocale(code, { months = 'auto', digits = 'latn', region = '' } = {}) {
+  function dateLocale(code, { months = 'auto', region = '' } = {}) {
     const locale = findLocale(code);
     if (locale.code !== 'ar') return locale.intl + '-u-nu-latn';
-    return (levantMonths(months, region) ? 'ar-IQ' : 'ar-EG') + '-u-nu-' + (digits === 'arab' ? 'arab' : 'latn');
+    return (levantMonths(months, region) ? 'ar-IQ' : 'ar-EG') + '-u-nu-latn';
   }
   // Wraps user text (a title, a file name) placed in a sentence in first-strong isolate marks, so its
   // own direction never reorders the punctuation around it, e.g. "Call Bob!" in an Arabic sentence.
@@ -82,7 +82,7 @@
     const [value, unit] = bytes < 1024 ? [bytes, 'byte'] : bytes < 1048576 ? [bytes / 1024, 'kilobyte'] : [bytes / 1048576, 'megabyte'];
     return new Intl.NumberFormat(intl, { style: 'unit', unit, unitDisplay: 'short', maximumFractionDigits: 1 }).format(value);
   }
-  const api = { LOCALES, DEFAULT, ARABIC_MONTHS, DIGITS, LEVANT_REGIONS, findLocale, matchLocale, regionOf, dateLocale, format, translate, isolate, formatSize };
+  const api = { LOCALES, DEFAULT, ARABIC_MONTHS, LEVANT_REGIONS, findLocale, matchLocale, regionOf, dateLocale, format, translate, isolate, formatSize };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else Object.assign(root, { LOCALES, findLocale, translate, isolate, formatSize });
 })(this);

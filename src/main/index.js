@@ -59,7 +59,7 @@ const ctx = { app, log, testMode, electron: { dialog, shell: httpsShell(shell), 
   openStartupSettings: () => shell.openExternal(STARTUP_SETTINGS) };
 // Before the data is read (a start error), the fresh-install language is the best guess.
 Object.assign(ctx, createI18n(() => ctx.store?.state?.settings?.language || firstRunLanguage,
-  () => ({ months: ctx.store?.state?.settings?.arabicMonths, digits: ctx.store?.state?.settings?.digits, region: ctx.region })));
+  () => ({ months: ctx.store?.state?.settings?.arabicMonths, region: ctx.region })));
 // Crashes and uncaught errors go to the log; after one, or after repeated errors, the user is offered a pre-filled GitHub issue.
 ctx.problems = createProblems(ctx);
 ctx.problems.install();

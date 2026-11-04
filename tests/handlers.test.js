@@ -70,24 +70,25 @@ test('changing the language asks for a restart only when the native fields would
   assert.deepEqual(save('ar'), { restart: false }, 'Arabic uses en-GB, already running');
 });
 
-test('Arabic month names and digits are saved when sent, kept when left out, and reset when invalid', () => {
+test('Arabic month names are saved when sent, kept when left out, and reset when invalid; no digit style is stored', () => {
   const ctx = liveContext();
   Object.assign(ctx, { controlsLocale: 'en-GB', setLogin() {}, rebuildTrayMenu() {}, placeAlert() {}, applyTheme() {}, quickAdd: { apply() {} } });
   const { settings } = createHandlers(ctx);
-  const saved = () => [ctx.store.state.settings.arabicMonths, ctx.store.state.settings.digits];
-  assert.deepEqual(saved(), ['auto', 'latn']);
+  const saved = () => ctx.store.state.settings.arabicMonths;
+  assert.equal(saved(), 'auto');
   settings.run({ ...ctx.store.state.settings, language: 'ar', arabicMonths: 'standard', digits: 'arab' });
-  assert.deepEqual(saved(), ['standard', 'arab']);
-  const { arabicMonths, digits, ...others } = ctx.store.state.settings; // eslint-disable-line no-unused-vars
+  assert.equal(saved(), 'standard');
+  assert.ok(!('digits' in ctx.store.state.settings), 'Western digits only: a digit style is never saved');
+  const { arabicMonths, ...others } = ctx.store.state.settings; // eslint-disable-line no-unused-vars
   settings.run({ ...others, sound: false });
-  assert.deepEqual(saved(), ['standard', 'arab'], 'Another interface sends neither and keeps them');
-  settings.run({ ...others, arabicMonths: 'syriac', digits: 'roman' });
-  assert.deepEqual(saved(), ['auto', 'latn']);
+  assert.equal(saved(), 'standard', 'Another interface does not send it and keeps it');
+  settings.run({ ...others, arabicMonths: 'syriac' });
+  assert.equal(saved(), 'auto');
 });
 
 test('the alert learns the first day of the week, so its repeat labels match the main window', () => {
   const ctx = { ...stub, language: () => 'en', store: { state: { settings: { palette: 'ocean', weekStart: 1 } } } };
   assert.deepEqual(createHandlers(ctx).language.run({}), { language: 'en', dates: null, palette: 'ocean', weekStart: 1, snoozePresets: DEFAULT_SNOOZE_PRESETS });
-  ctx.dateLocale = () => 'ar-EG-u-nu-arab';
-  assert.equal(createHandlers(ctx).language.run({}).dates, 'ar-EG-u-nu-arab', 'and the locale for its dates and counts');
+  ctx.dateLocale = () => 'ar-EG-u-nu-latn';
+  assert.equal(createHandlers(ctx).language.run({}).dates, 'ar-EG-u-nu-latn', 'and the locale for its dates and counts');
 });

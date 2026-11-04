@@ -1,6 +1,6 @@
 'use strict';
 const { REMIND_AGAIN, PALETTES } = require('../../core/tasks');
-const { LOCALES, DEFAULT: DEFAULT_LOCALE, ARABIC_MONTHS, DIGITS, findLocale } = require('../../../ui/lib/translate');
+const { LOCALES, DEFAULT: DEFAULT_LOCALE, ARABIC_MONTHS, findLocale } = require('../../../ui/lib/translate');
 const { normalizeSnoozePresets, checkSnoozePreset, DEFAULT_SNOOZE_PRESETS } = require('../../../ui/lib/alert-format');
 const { normalizeAccelerator } = require('../../../ui/lib/quickadd');
 
@@ -13,9 +13,8 @@ module.exports = ctx => ({
     const settings = { sound: !!payload.sound, startAtLogin: !!payload.startAtLogin, alertSide: payload.alertSide === 'left' ? 'left' : 'right', language: LOCALES.some(l => l.code === payload.language) ? payload.language : DEFAULT_LOCALE,
       weekStart: [0, 1, 6].includes(payload.weekStart) ? payload.weekStart : 6, theme: ['light', 'dark'].includes(payload.theme) ? payload.theme : 'system', palette: PALETTES.includes(payload.palette) ? payload.palette : 'lavender',
       remindAgain: REMIND_AGAIN.includes(payload.remindAgain) ? payload.remindAgain : 0,
-      // Arabic month names and digits; callers that leave them out keep the saved ones.
+      // Arabic month names; callers that leave them out keep the saved ones.
       arabicMonths: payload.arabicMonths === undefined ? old.arabicMonths : ARABIC_MONTHS.includes(payload.arabicMonths) ? payload.arabicMonths : 'auto',
-      digits: payload.digits === undefined ? old.digits : DIGITS.includes(payload.digits) ? payload.digits : 'latn',
       // Callers that leave the snooze choices out keep the saved ones.
       snoozePresets: normalizeSnoozePresets(payload.snoozePresets ?? old.snoozePresets),
       // Callers that leave quick add out keep the saved choice and shortcut.

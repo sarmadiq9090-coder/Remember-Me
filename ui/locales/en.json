@@ -343,7 +343,6 @@
   "Room for new plans": "Room for new plans",
   "Same as Windows": "Same as Windows",
   "Same time next week": "Same time next week",
-  "Sarmad": "Sarmad",
   "Saturday": "Saturday",
   "Save note": "Save note",
   "Save task": "Save task",
@@ -541,11 +540,7 @@
   "→ {day} {time}": "→ {day} {time}",
   "Month names": "Month names",
   "In dates. Iraq and the Levant name the months differently from Egypt and the Gulf.": "In dates. Iraq and the Levant name the months differently from Egypt and the Gulf.",
-  "Digits": "Digits",
-  "In dates, times and counts. Date and time fields always show 0-9.": "In dates, times and counts. Date and time fields always show 0-9.",
   "Same as the Windows region": "Same as the Windows region",
-  "Western {sample}": "Western {sample}",
-  "Arabic-Indic {sample}": "Arabic-Indic {sample}",
   "Uninstall the old Remember Me": "Uninstall the old Remember Me",
   "Your tasks and notes were copied from the Remember Me installed from the website, and they are safe here. If both copies run, every reminder shows twice. Uninstall the old one in Windows Settings → Apps → Installed apps, where it is listed as Remember Me, not Remember Me Reminders.": "Your tasks and notes were copied from the Remember Me installed from the website, and they are safe here. If both copies run, every reminder shows twice. Uninstall the old one in Windows Settings → Apps → Installed apps, where it is listed as Remember Me, not Remember Me Reminders."
 }

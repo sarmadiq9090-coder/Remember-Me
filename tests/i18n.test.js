@@ -144,7 +144,7 @@ test('the system language comes from Electron\'s preferred system languages, and
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-test('Arabic month names follow the Windows region unless chosen, and digits are Western unless Arabic-Indic were chosen', () => {
+test('Arabic month names follow the Windows region unless chosen, always with Western digits', () => {
   const { dateLocale, regionOf, LEVANT_REGIONS } = require('../ui/lib/translate');
   const { systemRegion, createI18n } = require('../src/main/i18n');
   assert.deepEqual(LEVANT_REGIONS, ['IQ', 'SY', 'LB', 'JO', 'PS']);
@@ -152,9 +152,8 @@ test('Arabic month names follow the Windows region unless chosen, and digits are
   for (const region of ['SA', 'AE', 'KW', 'EG', 'MA', 'US', '']) assert.equal(dateLocale('ar', { region }), 'ar-EG-u-nu-latn', region || 'no region');
   assert.equal(dateLocale('ar', { months: 'standard', region: 'IQ' }), 'ar-EG-u-nu-latn', 'A choice beats the region');
   assert.equal(dateLocale('ar', { months: 'levant', region: 'SA' }), 'ar-IQ-u-nu-latn');
-  assert.equal(dateLocale('ar', { digits: 'arab', region: 'IQ' }), 'ar-IQ-u-nu-arab');
-  assert.equal(dateLocale('ar', { digits: 'roman' }), 'ar-EG-u-nu-latn');
-  for (const { code, intl } of LOCALES.slice(2)) assert.equal(dateLocale(code, { months: 'levant', digits: 'arab', region: 'IQ' }), intl + '-u-nu-latn', 'Other languages are unchanged');
+  assert.equal(dateLocale('ar', { digits: 'arab', region: 'IQ' }), 'ar-IQ-u-nu-latn', 'No Arabic-Indic digits, whatever is asked');
+  for (const { code, intl } of LOCALES.slice(2)) assert.equal(dateLocale(code, { months: 'levant', region: 'IQ' }), intl + '-u-nu-latn', 'Other languages are unchanged');
   const month = tag => new Date(2026, 10, 3).toLocaleDateString(tag, { month: 'long' });
   assert.equal(month(dateLocale('ar', { region: 'IQ' })), 'تشرين الثاني');
   assert.equal(month(dateLocale('ar', { region: 'SA' })), 'نوفمبر');
@@ -163,11 +162,12 @@ test('Arabic month names follow the Windows region unless chosen, and digits are
   assert.equal(systemRegion({ getSystemLocale: () => { throw new Error('not ready'); }, getPreferredSystemLanguages: () => ['ar-JO'] }), 'JO');
   assert.equal(systemRegion({ getSystemLocale: () => 'ar', getPreferredSystemLanguages: () => ['ar'] }), '');
   assert.equal(systemRegion({}), '');
-  const settings = { language: 'ar', arabicMonths: 'auto', digits: 'latn' };
-  const i18n = createI18n(() => settings.language, () => ({ months: settings.arabicMonths, digits: settings.digits, region: 'IQ' }));
+  const settings = { language: 'ar', arabicMonths: 'auto' };
+  const i18n = createI18n(() => settings.language, () => ({ months: settings.arabicMonths, digits: 'arab', region: 'IQ' }));
   assert.equal(i18n.localeTag(), 'ar-IQ-u-nu-latn');
-  settings.digits = 'arab';
-  assert.equal(i18n.tr('{count} items', { count: 12 }), '١٢ items', 'Counts in main-process text follow the digits too');
+  assert.equal(i18n.tr('{count} items', { count: 12 }), '12 items', 'Counts in main-process text use 0-9');
+  settings.arabicMonths = 'standard';
+  assert.equal(i18n.localeTag(), 'ar-EG-u-nu-latn');
   assert.equal(createI18n(() => 'ar').localeTag(), 'ar-EG-u-nu-latn', 'No region known: standard month names');
 });
 

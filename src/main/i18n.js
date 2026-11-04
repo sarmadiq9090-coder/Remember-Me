@@ -5,11 +5,11 @@ const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale, matchLocale, regionOf, dat
 const { validateState } = require('../core/tasks');
 
 // The main process's interface text (tray, dialogs, notifications, errors), in the saved language.
-// look() returns { months, digits, region }: the saved Arabic month names and digits, and the Windows region.
+// look() returns { months, region }: the saved Arabic month names and the Windows region.
 function createI18n(savedLanguage, look = () => ({})) {
   function language() { const code = savedLanguage(); return LOCALES.some(l => l.code === code) ? code : DEFAULT_LOCALE; }
-  // The locale for dates, times and counts, the same the windows use: Western digits (0-9) unless
-  // Arabic-Indic were chosen for Arabic, and Arabic month names by region.
+  // The locale for dates, times and counts, the same the windows use: Western digits (0-9) always, in
+  // Arabic too, so the layout never shifts, and Arabic month names by region.
   function dateLocale() { return localeFor(language(), look()); }
   const localeTag = dateLocale;
   // Interface text comes from ui/locales/<code>.json, read once per language; English is the fallback.

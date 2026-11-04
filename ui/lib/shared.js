@@ -37,10 +37,10 @@ function hydrateIcons(root = document) { root.querySelectorAll('[data-icon]').fo
 // An element holding plain text, for translated text that sits next to markup.
 function textElement(tag, text, props = {}) { return Object.assign(document.createElement(tag), props, { textContent: text }); }
 function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-// Locale for every date, time and number: Western digits (0-9) unless Arabic-Indic were chosen for the
-// Arabic interface, and the Arabic month names of the chosen region (see dateLocale() in translate.js).
+// Locale for every date, time and number: Western digits (0-9) always, in Arabic too, so labels keep their
+// width and layout, and the Arabic month names of the chosen region (see dateLocale() in translate.js).
 function locale() { return uiDates || uiLocale.intl + '-u-nu-latn'; }
-function num(value) { return locale().endsWith('-nu-arab') ? Number(value).toLocaleString(locale(), { useGrouping: false }) : String(value); }
+function num(value) { return String(value); }
 // Required fields, number and date inputs report problems in the app's language, not the system's
 // (Chromium's own messages follow the Windows language, with its digits).
 document.addEventListener('invalid', e => {

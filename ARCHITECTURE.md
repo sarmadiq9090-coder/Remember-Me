@@ -185,7 +185,6 @@ all data. The shape (`version` is always `1`):
     weekStart: 6|0|1, theme: 'system'|'light'|'dark',
     palette: 'lavender'|'ocean'|'forest'|'sunset'|'graphite'|'contrast',  // ui/styles/theme.css
     arabicMonths: 'auto'|'levant'|'standard',  // Arabic month names: «تشرين الثاني» or «نوفمبر»; auto follows the Windows region (dateLocale() in ui/lib/translate.js)
-    digits: 'latn'|'arab',    // Western 0-9, or Arabic-Indic in the Arabic interface; native date and time fields always show 0-9
     autoUpdate: null|true|false,  // consent to background update checks; null means not asked yet
     remindAgain?: 0|2|5|15,   // minutes between repeated alert sounds; absent means off
     pausedUntil: null|'<ISO time>'|'manual',  // reminders paused from the tray; null means not paused
@@ -197,8 +196,8 @@ all data. The shape (`version` is always `1`):
 ```
 
 Fields marked `?` are optional and absent in older files. Data written by v1.4.0 loads unchanged
-apart from defaults for settings it did not have; the removed `settings.hijri` is deleted on load, and a
-`settings.digits` of `'auto'` from the earlier digit option (before v1.5) loads as `'latn'`. Completing a repeating task keeps the task and adds a
+apart from defaults for settings it did not have; the removed `settings.hijri` and
+`settings.digits` are deleted on load. Completing a repeating task keeps the task and adds a
 completed copy with `repeat: 'none'` and `sourceId`. Deleted items get `deletedAt` and stay in the
 trash for 30 days.
 

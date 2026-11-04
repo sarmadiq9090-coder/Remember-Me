@@ -7,7 +7,7 @@
 - Quick add from anywhere: turn it on in Settings, then press Ctrl+Alt+R in any app to add a task with an optional time from a small window above the taskbar. Enter saves, Esc closes. The shortcut can be changed in Settings, which also says when another app already uses it. It is off until you turn it on. [#82]
 - A Microsoft Store package, **Remember Me Reminders**: `pnpm run store` builds it and the **Store package** workflow uploads it as an artifact. In the Store version, updates come from the Store, Start with Windows is turned on in Windows' Startup apps settings, and the data lives in the package's folder, copied from the installer version on its first start. See `docs/distribution/microsoft-store.md`.
 - A new install opens in your Windows language when Remember Me has it (one of its 12), instead of always in English. A language you already chose is never changed.
-- Arabic interface: Settings → Calendar can show the month names used in Iraq and the Levant («تشرين الثاني») or in Egypt and the Gulf («نوفمبر»). By default they follow your Windows region. Arabic-Indic digits (١٢٣) are back as an option; Western digits stay the default.
+- Arabic interface: Settings → Calendar can show the month names used in Iraq and the Levant («تشرين الثاني») or in Egypt and the Gulf («نوفمبر»). By default they follow your Windows region. Digits stay Western (0-9).
 - Microsoft Store version: after it copies your data from the version installed from the website, a banner suggests uninstalling that version, because with both running every reminder shows twice.
 
 ### Changed
