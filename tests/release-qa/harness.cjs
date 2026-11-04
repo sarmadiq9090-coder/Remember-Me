@@ -1,5 +1,6 @@
 // Release QA harness for the packaged desktop-test build (see run.cjs). Every launch uses WAQT_TEST=1 and a temporary
-// WAQT_DATA_DIR; the fused exe is never run with ELECTRON_RUN_AS_NODE.
+// WAQT_DATA_DIR; the fused exe is never run with ELECTRON_RUN_AS_NODE. Only the upgrade test (tests/upgrade-desktop.cjs)
+// passes testMode: false, to start an installed copy as a user would, with the real data folder.
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -9,9 +10,11 @@ if (!exe || !fs.existsSync(exe)) throw new Error('Set WAQT_EXECUTABLE to the pac
 const results = [];
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function tempDir(name) { return fs.mkdtempSync(path.join(os.tmpdir(), `waqt-qa-${name}-`)); }
-async function launch({ dataDir = tempDir('data'), seed } = {}) {
+async function launch({ dataDir, seed, testMode = true } = {}) {
+  if (testMode) dataDir ??= tempDir('data');
   if (seed) fs.writeFileSync(path.join(dataDir, 'data.json'), JSON.stringify(seed, null, 2));
-  const env = { ...process.env, WAQT_TEST: '1', WAQT_DATA_DIR: dataDir };
+  const env = { ...process.env, ...(testMode ? { WAQT_TEST: '1', WAQT_DATA_DIR: dataDir } : {}) };
+  if (!testMode) { delete env.WAQT_TEST; delete env.WAQT_DATA_DIR; }
   delete env.ELECTRON_RUN_AS_NODE;
   // colorScheme null: no Playwright media emulation, so prefers-color-scheme follows the app like for a user.
   const app = await electron.launch({ executablePath: exe, args: [], env, timeout: 60000, colorScheme: null });
