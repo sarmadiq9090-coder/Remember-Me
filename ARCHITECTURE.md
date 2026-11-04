@@ -422,7 +422,8 @@ says how many were left out.
   against it with Playwright. Its `upgrade` job installs the previous release (`PREVIOUS`) from
   GitHub, gives it Arabic data, installs an installer built from this commit over it, and checks with
   `tests/upgrade-desktop.cjs` that the data, settings, language and start with Windows survive, then
-  that uninstalling keeps the data folder.
+  that uninstalling keeps the data folder and removes start with Windows (`customUnInstall` in
+  `installer/installer.nsh`, skipped when an upgrade runs the old uninstaller with `--updated`).
   `.github/workflows/release.yml` has two jobs. `build`, with a read-only token that isn't kept in
   the checkout, checks a `v*` tag against `package.json`, runs the tests, builds the installer,
   writes `SHA256SUMS.txt` and winget manifests (`tools/winget-manifest.mjs`) and uploads them as
