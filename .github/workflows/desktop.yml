@@ -44,13 +44,18 @@ jobs:
           path: screenshots/
           if-no-files-found: ignore
 
-  # Installs the previous release from GitHub, gives it Arabic data, installs this build over it the way
+  # Installs a previous release from GitHub, gives it Arabic data, installs this build over it the way
   # users and the updater do, and checks the data, the language and the app (tests/upgrade-desktop.cjs).
+  # The first entry is the latest release, the version users have now; the second, the one before it.
   upgrade:
     runs-on: windows-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        previous: [v1.6.2, v1.6.1]
     env:
-      PREVIOUS: v1.6.1
+      PREVIOUS: ${{ matrix.previous }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -100,6 +105,6 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: upgrade-screenshots
+          name: upgrade-screenshots-${{ matrix.previous }}
           path: screenshots/
           if-no-files-found: ignore

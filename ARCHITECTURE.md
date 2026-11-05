@@ -419,8 +419,8 @@ says how many were left out.
   `v*` tags and by hand, and uploads it as the `store-package` artifact.
 - `.github/workflows/test.yml` runs the unit tests and ESLint on Windows for every pull request.
   `.github/workflows/desktop.yml` packages a desktop test build and runs `tests/desktop-smoke.cjs`
-  against it with Playwright. Its `upgrade` job installs the previous release (`PREVIOUS`) from
-  GitHub, gives it Arabic data, installs an installer built from this commit over it, and checks with
+  against it with Playwright. Its `upgrade` job installs each release in its `previous` list (v1.6.2
+  and v1.6.1) from GitHub, gives it Arabic data, installs an installer built from this commit over it, and checks with
   `tests/upgrade-desktop.cjs` that the data, settings, language and start with Windows survive, then
   that uninstalling keeps the data folder.
   `.github/workflows/release.yml` has two jobs. `build`, with a read-only token that isn't kept in
