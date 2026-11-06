@@ -143,15 +143,25 @@ function logoFiles(maxIcon = 256) {
 }
 
 // Writes the logos into folder (emptied first) and returns their names. ico is optional.
-function writeStoreLogos(source, folder, ico = null) {
+// art is an optional folder of finished logos with the same names (store/logos/: the FastKiwi brand v2
+// MSIX set). Its files replace the generated ones and add the rest: more target sizes and the
+// unplated taskbar symbols (_altform-unplated for a dark taskbar, _altform-lightunplated for a light one).
+function writeStoreLogos(source, folder, ico = null, art = null) {
   const image = decodePng(fs.readFileSync(source));
   fs.rmSync(folder, { recursive: true, force: true });
   fs.mkdirSync(folder, { recursive: true });
   const icons = ico ? icoImages(fs.readFileSync(ico)) : new Map();
-  return logoFiles(Math.min(image.width, image.height)).map(({ name, width, height, icon }) => {
+  const names = logoFiles(Math.min(image.width, image.height)).map(({ name, width, height, icon }) => {
     if (!icons.has(icon)) icons.set(icon, icon === image.width ? image : scaleDown(image, icon));
     fs.writeFileSync(path.join(folder, name), encodePng(centered(icons.get(icon), width, height)));
     return name;
   });
+  if (!art) return names;
+  // A finished file replaces a generated one only at the same pixel size (the brand set rounds
+  // StoreLogo.scale-125 to 62 px; Windows asks for 63, so the generated one stays).
+  const size = file => { const png = fs.readFileSync(file); return `${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`; };
+  const finished = fs.readdirSync(art).filter(name => name.endsWith('.png') && !(names.includes(name) && size(path.join(art, name)) !== size(path.join(folder, name))));
+  for (const name of finished) fs.copyFileSync(path.join(art, name), path.join(folder, name));
+  return [...new Set([...names, ...finished])];
 }
 module.exports = { TILES, SCALES, TARGET_SIZES, decodePng, encodePng, scaleDown, icoImages, logoFiles, writeStoreLogos };
