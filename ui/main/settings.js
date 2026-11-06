@@ -91,7 +91,7 @@ function settingsPayload() {
   const presets = snoozeChoices(), valid = presets.every(preset => checkSnoozePreset(preset));
   // The Arabic month names are only shown, and so only sent, in the Arabic interface.
   const arabic = state.settings.language === 'ar' ? { arabicMonths: $('setting-arabic-months').value } : {};
-  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: Number($('setting-week').value), theme: checked('theme-mode', state.settings.theme), palette: checked('palette', state.settings.palette), remindAgain: Number($('setting-remind-again').value), ...arabic, ...(valid ? { snoozePresets: presets } : {}) };
+  return { sound: $('setting-sound').checked, startAtLogin: $('setting-startup').checked, alertSide: $('setting-side').value, language: $('setting-language').value, weekStart: Number($('setting-week').value), theme: checked('theme-mode', state.settings.theme), palette: checked('palette', state.settings.palette), textSize: Number(checked('text-size', state.settings.textSize)), remindAgain: Number($('setting-remind-again').value), ...arabic, ...(valid ? { snoozePresets: presets } : {}) };
 }
 // Settings → Calendar, Arabic interface only: month names («تشرين الثاني» or «نوفمبر»). The choices show
 // real samples from Intl, so they need no translation; other interfaces leave the list empty.
@@ -115,21 +115,24 @@ for (const id of ['setting-sound', 'setting-startup', 'setting-side', 'setting-l
 });
 // The value of a radio group in the page, or the saved one before the group is built.
 function checked(name, saved) { return document.querySelector(`input[name="${name}"]:checked`)?.value ?? saved; }
-// Settings → Appearance: mode and palette as radio groups (arrow keys move between options), built here with tr().
+// Settings → Appearance: mode, palette and text size as radio groups (arrow keys move between options), built here with tr().
 // Each preview card carries data-palette, so it shows that palette's real colors in the current mode.
 const PALETTE_NAMES = [['lavender', msg('Lavender')], ['ocean', msg('Ocean')], ['forest', msg('Forest')], ['sunset', msg('Sunset')], ['graphite', msg('Graphite')], ['contrast', msg('High contrast')]];
 const MODE_NAMES = [['system', msg('Same as Windows')], ['light', msg('Light')], ['dark', msg('Dark')]];
 const paletteMock = () => `<span class="mock-side"><span class="mock-logo">${brandMark(true)}</span><i class="mock-nav on"></i><i class="mock-nav"></i><i class="mock-nav"></i></span><span class="mock-page"><i class="mock-hero"></i><span class="mock-row"><i class="mock-check"></i><i class="mock-line"></i></span><span class="mock-row"><i class="mock-check"></i><i class="mock-line short"></i></span><i class="mock-button"></i></span>`;
 let appearanceLanguage, appearanceSaving = 0;
+// 115% in the interface language's own style ("%115" in Turkish), always with digits 0-9.
+function percentText(size) { return new Intl.NumberFormat(locale(), { style: 'percent' }).format(size / 100); }
 function renderAppearance() {
   const card = $('appearance-card');
   if (appearanceLanguage !== uiLanguage) {
     appearanceLanguage = uiLanguage;
     card.innerHTML = `<h2>${esc(tr('Appearance'))}</h2><div class="setting-row"><div><strong id="mode-label">${esc(tr('Mode'))}</strong><p>${esc(tr('Light or dark, or the same as Windows.'))}</p></div><div class="segmented" role="radiogroup" aria-labelledby="mode-label">${MODE_NAMES.map(([value, name]) => `<label><input type="radio" name="theme-mode" value="${value}"><span>${esc(tr(name))}</span></label>`).join('')}</div></div>`
+      + `<div class="setting-row"><div><strong id="text-size-label">${esc(tr('Text size'))}</strong><p>${esc(tr('Makes all text larger. Ctrl+= and Ctrl+- also change it, and Ctrl+0 brings it back to 100%.'))}</p></div><div class="segmented" role="radiogroup" aria-labelledby="text-size-label">${TEXT_SIZES.map(size => `<label><input type="radio" name="text-size" value="${size}"><span dir="ltr">${esc(percentText(size))}</span></label>`).join('')}</div></div>`
       + `<div class="palette-picker"><strong id="palette-label">${esc(tr('Colors'))}</strong><div class="palette-grid" role="radiogroup" aria-labelledby="palette-label">${PALETTE_NAMES.map(([id, name]) => `<label class="palette-card"><input type="radio" name="palette" value="${id}"><span class="palette-mock" data-palette="${id}" aria-hidden="true">${paletteMock()}</span><span class="palette-name">${esc(tr(name))}</span><span class="palette-tick" aria-hidden="true">${icon('check')}</span></label>`).join('')}</div></div>`;
   }
   if (appearanceSaving) return;
-  for (const [name, value] of [['theme-mode', state.settings.theme], ['palette', state.settings.palette]]) card.querySelector(`input[name="${name}"][value="${value}"]`).checked = true;
+  for (const [name, value] of [['theme-mode', state.settings.theme], ['palette', state.settings.palette], ['text-size', normalizeTextSize(state.settings.textSize)]]) card.querySelector(`input[name="${name}"][value="${value}"]`).checked = true;
 }
 // Note editor: paper colors and styles as radio groups, with a live preview (ids match src/core/tasks.js).
 const NOTE_COLORS = [['cream', msg('Cream')], ['yellow', msg('Yellow')], ['orange', msg('Orange')], ['red', msg('Red')], ['pink', msg('Pink')], ['purple', msg('Purple')], ['blue', msg('Blue')], ['green', msg('Green')], ['gray', msg('Gray')], ['white', msg('White')]];
@@ -158,6 +161,7 @@ for (const id of ['note-title', 'note-body']) $(id).addEventListener('input', up
 $('appearance-card').addEventListener('change', async e => {
   // The palette shows at once; main then updates the alert window and the window backgrounds.
   if (e.target.name === 'palette') applyPalette(e.target.value);
+  if (e.target.name === 'text-size') applyTextSize(Number(e.target.value));
   appearanceSaving++;
   try { await api('settings', settingsPayload()); } catch (err) { toast(err.message); } finally { appearanceSaving--; }
   await refresh();

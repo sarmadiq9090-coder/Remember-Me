@@ -96,6 +96,8 @@
   "Close the window normally and Remember Me stays by the clock. Use its tray menu to exit fully. Alerts cannot appear while the PC is off or asleep; missed reminders appear when you return. The app uses your device time.": "Close the window normally and Remember Me stays by the clock. Use its tray menu to exit fully. Alerts cannot appear while the PC is off or asleep; missed reminders appear when you return. The app uses your device time.",
   "Closing the window keeps Remember Me near the clock": "Closing the window keeps Remember Me near the clock",
   "Colors": "Colors",
+  "Text size": "Text size",
+  "Makes all text larger. Ctrl+= and Ctrl+- also change it, and Ctrl+0 brings it back to 100%.": "Makes all text larger. Ctrl+= and Ctrl+- also change it, and Ctrl+0 brings it back to 100%.",
   "Coming up: {title}": "Coming up: {title}",
   "Complete any task to see it in this list.": "Complete any task to see it in this list.",
   "Complete {title}": "Complete {title}",

@@ -90,6 +90,8 @@
   "Close the window normally and Remember Me stays by the clock. Use its tray menu to exit fully. Alerts cannot appear while the PC is off or asleep; missed reminders appear when you return. The app uses your device time.": "正常关闭窗口后，Remember Me 会留在时钟旁。要完全退出，请使用托盘菜单。电脑关机或睡眠时无法显示提醒；错过的提醒会在你回来时出现。应用使用设备时间。",
   "Closing the window keeps Remember Me near the clock": "关闭窗口后 Remember Me 仍留在时钟旁",
   "Colors": "颜色",
+  "Text size": "文字大小",
+  "Makes all text larger. Ctrl+= and Ctrl+- also change it, and Ctrl+0 brings it back to 100%.": "放大所有文字。也可以用 Ctrl+= 和 Ctrl+- 调整，按 Ctrl+0 恢复到 100%。",
   "Coming up: {title}": "即将到来：{title}",
   "Complete any task to see it in this list.": "完成任意任务即可在此列表中看到它。",
   "Complete {title}": "完成“{title}”",

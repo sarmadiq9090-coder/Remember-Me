@@ -91,6 +91,8 @@
   "Close the window normally and Remember Me stays by the clock. Use its tray menu to exit fully. Alerts cannot appear while the PC is off or asleep; missed reminders appear when you return. The app uses your device time.": "Fermez la fenêtre normalement : Remember Me reste près de l'horloge. Utilisez son menu dans la zone de notification pour quitter complètement. Les alertes ne peuvent pas s'afficher quand le PC est éteint ou en veille ; les rappels manqués apparaissent à votre retour. L'application utilise l'heure de votre appareil.",
   "Closing the window keeps Remember Me near the clock": "Fermer la fenêtre garde Remember Me près de l'horloge",
   "Colors": "Couleurs",
+  "Text size": "Taille du texte",
+  "Makes all text larger. Ctrl+= and Ctrl+- also change it, and Ctrl+0 brings it back to 100%.": "Agrandit tout le texte. Ctrl+= et Ctrl+- la modifient aussi, et Ctrl+0 la remet à 100 %.",
   "Coming up: {title}": "Bientôt : {title}",
   "Complete any task to see it in this list.": "Terminez une tâche pour la voir dans cette liste.",
   "Complete {title}": "Terminer {title}",

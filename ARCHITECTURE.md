@@ -48,7 +48,7 @@ true (see "Keeping this document current").
 | Main window scripts: plain scripts loaded in order, sharing one scope (state, render, cards, editors, trash, settings, events, boot) | `ui/main/*.js` |
 | Alert window script | `ui/alert/alert.js` |
 | Quick-add window script | `ui/quickadd/quickadd.js` |
-| Shared by both windows: languages (`translate.js`, `i18n.js`), helpers and icons (`shared.js`), keeping keyboard focus when lists are rebuilt (`focus.js`), search, alert formatting, the quick-add shortcut rules and due time (`quickadd.js`), when the Store version asks for a rating (`rating.js`) | `ui/lib/*.js` |
+| Shared by both windows: languages (`translate.js`, `i18n.js`), helpers and icons (`shared.js`), keeping keyboard focus when lists are rebuilt (`focus.js`), search, alert formatting, the quick-add shortcut rules and due time (`quickadd.js`), when the Store version asks for a rating (`rating.js`), text size and its Ctrl+= / Ctrl+- / Ctrl+0 keys (`text-size.js`) | `ui/lib/*.js` |
 | Stylesheets and theme tokens | `ui/styles/*.css` |
 | Translations | `ui/locales/*.json` |
 | Packaging, installer, Microsoft Store package and its logos, winget manifests, icon generator, screenshots, website images | `tools/` |
@@ -191,6 +191,7 @@ all data. The shape (`version` is always `1`):
     snoozePresets: [6 × { kind: 'in', minutes } | { kind: 'today'|'tomorrow', time: 'HH:MM' } | { kind: 'week'|'pick' }],  // the alert's 1-6 snooze choices (ui/lib/alert-format.js)
     quickAdd: false|true,     // the global quick-add shortcut; absent in older files means off
     quickAddShortcut: 'Ctrl+Alt+R',  // an Electron accelerator checked by normalizeAccelerator (ui/lib/quickadd.js); invalid or absent means the default
+    textSize: 100|115|130|150  // percent, ui/lib/text-size.js; absent in older files, or invalid, means 100
     ratingAsked?: true        // the Store version's one-time rating request was answered (ui/lib/rating.js); absent means not yet
   }
 }
@@ -364,6 +365,7 @@ Settings' "Open data folder" and About's "Open log folder" show it. It records:
   unavailable, error), with the current and next version only, never feed URLs or paths;
 - `data-recovered-from-bak` when `data.json` could not be read and the `.bak` copy was loaded;
 - `quick-add-shortcut-unavailable` (the shortcut only) when Windows refuses the quick-add shortcut;
+- `text-size-not-saved` when a Ctrl+= / Ctrl+- / Ctrl+0 text size change could not be saved;
 - `start-failed`, `scan-failed` (once per distinct error, then at most every 10 minutes) and
   `trash-purge-failed`;
 - `action-failed` with the IPC action name, for any request that returned an error;
