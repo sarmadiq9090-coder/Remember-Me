@@ -9,6 +9,7 @@ function render() {
   document.querySelector('.nav-item[data-view="settings"]').classList.toggle('needs-attention', !!state.driveBackup?.stale);
   renderTagFilters();
   renderUpdateNotice();
+  renderRatingPrompt();
   document.querySelectorAll('[data-filter]').forEach(b => { b.classList.toggle('active', b.dataset.filter === filter); b.setAttribute('aria-pressed', b.dataset.filter === filter); });
   const names = views[view].map(key => (key ? tr(key) : ''));
   $('breadcrumb').textContent = names[0];
