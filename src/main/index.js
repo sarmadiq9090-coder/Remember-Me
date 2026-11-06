@@ -18,6 +18,7 @@ const { createScheduler } = require('./scheduler');
 const { createProblems } = require('./problems');
 const { createQuickAdd } = require('./quick-add');
 const { secureContents, httpsShell } = require('./web-security');
+const { isStoreUrl } = require('../platform/about');
 const testMode = process.env.WAQT_TEST === '1';
 // True in the Microsoft Store (MSIX) package: the Store updates it, Windows runs its startup task,
 // and its data lives in the package's own folder (see docs/distribution/microsoft-store.md).
@@ -69,6 +70,8 @@ ctx.windows = createWindows(ctx);
 ctx.tray = createTray(ctx);
 ctx.scheduler = createScheduler(ctx);
 ctx.quickAdd = createQuickAdd(ctx, globalShortcut);
+// Microsoft Store pages (the rating request, "More from FastKiwi"): only ms-windows-store: addresses from about.js.
+ctx.openStoreLink = async url => { if (!isStoreUrl(url)) throw new Error('only Microsoft Store pages open here'); await shell.openExternal(url); };
 // The flat names the handlers use.
 const { windows, tray, scheduler } = ctx;
 Object.assign(ctx, { activeAlerts: scheduler.activeAlerts, openInMain: windows.openInMain, takeOpenRequest: windows.takeOpenRequest,

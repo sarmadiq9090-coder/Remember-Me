@@ -346,6 +346,8 @@ function validateState(data) {
   // Quick add from anywhere is off until the user turns it on; a shortcut that isn't valid gets the default.
   if (typeof data.settings.quickAdd !== 'boolean') data.settings.quickAdd = false;
   data.settings.quickAddShortcut = normalizeAccelerator(data.settings.quickAddShortcut) || DEFAULT_QUICK_ADD_SHORTCUT;
+  // The Store version's one-time rating request: true once answered; absent until then.
+  if ('ratingAsked' in data.settings && data.settings.ratingAsked !== true) delete data.settings.ratingAsked;
   return data;
 }
 module.exports = { importTasks, normalizeChecklist, toggleStep, normalizeTags, PALETTES, NOTE_COLORS, NOTE_STYLES, noteLook, EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, alertQueue, validateState, REMIND_AGAIN, skipOccurrence };

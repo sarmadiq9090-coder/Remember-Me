@@ -48,7 +48,7 @@ true (see "Keeping this document current").
 | Main window scripts: plain scripts loaded in order, sharing one scope (state, render, cards, editors, trash, settings, events, boot) | `ui/main/*.js` |
 | Alert window script | `ui/alert/alert.js` |
 | Quick-add window script | `ui/quickadd/quickadd.js` |
-| Shared by both windows: languages (`translate.js`, `i18n.js`), helpers and icons (`shared.js`), keeping keyboard focus when lists are rebuilt (`focus.js`), search, alert formatting, the quick-add shortcut rules and due time (`quickadd.js`) | `ui/lib/*.js` |
+| Shared by both windows: languages (`translate.js`, `i18n.js`), helpers and icons (`shared.js`), keeping keyboard focus when lists are rebuilt (`focus.js`), search, alert formatting, the quick-add shortcut rules and due time (`quickadd.js`), when the Store version asks for a rating (`rating.js`) | `ui/lib/*.js` |
 | Stylesheets and theme tokens | `ui/styles/*.css` |
 | Translations | `ui/locales/*.json` |
 | Packaging, installer, Microsoft Store package and its logos, winget manifests, icon generator, screenshots, website images | `tools/` |
@@ -120,7 +120,7 @@ registry throws if an allowed action has no handler, has two, or a handler is no
 | Backups | `export`, `restore`, `chooseDriveFolder`, `driveBackupNow`, `driveAutomatic`, `driveKeep`, `driveHelp`, `openDriveFolder` |
 | Updates | `updateConsent`, `checkUpdates`, `installUpdate`, `dismissUpdate` |
 | About | `openLink`, `copyDiagnostics`, `reportProblem`, `openLogs` |
-| App | `settings`, `relaunch`, `preview`, `dataFolder`, `open`, `openStartupSettings` (Microsoft Store version only) |
+| App | `settings`, `relaunch`, `preview`, `dataFolder`, `open`, `openStartupSettings`, `ratingPrompt` (both Microsoft Store version only) |
 
 The alert window may only use `alerts`, `language`, `locale`, `complete`, `skip`, `undoComplete`,
 `undoable`, `snooze`, `open` (optionally with the shown task's `id`), `openAttachment` and
@@ -190,7 +190,8 @@ all data. The shape (`version` is always `1`):
     pausedUntil: null|'<ISO time>'|'manual',  // reminders paused from the tray; null means not paused
     snoozePresets: [6 × { kind: 'in', minutes } | { kind: 'today'|'tomorrow', time: 'HH:MM' } | { kind: 'week'|'pick' }],  // the alert's 1-6 snooze choices (ui/lib/alert-format.js)
     quickAdd: false|true,     // the global quick-add shortcut; absent in older files means off
-    quickAddShortcut: 'Ctrl+Alt+R'  // an Electron accelerator checked by normalizeAccelerator (ui/lib/quickadd.js); invalid or absent means the default
+    quickAddShortcut: 'Ctrl+Alt+R',  // an Electron accelerator checked by normalizeAccelerator (ui/lib/quickadd.js); invalid or absent means the default
+    ratingAsked?: true        // the Store version's one-time rating request was answered (ui/lib/rating.js); absent means not yet
   }
 }
 ```
@@ -281,7 +282,7 @@ occurrence that falls in a spring-forward gap fires an hour later, and the next 
 - **Restore** (`readBackup`, `restoreBackup`) verifies every file against its checksum (older
   backups without checksums are checked for presence and size), exports a safety copy of the current
   data, copies the attachments in, and replaces the state in one `Store` commit. Settings about this
-  PC (`autoUpdate`, `startAtLogin`, `pausedUntil`, `quickAdd`, `quickAddShortcut`) keep their current values; the rest come from the
+  PC (`autoUpdate`, `startAtLogin`, `pausedUntil`, `quickAdd`, `quickAddShortcut`, `ratingAsked`) keep their current values; the rest come from the
   backup and apply at once.
 - **Google Drive** (`DriveBackup`) needs no Google account access: the user picks a folder synced
   by Google Drive for desktop, and the app copies a fresh local snapshot there once a day (or on
@@ -338,7 +339,9 @@ Updates card), "Copy diagnostic info" and "Open log folder".
   address (`https://github.com/...`, the support page on `https://fastkiwi.app/support/` or, in the
   Arabic interface, `/ar/support/`) and main passes only that to `shell.openExternal`, which opens
   https only, plus the one address `mailto:support@fastkiwi.app`. An unknown ID is rejected in
-  `checkRequest`.
+  `checkRequest`. `moreApps` (More from FastKiwi) opens the publisher page in the Microsoft Store through
+  `ctx.openStoreLink`, which accepts only `ms-windows-store://publisher|review/?…` addresses; the card cannot
+  send the review page, which only the rating request opens.
 - `copyDiagnostics` builds the text in main and writes it with Electron's `clipboard` (the pages
   have no clipboard permission): the app, Electron, Chromium and Node versions, the Windows version
   and architecture, the UI language and the theme. Never tasks, notes, file names or paths.

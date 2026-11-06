@@ -1,12 +1,12 @@
 'use strict';
 const path = require('node:path');
 const { fileURLToPath } = require('node:url');
-const { LINKS } = require('../platform/about');
+const { ABOUT_LINK_IDS } = require('../platform/about');
 const ACTIONS = new Set(['state', 'alerts', 'language', 'saveTask', 'complete', 'skip', 'snooze', 'reopen', 'deleteTask', 'saveNote', 'deleteNote',
   'attachFiles', 'openAttachment', 'imagePreview', 'chooseDriveFolder', 'driveBackupNow', 'driveAutomatic', 'driveKeep', 'driveHelp', 'openDriveFolder',
   'undoComplete', 'undoable', 'toggleStep', 'restoreTask', 'restoreNote', 'purgeTask', 'purgeNote', 'emptyTrash',
   'locale', 'settings', 'preview', 'export', 'restore', 'storage', 'cleanOrphans', 'dataFolder', 'open',
-  'updateConsent', 'checkUpdates', 'installUpdate', 'dismissUpdate', 'openLink', 'copyDiagnostics', 'reportProblem', 'openLogs', 'relaunch', 'openStartupSettings', 'quickAdd']);
+  'updateConsent', 'checkUpdates', 'installUpdate', 'dismissUpdate', 'openLink', 'copyDiagnostics', 'reportProblem', 'openLogs', 'relaunch', 'openStartupSettings', 'quickAdd', 'ratingPrompt']);
 // The always-on-top alert only needs to read its queue and act on the reminder it shows.
 const ALERT_ACTIONS = new Set(['alerts', 'language', 'locale', 'complete', 'skip', 'undoComplete', 'undoable', 'snooze', 'open', 'openAttachment', 'imagePreview']);
 // The quick-add window (global shortcut) only reads its language and adds one task.
@@ -31,7 +31,9 @@ function checkRequest(action, payload, { fromAlert = false, fromQuickAdd = false
   if (action === 'quickAdd' && (typeof payload.title !== 'string' || Object.keys(payload).some(key => key !== 'title' && key !== 'dueAt'))) throw new Error('Invalid request data.');
   if (action === 'quickAdd' && payload.dueAt !== undefined && payload.dueAt !== null && !isDate(payload.dueAt)) throw new Error('Invalid time.');
   // A link ID from the About card's fixed list; the main process picks the URL.
-  if (action === 'openLink' && (typeof payload.link !== 'string' || !LINKS.has(payload.link))) throw new Error('Unknown link.');
+  if (action === 'openLink' && (typeof payload.link !== 'string' || !ABOUT_LINK_IDS.has(payload.link))) throw new Error('Unknown link.');
+  // The Store rating request's answer: rate now, or not now (never asked again either way).
+  if (action === 'ratingPrompt' && !['rate', 'later'].includes(payload.choice)) throw new Error('Invalid request data.');
   return payload;
 }
 // True only when the request comes from the top-level page the window was created with.

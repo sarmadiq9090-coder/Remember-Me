@@ -9,7 +9,8 @@ const { BACKUP_INFO, attachmentPath, exportBackup, hashFile } = require('./attac
 // Folder names of the app's own backups. Versions up to 1.4 used the old internal name, Waqt.
 const BACKUP_PREFIXES = ['RememberMe-backup-', 'Waqt-backup-'];
 // Settings that belong to this PC rather than to the data; a restore keeps the current values.
-const MACHINE_SETTINGS = ['autoUpdate', 'startAtLogin', 'pausedUntil', 'quickAdd', 'quickAddShortcut'];
+// ratingAsked: the Store version's rating request was answered on this PC; a restored backup must not ask again.
+const MACHINE_SETTINGS = ['autoUpdate', 'startAtLogin', 'pausedUntil', 'quickAdd', 'quickAddShortcut', 'ratingAsked'];
 
 // Reads a backup folder and checks it completely before anything is restored from it.
 // Backups made before v1.5 have no backup.json: they are accepted when every file is present

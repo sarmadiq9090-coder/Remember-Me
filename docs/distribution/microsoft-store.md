@@ -89,6 +89,8 @@ Settings shows this path and **Open data folder** opens it. The data, backups an
 
 **Uninstalling the Store version deletes its data** (Windows removes the package folder, and **Settings → Apps → Advanced options → Reset** empties it). Export a backup, or keep a Google Drive backup, before uninstalling or resetting.
 
+**Rating request.** Only the Store version asks, once, for a rating, after a first real success: a reminder marked done, or five reminders set (`ui/lib/rating.js`). **Rate in the Store** opens `ms-windows-store://review/?ProductId=9NGB1F7T7JGN`; **Not now** is final. Either answer is saved as `settings.ratingAsked`, also kept when a backup is restored. Nothing is offered in return for a rating. About has **More from FastKiwi** (`ms-windows-store://publisher/?name=FastKiwi`) in every version, next to **Support** and **Email support** (`LINKS` in `src/platform/about.js`).
+
 **Not changed:** the reminders, alerts, tray icon, backups, Google Drive folder copies and Report a problem work as in the installer version. Spellcheck is off in every version, so Chromium never downloads dictionaries.
 
 ## Store listing

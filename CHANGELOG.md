@@ -4,6 +4,7 @@
 
 ### Added
 
+- Microsoft Store version: after a first real success (a reminder done, or five reminders set), Remember Me asks once for a rating in the Store. **Not now** is final: it never asks again. About also has **More from FastKiwi** (the publisher's page in the Store), next to Support. [#103]
 - About has **Support** («الدعم»): the support page on fastkiwi.app (in Arabic in the Arabic interface), which needs no GitHub account, and **Email support**, which writes to support@fastkiwi.app. The other ten languages show their three new texts in English until they are translated.
 
 ### Changed

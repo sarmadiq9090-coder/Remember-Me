@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { LINKS, SUPPORT_EMAIL, linkUrl, windowsVersion, diagnostics } = require('../src/platform/about');
+const { LINKS, STORE_LINKS, ABOUT_LINK_IDS, SUPPORT_EMAIL, linkUrl, isStoreUrl, windowsVersion, diagnostics } = require('../src/platform/about');
 const SUPPORT_IDS = ['email', 'support', 'supportAr'];
 
 test('every About link is an exact https address on the project’s GitHub, apart from Support', () => {
@@ -15,6 +15,14 @@ test('every About link is an exact https address on the project’s GitHub, apar
   assert.equal(linkUrl('issues'), 'https://github.com/sarmadiq9090-coder/Remember-Me/issues/new/choose');
   assert.equal(linkUrl('privacy'), 'https://github.com/sarmadiq9090-coder/Remember-Me#privacy');
   for (const id of ['__proto__', 'constructor', 'https://example.com', undefined, 1]) assert.throws(() => linkUrl(id), /Unknown link/);
+});
+
+test('the Microsoft Store pages are fixed: the publisher page and this app\'s review page', () => {
+  assert.equal(STORE_LINKS.get('moreApps'), 'ms-windows-store://publisher/?name=FastKiwi');
+  assert.equal(STORE_LINKS.get('rate'), 'ms-windows-store://review/?ProductId=9NGB1F7T7JGN');
+  assert.deepEqual([...ABOUT_LINK_IDS].sort(), ['email', 'github', 'issues', 'license', 'moreApps', 'privacy', 'releases', 'repo', 'support', 'supportAr'], 'The About card cannot send rate');
+  for (const url of STORE_LINKS.values()) assert.ok(isStoreUrl(url), url);
+  for (const url of ['https://fastkiwi.app', 'ms-windows-store://pdp/?ProductId=x', 'ms-settings:startupapps', 'file:///C:/x', null]) assert.equal(isStoreUrl(url), false, String(url));
 });
 
 test('Support opens fastkiwi.app\'s support page, in Arabic for the Arabic interface, or an e-mail to support', () => {
