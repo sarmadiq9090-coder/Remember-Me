@@ -93,6 +93,8 @@
   "Close the window normally and Remember Me stays by the clock. Use its tray menu to exit fully. Alerts cannot appear while the PC is off or asleep; missed reminders appear when you return. The app uses your device time.": "Закройте окно как обычно — Remember Me останется рядом с часами. Чтобы выйти полностью, используйте его меню в области уведомлений. Пока ПК выключен или спит, напоминания не появляются; пропущенные появятся, когда вы вернётесь. Приложение использует время вашего устройства.",
   "Closing the window keeps Remember Me near the clock": "После закрытия окна Remember Me остаётся у часов",
   "Colors": "Цвета",
+  "Text size": "Размер текста",
+  "Makes all text larger. Ctrl+= and Ctrl+- also change it, and Ctrl+0 brings it back to 100%.": "Увеличивает весь текст. Его также меняют Ctrl+= и Ctrl+-, а Ctrl+0 возвращает 100 %.",
   "Coming up: {title}": "Скоро: {title}",
   "Complete any task to see it in this list.": "Выполните задачу, чтобы увидеть её в этом списке.",
   "Complete {title}": "Выполнить «{title}»",

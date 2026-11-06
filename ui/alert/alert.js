@@ -9,7 +9,7 @@ const repeating = task => !!task && task.id !== '__preview' && task.repeat && ta
 async function refreshAlert() {
   try {
     const look = await api('language');
-    await setLanguage(look); applyPalette(look.palette); weekStart = look.weekStart;
+    await setLanguage(look); applyPalette(look.palette); applyTextSize(look.textSize); weekStart = look.weekStart;
     presets = normalizeSnoozePresets(look.snoozePresets);
     tasks = await api('alerts');
     // Shown before rendering: nothing in a hidden page can take the focus.

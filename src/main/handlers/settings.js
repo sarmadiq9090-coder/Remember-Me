@@ -3,6 +3,7 @@ const { REMIND_AGAIN, PALETTES } = require('../../core/tasks');
 const { LOCALES, DEFAULT: DEFAULT_LOCALE, ARABIC_MONTHS, findLocale } = require('../../../ui/lib/translate');
 const { normalizeSnoozePresets, checkSnoozePreset, DEFAULT_SNOOZE_PRESETS } = require('../../../ui/lib/alert-format');
 const { normalizeAccelerator } = require('../../../ui/lib/quickadd');
+const { normalizeTextSize } = require('../../../ui/lib/text-size');
 
 module.exports = ctx => ({
   settings: { run: payload => {
@@ -19,7 +20,9 @@ module.exports = ctx => ({
       snoozePresets: normalizeSnoozePresets(payload.snoozePresets ?? old.snoozePresets),
       // Callers that leave quick add out keep the saved choice and shortcut.
       quickAdd: typeof payload.quickAdd === 'boolean' ? payload.quickAdd : old.quickAdd,
-      quickAddShortcut: payload.quickAddShortcut === undefined ? old.quickAddShortcut : normalizeAccelerator(payload.quickAddShortcut) };
+      quickAddShortcut: payload.quickAddShortcut === undefined ? old.quickAddShortcut : normalizeAccelerator(payload.quickAddShortcut),
+      // Callers that leave the text size out keep the saved one.
+      textSize: payload.textSize === undefined ? old.textSize : normalizeTextSize(payload.textSize) };
     if (!settings.quickAddShortcut) throw new Error(ctx.tr('Use two of Ctrl, Alt and Shift with a letter, a digit, F1 to F12 or Space.'));
     if (old.startAtLogin !== settings.startAtLogin) ctx.setLogin(settings.startAtLogin);
     try { ctx.store.change(s => { s.settings = { ...s.settings, ...settings }; }); }

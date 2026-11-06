@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Text size: Settings → Appearance makes all text larger (100%, 115%, 130% or 150%), in the main window, the alert and quick add. Ctrl+= and Ctrl+- change it in any window and Ctrl+0 brings it back to 100%. The alert window grows with the text.
+
+### Changed
+
+- No text is smaller than 12 px any more: small labels, hints, counts and badges that were 9 to 11 px are now 12 px.
+
 ## v1.7.0 (2026-11-06)
 
 Quick add from anywhere, a Microsoft Store package, and a new install that opens in your Windows language. Your tasks, notes, attachments and settings load unchanged.

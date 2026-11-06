@@ -5,7 +5,7 @@ const quickField = id => document.getElementById(id);
 async function applyQuickLook() {
   try {
     const look = await api('language');
-    await setLanguage(look); applyPalette(look.palette);
+    await setLanguage(look); applyPalette(look.palette); applyTextSize(look.textSize);
     document.title = tr('Remember Me • Quick add');
     renderQuickDue();
   } catch (error) { showQuickMessage(error.message, true); } finally { showPage(); }

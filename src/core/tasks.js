@@ -6,11 +6,12 @@ const { LOCALES, DEFAULT: DEFAULT_LOCALE, ARABIC_MONTHS } = require('../../ui/li
 const { validPause } = require('./pause');
 const { DEFAULT_SNOOZE_PRESETS, normalizeSnoozePresets } = require('../../ui/lib/alert-format');
 const { DEFAULT_QUICK_ADD_SHORTCUT, normalizeAccelerator } = require('../../ui/lib/quickadd');
+const { DEFAULT_TEXT_SIZE, normalizeTextSize } = require('../../ui/lib/text-size');
 
 // language is the interface language of a fresh install (from Windows' preferred languages); English otherwise.
 function initialState(language = DEFAULT_LOCALE) {
   if (!LOCALES.some(l => l.code === language)) language = DEFAULT_LOCALE;
-  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language, weekStart: 6, theme: 'system', palette: 'lavender', arabicMonths: 'auto', autoUpdate: null, pausedUntil: null, snoozePresets: DEFAULT_SNOOZE_PRESETS.map(p => ({ ...p })), quickAdd: false, quickAddShortcut: DEFAULT_QUICK_ADD_SHORTCUT } };
+  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language, weekStart: 6, theme: 'system', palette: 'lavender', arabicMonths: 'auto', autoUpdate: null, pausedUntil: null, snoozePresets: DEFAULT_SNOOZE_PRESETS.map(p => ({ ...p })), quickAdd: false, quickAddShortcut: DEFAULT_QUICK_ADD_SHORTCUT, textSize: DEFAULT_TEXT_SIZE } };
 }
 // Interface palettes in ui/styles/theme.css; anything else shows Lavender.
 const PALETTES = ['lavender', 'ocean', 'forest', 'sunset', 'graphite', 'contrast'];
@@ -342,6 +343,8 @@ function validateState(data) {
   // Quick add from anywhere is off until the user turns it on; a shortcut that isn't valid gets the default.
   if (typeof data.settings.quickAdd !== 'boolean') data.settings.quickAdd = false;
   data.settings.quickAddShortcut = normalizeAccelerator(data.settings.quickAddShortcut) || DEFAULT_QUICK_ADD_SHORTCUT;
+  // Text size in percent (ui/lib/text-size.js); older files have none and show 100%.
+  data.settings.textSize = normalizeTextSize(data.settings.textSize);
   return data;
 }
 module.exports = { importTasks, normalizeChecklist, toggleStep, normalizeTags, PALETTES, NOTE_COLORS, NOTE_STYLES, noteLook, EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, alertQueue, validateState, REMIND_AGAIN, skipOccurrence };

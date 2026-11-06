@@ -2,17 +2,17 @@
 .quickadd-body{background:var(--surface);height:100vh;overflow:hidden}
 .quickadd-shell{height:100vh;display:flex;flex-direction:column;gap:10px;padding:10px 16px 8px;border:1px solid var(--border);border-top:4px solid var(--accent);text-align:start}
 .quickadd-header{display:flex;align-items:center;gap:8px;-webkit-app-region:drag}
-.quickadd-header strong{font-size:13px}
+.quickadd-header strong{font-size:calc(13px*var(--text-scale))}
 .quickadd-mark{width:20px;height:20px}
 .quickadd-mark svg{width:20px;height:20px}
-.quickadd-hint{margin-inline-start:auto;font-size:11px;color:var(--muted)}
-#quickadd-title{width:100%;font-size:14px;padding:10px 12px}
+.quickadd-hint{margin-inline-start:auto;font-size:calc(12px*var(--text-scale));color:var(--muted)}
+#quickadd-title{width:100%;font-size:calc(14px*var(--text-scale));padding:10px 12px}
 .quickadd-row{display:flex;align-items:center;gap:10px}
 .quickadd-time{display:flex;align-items:center;gap:6px;color:var(--muted)}
 .quickadd-time svg{width:17px;height:17px}
-.quickadd-time input{padding:7px 9px;font-size:13px}
-.quickadd-due{flex:1;min-width:0;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.quickadd-row .primary{font-size:12px;padding:9px 16px}
-.quickadd-row .primary kbd{border-color:currentColor;font-size:9px}
-.quickadd-message{margin:0;min-height:16px;font-size:12px;color:var(--ink-2)}
+.quickadd-time input{padding:7px 9px;font-size:calc(13px*var(--text-scale))}
+.quickadd-due{flex:1;min-width:0;font-size:calc(12px*var(--text-scale));color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.quickadd-row .primary{font-size:calc(12px*var(--text-scale));padding:9px 16px}
+.quickadd-row .primary kbd{border-color:currentColor;font-size:calc(12px*var(--text-scale))}
+.quickadd-message{margin:0;min-height:16px;font-size:calc(12px*var(--text-scale));color:var(--ink-2)}
 .quickadd-message.error{color:var(--danger)}

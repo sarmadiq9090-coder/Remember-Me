@@ -88,7 +88,7 @@ test('Arabic month names are saved when sent, kept when left out, and reset when
 
 test('the alert learns the first day of the week, so its repeat labels match the main window', () => {
   const ctx = { ...stub, language: () => 'en', store: { state: { settings: { palette: 'ocean', weekStart: 1 } } } };
-  assert.deepEqual(createHandlers(ctx).language.run({}), { language: 'en', dates: null, palette: 'ocean', weekStart: 1, snoozePresets: DEFAULT_SNOOZE_PRESETS });
+  assert.deepEqual(createHandlers(ctx).language.run({}), { language: 'en', dates: null, palette: 'ocean', textSize: 100, weekStart: 1, snoozePresets: DEFAULT_SNOOZE_PRESETS });
   ctx.dateLocale = () => 'ar-EG-u-nu-latn';
   assert.equal(createHandlers(ctx).language.run({}).dates, 'ar-EG-u-nu-latn', 'and the locale for its dates and counts');
 });

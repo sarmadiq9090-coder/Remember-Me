@@ -94,6 +94,8 @@
   "Close the window normally and Remember Me stays by the clock. Use its tray menu to exit fully. Alerts cannot appear while the PC is off or asleep; missed reminders appear when you return. The app uses your device time.": "أغلق النافذة بشكل طبيعي؛ يبقى ذكرني بجانب الساعة. للخروج الكامل استخدم قائمته هناك. أثناء إيقاف الجهاز أو سكونه لا يمكن إظهار تنبيه، وستظهر التذكيرات الفائتة عند العودة وتشغيل البرنامج. الوقت المعتمد هو توقيت جهازك.",
   "Closing the window keeps Remember Me near the clock": "إغلاق النافذة يُبقي ذكرني بجانب الساعة",
   "Colors": "الألوان",
+  "Text size": "حجم النص",
+  "Makes all text larger. Ctrl+= and Ctrl+- also change it, and Ctrl+0 brings it back to 100%.": "يكبّر كل النصوص في البرنامج. يمكن تغييره أيضًا بالمفتاحين Ctrl+= و Ctrl+- وإعادته إلى 100% بالمفتاح Ctrl+0.",
   "Coming up: {title}": "قريبًا: {title}",
   "Complete any task to see it in this list.": "اضغط علامة الإنجاز بجانب أي مهمة لتظهر في هذه القائمة.",
   "Complete {title}": "إكمال {title}",

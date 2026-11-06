@@ -5,6 +5,7 @@ const { alertBounds, quickAddBounds } = require('../core/placement');
 const { windowColors } = require('../platform/themes');
 const { findLocale } = require('../../ui/lib/translate');
 const { PAGE_PREFERENCES } = require('./web-security');
+const { textSizeStep, stepTextSize, scaledSize } = require('../../ui/lib/text-size');
 // Windows picks the matching size from the ICO for the title bar, taskbar and Alt+Tab.
 const windowIcon = path.join(__dirname, '../../assets/icon.ico');
 
@@ -18,18 +19,33 @@ function createWindows(ctx) {
     nativeTheme.themeSource = ctx.store.state.settings.theme;
     for (const [win, kind] of [[mainWindow, 'main'], [alertWindow, 'alert'], [quickAddWindow, 'alert']]) if (win && !win.isDestroyed()) win.setBackgroundColor(background(kind));
   }
-  // The preload hands the saved palette, language and direction to the page so its first paint already uses
+  // The preload hands the saved palette, text size, language and direction to the page so its first paint already uses
   // them; later changes arrive with waqt:update. Page URLs stay plain file paths: the desktop tests and fromPage() match on them.
   function options() {
     const { store } = ctx, locale = findLocale(store.state.settings.language);
     return { preload: path.join(__dirname, 'preload.js'), ...PAGE_PREFERENCES,
-      additionalArguments: [`--waqt-palette=${store.state.settings.palette}`, `--waqt-language=${locale.code}`, `--waqt-dir=${locale.dir}`] };
+      additionalArguments: [`--waqt-palette=${store.state.settings.palette}`, `--waqt-text-size=${store.state.settings.textSize}`, `--waqt-language=${locale.code}`, `--waqt-dir=${locale.dir}`] };
   }
+  // Ctrl+= / Ctrl+- / Ctrl+0 change the text size in every window (the windows have no menu, so Chromium's
+  // zoom keys do nothing). The size is saved like any setting; the alert window grows with it.
+  function textSizeKeys(win) {
+    win.webContents.on('before-input-event', (event, input) => {
+      const step = textSizeStep(input);
+      if (step === null) return;
+      event.preventDefault();
+      const current = ctx.store.state.settings.textSize, next = stepTextSize(current, step);
+      if (next === current) return;
+      try { ctx.store.change(s => { s.settings.textSize = next; }); } catch (err) { ctx.log?.warn('text-size-not-saved', err); return; }
+      placeAlert(); notifyViews();
+    });
+  }
+  const alertSize = () => scaledSize({ width: 410, height: 570 }, ctx.store.state.settings.textSize);
   // New windows, navigation and webviews are denied for every page in index.js (src/main/web-security.js).
   function createMain(visible = !process.argv.includes('--background')) {
     const win = mainWindow = new BrowserWindow({ width: 1250, height: 850, minWidth: 900, minHeight: 650,
       title: tr('Remember Me • Your day'), icon: windowIcon, show: false, backgroundColor: background('main'), autoHideMenuBar: true, webPreferences: options() });
     win.setMenu(null);
+    textSizeKeys(win);
     win.loadFile(path.join(__dirname, '../../ui/index.html'));
     win.on('session-end', () => { ctx.quitting = true; });
     win.on('close', e => { if (!ctx.quitting) { e.preventDefault(); win.hide(); } });
@@ -57,7 +73,7 @@ function createWindows(ctx) {
   }
   function placeAlert() {
     if (!alertWindow || alertWindow.isDestroyed()) return;
-    alertWindow.setBounds(alertBounds(screen.getPrimaryDisplay(), ctx.store.state.settings.alertSide));
+    alertWindow.setBounds(alertBounds(screen.getPrimaryDisplay(), ctx.store.state.settings.alertSide, alertSize()));
   }
   function notifyViews() {
     for (const win of [mainWindow, alertWindow, quickAddWindow]) if (win && !win.isDestroyed()) win.webContents.send('waqt:update');
@@ -68,10 +84,11 @@ function createWindows(ctx) {
   function showAlert() {
     if (!alertWindow || alertWindow.isDestroyed()) {
       const activeAlerts = () => ctx.scheduler.activeAlerts();
-      alertWindow = new BrowserWindow({ width: 410, height: 570, frame: false, resizable: false, minimizable: false,
+      alertWindow = new BrowserWindow({ ...alertSize(), frame: false, resizable: false, minimizable: false,
         maximizable: false, skipTaskbar: true, alwaysOnTop: true, show: false, backgroundColor: background('alert'), icon: windowIcon, webPreferences: options() });
       alertWindow.setAlwaysOnTop(true, 'pop-up-menu');
       placeAlert();
+      textSizeKeys(alertWindow);
       alertWindow.loadFile(path.join(__dirname, '../../ui/alert.html'));
       alertWindow.once('ready-to-show', () => { if (alertWindow && activeAlerts().length) alertWindow.showInactive(); });
       alertWindow.on('session-end', () => { ctx.quitting = true; });
@@ -85,9 +102,10 @@ function createWindows(ctx) {
   function showQuickAdd() {
     if (quickAddWindow && !quickAddWindow.isDestroyed()) { quickAddWindow.show(); quickAddWindow.focus(); return; }
     const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-    const win = quickAddWindow = new BrowserWindow({ ...quickAddBounds(display), frame: false, resizable: false, minimizable: false, maximizable: false,
+    const win = quickAddWindow = new BrowserWindow({ ...quickAddBounds(display, scaledSize({ width: 460, height: 168 }, ctx.store.state.settings.textSize)), frame: false, resizable: false, minimizable: false, maximizable: false,
       skipTaskbar: true, alwaysOnTop: true, show: false, title: tr('Remember Me • Quick add'), backgroundColor: background('alert'), icon: windowIcon, webPreferences: options() });
     win.setAlwaysOnTop(true, 'pop-up-menu');
+    textSizeKeys(win);
     win.loadFile(path.join(__dirname, '../../ui/quickadd.html'));
     win.once('ready-to-show', () => { win.show(); win.focus(); });
     win.on('closed', () => { if (quickAddWindow === win) quickAddWindow = null; });

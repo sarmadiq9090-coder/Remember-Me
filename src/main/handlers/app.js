@@ -3,6 +3,7 @@ const { dueTasks } = require('../../core/tasks');
 const { nextOccurrence } = require('../../core/repeat');
 const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale } = require('../../../ui/lib/translate');
 const { normalizeSnoozePresets } = require('../../../ui/lib/alert-format');
+const { normalizeTextSize } = require('../../../ui/lib/text-size');
 
 module.exports = ctx => ({
   state: { readOnly: true, run: () => ({ ...ctx.store.state, dataPath: ctx.app.getPath('userData'), packaged: ctx.app.isPackaged, recovered: ctx.store.recovered, driveBackup: ctx.driveBackup.status(), updates: ctx.updates.status(), windowsStore: ctx.windowsStore === true, importedFromInstaller: ctx.importedFromInstaller === true, dates: ctx.dateLocale?.() ?? null, region: ctx.region || '', quickAdd: ctx.quickAdd.status(), openTask: ctx.takeOpenRequest() }) },
@@ -13,7 +14,7 @@ module.exports = ctx => ({
       next: t.repeat && t.repeat !== 'none' && t.scheduleAt ? nextOccurrence(t.scheduleAt, t.repeat, now, t) : null }));
   } },
   // What the alert window needs to look and read like the main window.
-  language: { readOnly: true, run: () => { const { settings } = ctx.store.state; return { language: ctx.language(), dates: ctx.dateLocale?.() ?? null, palette: settings.palette, weekStart: settings.weekStart, snoozePresets: normalizeSnoozePresets(settings.snoozePresets) }; } },
+  language: { readOnly: true, run: () => { const { settings } = ctx.store.state; return { language: ctx.language(), dates: ctx.dateLocale?.() ?? null, palette: settings.palette, textSize: normalizeTextSize(settings.textSize), weekStart: settings.weekStart, snoozePresets: normalizeSnoozePresets(settings.snoozePresets) }; } },
   // Reads translations only; each window asks once per language inside its own refresh, before rendering.
   locale: { readOnly: true, run: payload => {
     const code = LOCALES.some(l => l.code === payload.code) ? payload.code : ctx.language();

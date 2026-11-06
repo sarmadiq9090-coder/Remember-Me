@@ -90,6 +90,8 @@
   "Close the window normally and Remember Me stays by the clock. Use its tray menu to exit fully. Alerts cannot appear while the PC is off or asleep; missed reminders appear when you return. The app uses your device time.": "Tutup jendela seperti biasa dan Remember Me tetap ada di dekat jam. Gunakan menunya di baki sistem untuk keluar sepenuhnya. Peringatan tidak bisa tampil saat PC mati atau tidur; pengingat yang terlewat muncul saat Anda kembali. Aplikasi memakai waktu perangkat Anda.",
   "Closing the window keeps Remember Me near the clock": "Menutup jendela membuat Remember Me tetap di dekat jam",
   "Colors": "Warna",
+  "Text size": "Ukuran teks",
+  "Makes all text larger. Ctrl+= and Ctrl+- also change it, and Ctrl+0 brings it back to 100%.": "Memperbesar semua teks. Ctrl+= dan Ctrl+- juga mengubahnya, dan Ctrl+0 mengembalikannya ke 100%.",
   "Coming up: {title}": "Segera: {title}",
   "Complete any task to see it in this list.": "Selesaikan tugas apa pun untuk melihatnya di daftar ini.",
   "Complete {title}": "Selesaikan {title}",
