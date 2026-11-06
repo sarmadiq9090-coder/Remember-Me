@@ -2,13 +2,15 @@
 const { randomUUID } = require('node:crypto');
 const { attachmentIds, validateAttachment } = require('./records');
 const { nextOccurrence } = require('./repeat');
-const { LOCALES, DEFAULT: DEFAULT_LOCALE } = require('../../ui/lib/translate');
+const { LOCALES, DEFAULT: DEFAULT_LOCALE, ARABIC_MONTHS } = require('../../ui/lib/translate');
 const { validPause } = require('./pause');
 const { DEFAULT_SNOOZE_PRESETS, normalizeSnoozePresets } = require('../../ui/lib/alert-format');
 const { DEFAULT_QUICK_ADD_SHORTCUT, normalizeAccelerator } = require('../../ui/lib/quickadd');
 
-function initialState() {
-  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: DEFAULT_LOCALE, weekStart: 6, theme: 'system', palette: 'lavender', autoUpdate: null, pausedUntil: null, snoozePresets: DEFAULT_SNOOZE_PRESETS.map(p => ({ ...p })), quickAdd: false, quickAddShortcut: DEFAULT_QUICK_ADD_SHORTCUT } };
+// language is the interface language of a fresh install (from Windows' preferred languages); English otherwise.
+function initialState(language = DEFAULT_LOCALE) {
+  if (!LOCALES.some(l => l.code === language)) language = DEFAULT_LOCALE;
+  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language, weekStart: 6, theme: 'system', palette: 'lavender', arabicMonths: 'auto', autoUpdate: null, pausedUntil: null, snoozePresets: DEFAULT_SNOOZE_PRESETS.map(p => ({ ...p })), quickAdd: false, quickAddShortcut: DEFAULT_QUICK_ADD_SHORTCUT } };
 }
 // Interface palettes in ui/styles/theme.css; anything else shows Lavender.
 const PALETTES = ['lavender', 'ocean', 'forest', 'sunset', 'graphite', 'contrast'];
@@ -319,6 +321,8 @@ function validateState(data) {
   // The Hijri date and digit style options were removed; data saved while they existed drops the fields.
   delete data.settings.hijri;
   delete data.settings.digits;
+  // Arabic month names follow the Windows region unless chosen.
+  if (!ARABIC_MONTHS.includes(data.settings.arabicMonths)) data.settings.arabicMonths = 'auto';
   for (const key of ['sound', 'startAtLogin']) if (typeof data.settings[key] !== 'boolean') data.settings[key] = defaults[key];
   if (!['system', 'light', 'dark'].includes(data.settings.theme)) data.settings.theme = 'system';
   if (!PALETTES.includes(data.settings.palette)) data.settings.palette = 'lavender';

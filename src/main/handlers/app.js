@@ -5,7 +5,7 @@ const { LOCALES, DEFAULT: DEFAULT_LOCALE, findLocale } = require('../../../ui/li
 const { normalizeSnoozePresets } = require('../../../ui/lib/alert-format');
 
 module.exports = ctx => ({
-  state: { readOnly: true, run: () => ({ ...ctx.store.state, dataPath: ctx.app.getPath('userData'), packaged: ctx.app.isPackaged, recovered: ctx.store.recovered, driveBackup: ctx.driveBackup.status(), updates: ctx.updates.status(), windowsStore: ctx.windowsStore === true, quickAdd: ctx.quickAdd.status(), openTask: ctx.takeOpenRequest() }) },
+  state: { readOnly: true, run: () => ({ ...ctx.store.state, dataPath: ctx.app.getPath('userData'), packaged: ctx.app.isPackaged, recovered: ctx.store.recovered, driveBackup: ctx.driveBackup.status(), updates: ctx.updates.status(), windowsStore: ctx.windowsStore === true, importedFromInstaller: ctx.importedFromInstaller === true, dates: ctx.dateLocale?.() ?? null, region: ctx.region || '', quickAdd: ctx.quickAdd.status(), openTask: ctx.takeOpenRequest() }) },
   alerts: { readOnly: true, run: () => {
     const now = new Date(), { store } = ctx;
     // next is when a repeating reminder comes back after Done, shown under the Done button.
@@ -13,7 +13,7 @@ module.exports = ctx => ({
       next: t.repeat && t.repeat !== 'none' && t.scheduleAt ? nextOccurrence(t.scheduleAt, t.repeat, now, t) : null }));
   } },
   // What the alert window needs to look and read like the main window.
-  language: { readOnly: true, run: () => { const { settings } = ctx.store.state; return { language: ctx.language(), palette: settings.palette, weekStart: settings.weekStart, snoozePresets: normalizeSnoozePresets(settings.snoozePresets) }; } },
+  language: { readOnly: true, run: () => { const { settings } = ctx.store.state; return { language: ctx.language(), dates: ctx.dateLocale?.() ?? null, palette: settings.palette, weekStart: settings.weekStart, snoozePresets: normalizeSnoozePresets(settings.snoozePresets) }; } },
   // Reads translations only; each window asks once per language inside its own refresh, before rendering.
   locale: { readOnly: true, run: payload => {
     const code = LOCALES.some(l => l.code === payload.code) ? payload.code : ctx.language();

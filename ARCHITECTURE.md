@@ -181,9 +181,10 @@ all data. The shape (`version` is always `1`):
            attachments, createdAt, updatedAt, deletedAt? }],
   attachments: [{ id, name, size, addedAt }],
   settings: {
-    sound: true, startAtLogin: false, alertSide: 'right'|'left', language: 'en'|'ar'|'es'|…,  // a code from LOCALES in ui/lib/translate.js; new installs use 'en'
+    sound: true, startAtLogin: false, alertSide: 'right'|'left', language: 'en'|'ar'|'es'|…,  // a code from LOCALES in ui/lib/translate.js; new installs use Windows' preferred language if the app has it, else 'en'
     weekStart: 6|0|1, theme: 'system'|'light'|'dark',
     palette: 'lavender'|'ocean'|'forest'|'sunset'|'graphite'|'contrast',  // ui/styles/theme.css
+    arabicMonths: 'auto'|'levant'|'standard',  // Arabic month names: «تشرين الثاني» or «نوفمبر»; auto follows the Windows region (dateLocale() in ui/lib/translate.js)
     autoUpdate: null|true|false,  // consent to background update checks; null means not asked yet
     remindAgain?: 0|2|5|15,   // minutes between repeated alert sounds; absent means off
     pausedUntil: null|'<ISO time>'|'manual',  // reminders paused from the tray; null means not paused
@@ -418,7 +419,11 @@ says how many were left out.
   `v*` tags and by hand, and uploads it as the `store-package` artifact.
 - `.github/workflows/test.yml` runs the unit tests and ESLint on Windows for every pull request.
   `.github/workflows/desktop.yml` packages a desktop test build and runs `tests/desktop-smoke.cjs`
-  against it with Playwright.
+  against it with Playwright. Its `upgrade` job installs each release in its `previous` list (v1.6.2
+  and v1.6.1) from GitHub, gives it Arabic data, installs an installer built from this commit over it, and checks with
+  `tests/upgrade-desktop.cjs` that the data, settings, language and start with Windows survive, then
+  that uninstalling keeps the data folder and removes start with Windows (`customUnInstall` in
+  `installer/installer.nsh`, skipped when an upgrade runs the old uninstaller with `--updated`).
   `.github/workflows/release.yml` has two jobs. `build`, with a read-only token that isn't kept in
   the checkout, checks a `v*` tag against `package.json`, runs the tests, builds the installer,
   writes `SHA256SUMS.txt` and winget manifests (`tools/winget-manifest.mjs`) and uploads them as

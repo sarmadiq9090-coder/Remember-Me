@@ -1,16 +1,37 @@
 # Changelog
 
-## Unreleased
+## v1.7.0 (2026-11-06)
+
+Quick add from anywhere, a Microsoft Store package, and a new install that opens in your Windows language. Your tasks, notes, attachments and settings load unchanged.
 
 ### Added
 
-- Quick add from anywhere: turn it on in Settings, then press Ctrl+Alt+R in any app to add a task with an optional time from a small window above the taskbar. Enter saves, Esc closes. The shortcut can be changed in Settings, which also says when another app already uses it. It is off until you turn it on. [#82]
-- A Microsoft Store package, **Remember Me Reminders**: `pnpm run store` builds it and the **Store package** workflow uploads it as an artifact. In the Store version, updates come from the Store, Start with Windows is turned on in Windows' Startup apps settings, and the data lives in the package's folder, copied from the installer version on its first start. See `docs/distribution/microsoft-store.md`.
+- Quick add from anywhere: turn it on in Settings, then press Ctrl+Alt+R in any app to add a task with an optional time from a small window above the taskbar. Enter saves, Esc closes. The shortcut can be changed in Settings, which also says when another app already uses it. It is off until you turn it on. (issue #82) [#100]
+- A Microsoft Store package, **Remember Me Reminders**: `pnpm run store` builds it and the **Store package** workflow uploads it as an artifact. In the Store version, updates come from the Store, Start with Windows is turned on in Windows' Startup apps settings, and the data lives in the package's folder, copied from the installer version on its first start. See `docs/distribution/microsoft-store.md`. [#101]
+- A new install opens in your Windows language when Remember Me has it (one of its 12), instead of always in English. A language you already chose is never changed. [#102]
+- Arabic interface: Settings → Calendar can show the month names used in Iraq and the Levant («تشرين الثاني») or in Egypt and the Gulf («نوفمبر»). By default they follow your Windows region. Digits stay Western (0-9). [#102]
+- Microsoft Store version: after it copies your data from the version installed from the website, a banner suggests uninstalling that version, because with both running every reminder shows twice. [#102]
 
 ### Changed
 
-- Spellcheck is off, so Chromium never downloads spelling dictionaries from Google's servers.
-- The installer's privacy notice now describes **Report a problem**.
+- Spellcheck is off, so Chromium never downloads spelling dictionaries from Google's servers. [#101]
+- The installer's privacy notice now describes **Report a problem**. [#101]
+- Microsoft Store version: the help for Start with Windows names the entry as Windows lists it, **Remember Me Reminders**, in every language. The Store version uses its package's own taskbar identity, so its taskbar button groups with its pinned and Start menu entries. [#102]
+- Microsoft Store listing: new Arabic and dark screenshots, with the alert at the bottom left in Arabic and the purple palette in dark, captions for each, and listing fixes (only English and Arabic listings, Arabic name «ذكّرني - تذكير ومهام», no other product names in the search terms). The Store workflow now installs and starts the package on Windows to check it. [#102]
+
+### Fixed
+
+- Arabic: the hint in the search box and other empty fields now ends with its ellipsis («ابحث عن مهمة أو ملاحظة…»), instead of starting with it. [#102]
+- Uninstalling Remember Me also removes its Start with Windows entry, which was left pointing at the removed app. Updating keeps it, and your data folder is still kept. [#105]
+
+### For contributors
+
+- `CLAUDE.md` with the repository guide, and `ROADMAP.md` with the phase plan, the weekly release trains and the rollback steps. [#96] [#97]
+- The **Desktop** workflow has an upgrade job: it installs v1.6.2 (and v1.6.1) from its GitHub release, adds Arabic tasks, notes, an attachment and settings, installs the new build over it, and checks that everything loads unchanged in Arabic before it uninstalls (`tests/upgrade-desktop.cjs`). [#104]
+
+### Upgrading
+
+- v1.5.0 and later update themselves if you allowed automatic updates. Otherwise, install v1.7.0 over your current version; your data stays where it is.
 
 ## v1.6.2 (2026-11-03)
 
@@ -273,3 +294,10 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 [#71]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/71
 [#72]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/72
 [#91]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/91
+[#96]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/96
+[#97]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/97
+[#100]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/100
+[#101]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/101
+[#102]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/102
+[#104]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/104
+[#105]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/105

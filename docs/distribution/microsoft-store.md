@@ -43,7 +43,7 @@ The package is built on GitHub Actions by `.github/workflows/store.yml` (electro
 
 If the run says **Dry run** in its summary, `store/identity.json` has a placeholder and the package can't be uploaded.
 
-The job runs the unit tests, `pnpm run package` and `pnpm run store`, then opens the package and checks its identity, publisher, minimum Windows version (10.0.17763.0, Windows 10 1809), the `runFullTrust` capability, the startup task and `resources.pri`. It has a read-only token and uses no secrets.
+The job runs the unit tests, `pnpm run package` and `pnpm run store`, then opens the package and checks its identity, publisher, minimum Windows version (10.0.17763.0, Windows 10 1809), the `runFullTrust` capability, the startup task and `resources.pri`. Then `tests/store-install.ps1` signs a copy with a throwaway certificate, installs it on the runner, leaves sample data where the installer version keeps its data, starts the app as the Start menu does and checks its log: Store mode, the data copied into the package folder with its language kept, the app still running. It removes the package, the certificate and the sample afterwards. A second job, **Store screenshots**, retakes the listing images with Windows' fonts (see [Screenshots](#screenshots)). The workflow has a read-only token and uses no secrets.
 
 To build on a Windows PC instead: `pnpm install`, `pnpm run package`, `pnpm run store`. The package is written to `release/store/`. To try it before uploading, install it with `Add-AppxPackage -Register` from an unpacked copy, or sign a copy with a test certificate. An unsigned package doesn't install by double-click.
 
@@ -56,7 +56,7 @@ To build on a Windows PC instead: `pnpm install`, `pnpm run package`, `pnpm run 
 3. **Pricing and availability:** Free, all markets (or choose), visibility Public. Save.
 4. **Properties:** category **Productivity**. Privacy policy URL `https://fastkiwi.app/privacy/` (see [Privacy policy](#privacy-policy)). Website `https://sarmadiq9090-coder.github.io/Remember-Me/`. Support contact `https://github.com/sarmadiq9090-coder/Remember-Me/issues`. Product declarations: "can be installed to alternate drives" may stay on; everything else (non-Microsoft drivers or NT services, own purchase system, accessibility testing claim) is off. Save.
 5. **Age ratings:** answer the questionnaire as in [Age rating](#age-rating-iarc-questionnaire).
-6. **Store listings:** English (United States) and Arabic, with the text in [Store listing](#store-listing). Add the [screenshots](#screenshots).
+6. **Store listings:** English (United States) and Arabic only, with the text in [Store listing](#store-listing), and remove every other listing language (see there). Add the [screenshots](#screenshots) and their captions.
 7. **Submission options → Notes for certification:** paste [the notes](#notes-for-certification).
 8. **Submit to the Store.** Certification usually takes a few business days.
 
@@ -66,7 +66,9 @@ The app checks Electron's `process.windowsStore`, which is `true` only inside th
 
 **Updates.** The Store installs new versions itself, and Store policy forbids an app updating itself. The Store version never loads electron-updater, never contacts GitHub, and asks no update consent. Settings → Updates and About say "Updates come from Microsoft Store." (`src/platform/updates.js`: `updateSource`, `createUpdater`; tested in `tests/store.test.js`).
 
-**Start with Windows.** Electron's `app.setLoginItemSettings` doesn't work for a packaged app: it writes the HKCU `Run` key, and a packaged app's registry writes go to its private copy of the registry, which Windows doesn't read at sign-in. The package declares a startup task instead (`desktop:StartupTask`, `TaskId="RememberMeStartup"`, `Enabled="false"`). electron-builder's own `addAutoLaunchExtension` was not used: it turns the task on by default (and names it `SlackStartup`), while Remember Me starts with Windows only when the user asks, as the installer version does. Electron has no API to switch a startup task (that needs the WinRT `StartupTask` class), so in the Store version Settings shows **Open startup settings**, which opens Windows' **Settings → Apps → Startup** page, where the user turns Remember Me on. The "Start with Windows is off" warning becomes a banner with the same button that can be dismissed. Windows starts the task without `--background`, so the main window opens at sign-in.
+**Start with Windows.** Electron's `app.setLoginItemSettings` doesn't work for a packaged app: it writes the HKCU `Run` key, and a packaged app's registry writes go to its private copy of the registry, which Windows doesn't read at sign-in. The package declares a startup task instead (`desktop:StartupTask`, `TaskId="RememberMeStartup"`, `Enabled="false"`). electron-builder's own `addAutoLaunchExtension` was not used: it turns the task on by default (and names it `SlackStartup`), while Remember Me starts with Windows only when the user asks, as the installer version does. Electron has no API to switch a startup task (that needs the WinRT `StartupTask` class), so in the Store version Settings shows **Open startup settings**, which opens Windows' **Settings → Apps → Startup** page, where the user turns on **Remember Me Reminders** (the startup task's name there, from `store/identity.json`; the app's help text says so in every language). The "Start with Windows is off" warning becomes a banner with the same button that can be dismissed. Windows starts the task without `--background`, so the main window opens at sign-in.
+
+**Taskbar identity.** The installer version sets the AppUserModelID `com.waqt.reminder` (its taskbar group since v1.4). The Store version doesn't: Windows gives it `<package family name>!RememberMe` from the package, so its taskbar button groups with its pinned tile and Start entry (`appUserModelId` in `src/platform/login-item.js`).
 
 **Data folder.** Inside a package Windows virtualizes `%APPDATA%`: files the app creates there go into a hidden per-package copy that File Explorer, other programs and the installer version can't see. So the Store version keeps its data in its package folder:
 
@@ -80,8 +82,10 @@ Settings shows this path and **Open data folder** opens it. The data, backups an
 
 - On its first start, the Store version copies the installer version's data from `%APPDATA%\Remember Me` (or `%APPDATA%\Waqt` from v1.4) into its package folder and checks the copy: `data.json`, `data.json.bak`, `attachments`, `backups`, `drive-backup.json` and `logs`. The original is not changed or deleted. The Google Drive backup settings come along.
 - Quit the installer version from its tray menu first, so it isn't writing while the copy is made. If the copy fails, the Store version works on `%APPDATA%\Remember Me` as it is (it can still read the installer version's files there) and tries the copy again at the next start.
-- After the first start the two versions don't share data. Check that everything is there, then uninstall the installer version from **Settings → Apps** (its uninstaller keeps `%APPDATA%\Remember Me`). Turn on start with Windows again in the Store version (see above): the installer version's entry is removed by its uninstaller.
+- After the first start the two versions don't share data, and if both run, every reminder shows twice. So after the copy the Store version shows a banner (until it is dismissed) asking the user to uninstall the old version, listed as **Remember Me** in **Settings → Apps → Installed apps** (its uninstaller keeps `%APPDATA%\Remember Me`). Turn on start with Windows again in the Store version (see above): the installer version's entry is removed by its uninstaller.
 - The manual way always works too: **Export backup** in the installer version, then **Restore from backup** in the Store version.
+
+**Language on first run.** The Store has no installer page that could ask for a language, so a fresh install (no saved data) opens in the first of Windows' preferred languages that the app has (`app.getPreferredSystemLanguages()`, matched by `matchLocale` in `ui/lib/translate.js`), else English. A saved language, including one copied from the installer version, is never changed. The installer version does the same.
 
 **Uninstalling the Store version deletes its data** (Windows removes the package folder, and **Settings → Apps → Advanced options → Reset** empties it). Export a backup, or keep a Google Drive backup, before uninstalling or resetting.
 
@@ -91,7 +95,7 @@ Settings shows this path and **Open data folder** opens it. The data, backups an
 
 Partner Center limits: description up to 10,000 characters, short description up to 1,000, up to 20 features of up to 200 characters each, up to 7 search terms of up to 30 characters (21 words in all), release notes up to 1,500.
 
-The package declares the app's 12 interface languages, so Partner Center may list a Store listing for each. Fill English (United States) and Arabic with the text below. For the other ten, add the English text or remove those listing languages, as Partner Center offers.
+The package declares the app's 12 interface languages, so Partner Center may list a Store listing for each. Fill only **English (United States)** and **Arabic** with the text below, and **remove the other ten listing languages** (Store listings → **Manage additional languages**, untick them). Don't paste the English text into them: policy 10.7 wants each listing in the language it is listed under. Customers in those languages see the English listing, and the app itself still opens in their language. If Partner Center refuses to remove a language because the package declares it, stop and ask: the package's language list can be cut to English and Arabic in `tools/store.cjs`.
 
 ### English (United States)
 
@@ -112,6 +116,8 @@ The package declares the app's 12 interface languages, so Partner Center may lis
 > Remember Me speaks 12 languages, including a full right-to-left Arabic interface, and offers light and dark themes with six color palettes. It is free and open source under the MIT license.
 >
 > Reminders appear while Remember Me is running: closing the window keeps it in the notification area, and you can turn on Start with Windows in Windows Settings > Apps > Startup.
+>
+> Windows only — no phone app or cloud sync.
 
 **Features:**
 
@@ -119,7 +125,7 @@ The package declares the app's 12 interface languages, so Partner Center may lis
 2. Smart snooze on keys 1 to 6: 10 minutes, 1 hour, this evening, tomorrow, next week or any time. Set your own six choices.
 3. Repeating tasks: daily, weekly, monthly, yearly, chosen weekdays or every few days, at the same local time across DST changes.
 4. Early notice from 5 minutes to 1 day before a reminder, and an optional repeated sound while an alert is unanswered.
-5. Notes on ten paper colors, as plain cards, sticky notes or lined paper.
+5. Notes on ten paper colors, as plain cards, sticky-style paper or lined paper.
 6. Attach PDFs, documents, sheets and images to tasks and notes. Images preview inline, even in the alert.
 7. Checklists, tags, priorities, and search (Ctrl+K) that matches Arabic text with or without diacritics.
 8. Undo, and a Trash that keeps deleted tasks and notes for 30 days.
@@ -129,20 +135,22 @@ The package declares the app's 12 interface languages, so Partner Center may lis
 12. Pause reminders for an hour, until tomorrow, or until you resume.
 13. No account, no analytics, no tracking. Your data stays on your PC.
 14. Free and open source (MIT).
+15. Quick add from anywhere (off until you turn it on): a global shortcut, Ctrl+Alt+R or one you choose, opens a small box to add a task without opening the app.
+16. Windows only — no phone app or cloud sync.
 
-**Search terms:** reminder, to do list, tasks, notes, sticky notes, planner, Arabic
+**Search terms:** reminder, to do list, tasks, notes, alarm, planner, Arabic
 
 **What's new in this version (release notes):**
 
 > First release in the Microsoft Store. Updates now arrive through the Store. If you used the version from GitHub, your tasks, notes and attachments are copied in the first time you start this one.
 
-**Copyright and trademark info:** © 2026 Sarmad. Open source under the MIT license.
+**Copyright and trademark info:** © FastKiwi. Open source under the MIT license.
 
 **Additional license terms:** MIT License, https://github.com/sarmadiq9090-coder/Remember-Me/blob/main/LICENSE
 
 ### Arabic (العربية)
 
-**Product name:** Remember Me Reminders (or an Arabic name such as «ذكرني - Remember Me» if you reserve it under **Manage app names**; every listing must use a reserved name)
+**Product name:** «ذكّرني - تذكير ومهام». Reserve it first under **Product management → Manage app names → Reserve another name**: every listing must use a reserved name. Until it is reserved, use Remember Me Reminders.
 
 **الوصف المختصر:**
 
@@ -159,6 +167,8 @@ The package declares the app's 12 interface languages, so Partner Center may lis
 > يدعم ذكرني 12 لغة، منها واجهة عربية كاملة من اليمين إلى اليسار، مع سمة فاتحة وداكنة وست لوحات ألوان. وهو مجاني ومفتوح المصدر بترخيص MIT.
 >
 > تظهر التذكيرات ما دام ذكرني يعمل: إغلاق النافذة يبقيه في منطقة الإشعارات بجانب الساعة، ويمكنك تشغيله مع ويندوز من إعدادات ويندوز ← التطبيقات ← بدء التشغيل.
+>
+> لويندوز فقط، بلا تطبيق للهاتف ولا مزامنة سحابية.
 
 **الميزات:**
 
@@ -176,14 +186,16 @@ The package declares the app's 12 interface languages, so Partner Center may lis
 12. إيقاف التذكيرات مؤقتًا لساعة أو حتى الغد أو حتى تستأنفها.
 13. بلا حساب ولا إحصاءات ولا تتبع. بياناتك تبقى على جهازك.
 14. مجاني ومفتوح المصدر (MIT).
+15. إضافة سريعة من أي مكان (متوقفة حتى تفعّلها): اختصار عام، Ctrl+Alt+R أو اختصار تختاره، يفتح مربعًا صغيرًا لإضافة مهمة دون فتح البرنامج.
+16. لويندوز فقط، بلا تطبيق للهاتف ولا مزامنة سحابية.
 
-**كلمات البحث:** تذكير, مهام, ملاحظات, منبه, قائمة مهام, تنظيم الوقت, reminder
+**كلمات البحث:** ذكرني, تذكير, مهام, ملاحظات, منبه, قائمة مهام, تذكير بالمواعيد
 
 **ما الجديد في هذا الإصدار:**
 
 > أول إصدار في Microsoft Store. التحديثات تصل الآن من المتجر. إذا كنت تستخدم النسخة من GitHub، تُنسخ مهامك وملاحظاتك ومرفقاتك تلقائيًا في أول تشغيل لهذه النسخة.
 
-**حقوق النشر:** © 2026 Sarmad. مفتوح المصدر بترخيص MIT.
+**حقوق النشر:** © FastKiwi. مفتوح المصدر بترخيص MIT.
 
 ### Privacy policy
 
@@ -232,7 +244,8 @@ Paste this into **Submission options → Notes for certification**:
 > Remember Me Reminders is a Win32 desktop app (Electron) packaged as MSIX. It needs runFullTrust because it is a classic desktop app and because of how reminders work:
 > - Persistent alerts: when a reminder is due, a small frameless window appears above the taskbar and stays on top of other windows until the user chooses Done or Snooze. It must keep running in the background to show alerts on time.
 > - Notification-area (tray) icon: closing the main window keeps the app running next to the clock. Right-click the tray icon and choose Exit to quit completely.
-> - Start with Windows: the package declares a startup task (TaskId RememberMeStartup) that is disabled by default. The user turns it on in Windows Settings > Apps > Startup; the app's Settings has an "Open startup settings" button for this. The app writes no Run registry keys.
+> - Start with Windows: the package declares a startup task (TaskId RememberMeStartup, shown as "Remember Me Reminders") that is disabled by default. The user turns it on in Windows Settings > Apps > Startup; the app's Settings has an "Open startup settings" button for this. The app writes no Run registry keys.
+> - Optional global shortcut: Settings > "Quick add from anywhere" is off by default. When the user turns it on, the app registers one system-wide keyboard shortcut (Ctrl+Alt+R, or one the user picks) that opens a small always-on-top box to add a task. It is released when the setting is turned off or the app quits; if another app already holds it, Settings says so. The app does not read or log any other keys.
 >
 > How to test (no account or sign-in needed, works offline): open the app, choose "Add task", enter a title, turn on the reminder and set it one or two minutes ahead, then save. When it is due, the alert appears above the taskbar; use Done, or a snooze choice (keys 1-6). Settings > "Preview alert" shows an alert immediately.
 >
@@ -244,16 +257,20 @@ Partner Center needs at least one desktop screenshot, PNG, 1366×768 or larger (
 
 The screenshots in `docs/screenshots/` are 1234×811 (main window) and 410×570 (alert), so **none of them fit**: they are narrower than 1366 px. Use the Store set in **`docs/screenshots/store/`**, all 1366×768 PNG with made-up sample data:
 
-| File | Use for |
-| --- | --- |
-| `store/alert-en.png` | English listing, first: the alert over the main window |
-| `store/main-en.png` | English: Today view |
-| `store/notes-en.png` | English: notes |
-| `store/dark-en.png` | English: dark theme, Ocean palette |
-| `store/alert-ar.png` | Arabic listing, first |
-| `store/main-ar.png` | Arabic: Today view, right to left |
+Upload them in this order, each with its caption (Partner Center has a caption box under every screenshot, up to 200 characters):
 
-Regenerate them after interface changes with `pnpm run screenshots -- --store` (on Windows, or on Linux under `xvfb-run`). It runs the app in test mode with sample data, sizes the main window to 1366×768, and draws the alert over the main window at the bottom right, as it appears on screen. The committed set was made on Linux, so the font isn't Segoe UI; regenerating on Windows gives Windows' own fonts.
+| File | Listing | Caption |
+| --- | --- | --- |
+| `store/alert-en.png` | English, first: the alert over the main window | A reminder stays on top until you choose Done or snooze it. |
+| `store/main-en.png` | English: Today view | Your day at a glance: tasks, steps, tags and priorities. |
+| `store/notes-en.png` | English: notes | Notes on colored paper, next to your tasks. |
+| `store/dark-en.png` | English: dark theme, Lavender palette | Light or dark, with six color palettes. |
+| `store/alert-ar.png` | Arabic, first: the alert at the bottom left | يبقى التذكير ظاهرًا حتى تنجزه أو تؤجله. |
+| `store/main-ar.png` | Arabic: Today view, right to left | يومك في لمحة: المهام والخطوات والوسوم والأولويات. |
+| `store/notes-ar.png` | Arabic: notes | ملاحظات على ورق ملوّن، بجانب مهامك. |
+| `store/dark-ar.png` | Arabic: dark theme, Lavender palette | فاتح أو داكن، مع ست لوحات ألوان. |
+
+Regenerate them after interface changes with `pnpm run screenshots -- --store` (on Windows, or on Linux under `xvfb-run`). It runs the app in test mode with sample data, sizes the main window to 1366×768, and draws the alert over the main window in the bottom corner of its side: right for English, left for Arabic, so it doesn't cover the right-to-left headline. The dark shots use the default Lavender palette, the purple of the app icon. The committed set comes from the **Store screenshots** job of `.github/workflows/store.yml`, which runs the same command on Windows (Segoe UI): download its `store-screenshots` artifact to update them.
 
 Store logos for the listing (1:1 box art, 2:3 poster art) are optional; without them the Store uses the logos from the package.
 
@@ -275,11 +292,13 @@ Store logos for the listing (1:1 box art, 2:3 poster art) are optional; without 
 
 **الرفع في Partner Center:** Apps and games ← Remember Me Reminders ← Start your submission ← Packages، واسحب ملف `.appx` إليه، وأبقِ Windows 10/11 Desktop فقط. ثم: Pricing and availability (مجاني)، Properties (الفئة Productivity ورابط الخصوصية https://fastkiwi.app/privacy/)، Age ratings (الإجابات في الجدول أعلاه: كلها «لا»)، Store listings (النص الإنجليزي والعربي جاهز أعلاه)، Submission options (الصق «ملاحظات الاعتماد» أعلاه)، ثم Submit. كل رفع جديد يحتاج رقم إصدار أعلى في `package.json`.
 
-**قبل الإرسال:** صفحة الخصوصية https://fastkiwi.app/privacy/ ليس فيها قسم خاص بذكرني؛ أضف القسم المقترح أعلاه (بالعربية والإنجليزية). وصور المتجر الجاهزة في `docs/screenshots/store/` بمقاس 1366×768؛ الصور القديمة في `docs/screenshots/` أصغر من الحد المطلوب.
+**قبل الإرسال:** صفحة الخصوصية https://fastkiwi.app/privacy/ ليس فيها قسم خاص بذكرني؛ أضف القسم المقترح أعلاه (بالعربية والإنجليزية). وصور المتجر الجاهزة في `docs/screenshots/store/` بمقاس 1366×768، أربع بالإنجليزية وأربع بالعربية، ولكل صورة تعليق جاهز في جدول «Screenshots» أعلاه؛ الصور القديمة في `docs/screenshots/` أصغر من الحد المطلوب.
+
+**صفحات المتجر:** املأ الإنجليزية والعربية فقط، واحذف اللغات العشر الأخرى من Store listings ← Manage additional languages، ولا تلصق فيها النص الإنجليزي (سياسة 10.7). الاسم العربي «ذكّرني - تذكير ومهام» يجب حجزه أولًا من Product management ← Manage app names ← Reserve another name. حقوق النشر: © FastKiwi.
 
 **ما يختلف في نسخة المتجر:**
 - **التحديثات** من المتجر فقط؛ المحدِّث الداخلي من GitHub متوقف تمامًا، وتقول الإعدادات «التحديثات تأتي من Microsoft Store».
-- **التشغيل مع ويندوز:** لا يمكن لتطبيق من المتجر استخدام مفتاح Run في السجل، لذلك تحتوي الحزمة على «مهمة بدء تشغيل» متوقفة افتراضيًا، ويفعّلها المستخدم من إعدادات ويندوز ← التطبيقات ← بدء التشغيل. في إعدادات التطبيق زر «فتح إعدادات بدء التشغيل» يفتح هذه الصفحة. عند التشغيل مع ويندوز تظهر النافذة الرئيسية (ويندوز لا يمرر خيار التشغيل في الخلفية).
+- **التشغيل مع ويندوز:** لا يمكن لتطبيق من المتجر استخدام مفتاح Run في السجل، لذلك تحتوي الحزمة على «مهمة بدء تشغيل» متوقفة افتراضيًا، ويفعّلها المستخدم من إعدادات ويندوز ← التطبيقات ← بدء التشغيل، واسمها هناك «Remember Me Reminders». في إعدادات التطبيق زر «فتح إعدادات بدء التشغيل» يفتح هذه الصفحة. عند التشغيل مع ويندوز تظهر النافذة الرئيسية (ويندوز لا يمرر خيار التشغيل في الخلفية).
 - **البيانات** في مجلد الحزمة: `%LOCALAPPDATA%\Packages\FastKiwi.RememberMeReminders_sm1xjmj6v76yc\LocalState\Remember Me`.
-- **الانتقال من نسخة المثبّت لا يضيّع شيئًا:** في أول تشغيل تنسخ نسخة المتجر البيانات من `%APPDATA%\Remember Me` وتتحقق منها، دون تغيير الأصل. يُفضَّل إغلاق نسخة المثبّت أولًا. بعد التأكد يمكن إلغاء تثبيت نسخة المثبّت (تبقى بياناتها)، ثم تفعيل التشغيل مع ويندوز من جديد. والطريقة اليدوية متاحة دائمًا: «تصدير نسخة احتياطية» ثم «استعادة» في نسخة المتجر.
+- **الانتقال من نسخة المثبّت لا يضيّع شيئًا:** في أول تشغيل تنسخ نسخة المتجر البيانات من `%APPDATA%\Remember Me` وتتحقق منها، دون تغيير الأصل. يُفضَّل إغلاق نسخة المثبّت أولًا. إذا عملت النسختان معًا يظهر كل تذكير مرتين، لذلك تعرض نسخة المتجر بعد النسخ شريطًا يطلب إلغاء تثبيت النسخة القديمة (اسمها في قائمة التطبيقات «Remember Me»). بعد التأكد يمكن إلغاء تثبيت نسخة المثبّت (تبقى بياناتها)، ثم تفعيل التشغيل مع ويندوز من جديد. والطريقة اليدوية متاحة دائمًا: «تصدير نسخة احتياطية» ثم «استعادة» في نسخة المتجر.
 - **تنبيه:** إلغاء تثبيت نسخة المتجر أو «إعادة تعيينها» يحذف بياناتها؛ صدّر نسخة احتياطية قبل ذلك.

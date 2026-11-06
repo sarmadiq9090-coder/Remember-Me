@@ -50,7 +50,7 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 - **Tags and checklists:** tag tasks, filter the list by tag and find tags in search, sort tasks by due time, priority, newest or title, and break a task into steps you tick off from the list; a repeating task starts each occurrence with its steps unticked.
 - **Local-first data:** atomic saves, an automatic `.bak` copy and automatic recovery if the data file is damaged.
 - **Backups:** export a full backup with all attachments and checksums, restore one from Settings after it's verified, or copy daily backups into a synced Google Drive folder.
-- **Themes and display options:** light, dark or follow Windows, six color palettes (Lavender, Ocean, Forest, Sunset, Graphite and High contrast), and the first day of the week (Saturday by default). Dates and times always use Western digits (0-9), in Arabic too.
+- **Themes and display options:** light, dark or follow Windows, six color palettes (Lavender, Ocean, Forest, Sunset, Graphite and High contrast), and the first day of the week (Saturday by default). Dates and times always use Western digits (0-9), in Arabic too. The Arabic interface lets you choose Iraqi and Levantine month names («تشرين الثاني») or those of Egypt and the Gulf («نوفمبر»), by default from your Windows region.
 - **Multi-monitor aware:** the alert sits above the taskbar wherever it is (bottom, top, left or right) and adapts to scaled and secondary displays.
 - **Runs in the background:** closing the window keeps Remember Me in the notification area, and it can start with Windows. The icon shows a dot while reminders are waiting, and Remember Me warns you if Start with Windows is off while reminders are still to come.
 - **Optional automatic updates:** with your permission, new versions are downloaded from GitHub Releases and installed when you restart.
@@ -68,13 +68,13 @@ The installer is built by GitHub Actions from the published source. It is not co
 Compare the file's fingerprint with `SHA256SUMS.txt` from the same release:
 
 ```powershell
-Get-FileHash .\Remember-Me-Setup-1.6.2-x64.exe -Algorithm SHA256
+Get-FileHash .\Remember-Me-Setup-1.7.0-x64.exe -Algorithm SHA256
 ```
 
 With the GitHub CLI you can also confirm the file was built by this repository's release workflow from the release tag:
 
 ```powershell
-gh attestation verify .\Remember-Me-Setup-1.6.2-x64.exe --repo sarmadiq9090-coder/Remember-Me --source-ref refs/tags/v1.6.2 --signer-workflow sarmadiq9090-coder/Remember-Me/.github/workflows/release.yml
+gh attestation verify .\Remember-Me-Setup-1.7.0-x64.exe --repo sarmadiq9090-coder/Remember-Me --source-ref refs/tags/v1.7.0 --signer-workflow sarmadiq9090-coder/Remember-Me/.github/workflows/release.yml
 ```
 
 ### Microsoft Store
@@ -110,7 +110,7 @@ v1.4.0 can't update itself: install the next version from Releases once by hand,
 - **Settings:**
   - *Reminders and background:* alert sound, **Remind me again**, the six **Snooze choices** of the alert, start with Windows, **Quick add from anywhere** and its shortcut (click it and press the new one), alert position (left or right), interface language, and a preview alert.
   - *Appearance:* light, dark or same as Windows, and one of six palettes, picked from preview cards. The change shows at once in the main window and the alert.
-  - *Calendar:* the first day of the week.
+  - *Calendar:* the first day of the week; in Arabic also the month names.
   - *Your data:* export, restore, storage use and cleanup, the data folder, and Google Drive backups with how many automatic copies to keep.
   - *Updates:* automatic checks and **Check now**.
 - **About:** at the end of Settings, or **About Remember Me** in the tray menu. It shows the version, links to the source code, release notes, ideas and feedback, the privacy notice and the MIT license, and has **Report a problem**, **Check for updates** and **Open log folder**. **Copy diagnostic info** copies the app, Electron, Chromium and Windows versions plus the interface language and theme, to paste into a problem report. It never includes your tasks, notes, files or folder paths.

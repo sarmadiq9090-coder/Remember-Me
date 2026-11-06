@@ -24,7 +24,7 @@ $('settings-section').prepend(startupCard);
 document.querySelector('.page-heading').after(startupBanner);
 function dismissBanner() { try { localStorage.setItem('startupBannerDismissed', '1'); } catch { /* storage unavailable: it shows again next time */ } }
 async function openStartupSettings() {
-  try { await api('openStartupSettings'); toast(tr("In Startup apps, turn on Remember Me.")); } catch (error) { toast(error.message); }
+  try { await api('openStartupSettings'); toast(tr("In Startup apps, turn on Remember Me Reminders.")); } catch (error) { toast(error.message); }
 }
 $('open-startup-settings').addEventListener('click', openStartupSettings);
 function bannerDismissed() { try { return localStorage.getItem('startupBannerDismissed') === '1'; } catch { return false; } }
@@ -35,7 +35,7 @@ function renderStartupWarning() {
   startupBanner.hidden = !needed || view === 'settings' || bannerDismissed();
   for (const card of [startupCard, startupBanner]) {
     card.querySelector('h2').textContent = tr("Reminders only work while Remember Me is running");
-    card.querySelector('p').textContent = state.windowsStore ? tr("You have upcoming reminders. Check that Remember Me is on in Windows' Startup apps, so a restart does not make you miss one.") : tr("You have upcoming reminders, but Start with Windows is off. Turn it on so a restart does not make you miss one.");
+    card.querySelector('p').textContent = state.windowsStore ? tr("You have upcoming reminders. Check that Remember Me Reminders is on in Windows' Startup apps, so a restart does not make you miss one.") : tr("You have upcoming reminders, but Start with Windows is off. Turn it on so a restart does not make you miss one.");
     card.querySelector('[data-enable]').textContent = state.windowsStore ? tr("Open startup settings") : tr("Turn on Start with Windows");
     const dismiss = card.querySelector('[data-dismiss]');
     if (dismiss) dismiss.textContent = tr("Dismiss");

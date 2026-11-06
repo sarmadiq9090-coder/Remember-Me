@@ -49,6 +49,7 @@ function render() {
     renderSnoozeChoices();
     renderAppearance();
     $('setting-week').value = String(state.settings.weekStart);
+    renderArabicDates();
     $('data-path').textContent = state.dataPath;
     renderStorage();
     renderDriveBackup();
@@ -71,6 +72,7 @@ function render() {
     $('empty-add').hidden = view === 'completed' || !!query || filter !== 'all';
   }
   renderStartupWarning();
+  renderInstallerNotice();
   hydratePreviews();
 }
 // Tags that differ only in case are one tag, as in allTags().
