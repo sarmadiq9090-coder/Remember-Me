@@ -42,7 +42,7 @@ test('spellcheck is off, so Chromium never downloads Hunspell dictionaries from 
   assert.match(index, /session\.defaultSession\.setSpellCheckerEnabled\(false\)/);
 });
 
-test('only https:// addresses open in the browser', async () => {
+test('only https:// addresses open in the browser, and the support e-mail address', async () => {
   for (const url of ['https://github.com/sarmadiq9090-coder/Remember-Me', 'https://www.google.com/drive/download/']) assert.ok(isHttpsUrl(url), url);
   for (const url of ['http://example.com', 'file:///C:/Windows/System32/calc.exe', 'ms-settings:', '\\\\server\\share', 'github.com', '', undefined, 5]) assert.equal(isHttpsUrl(url), false, String(url));
   const opened = [], paths = [];
@@ -50,7 +50,9 @@ test('only https:// addresses open in the browser', async () => {
   await shell.openExternal('https://github.com/');
   await assert.rejects(shell.openExternal('file:///C:/evil.exe'), /only https/);
   await assert.rejects(shell.openExternal('http://github.com/'), /only https/);
-  assert.deepEqual(opened, ['https://github.com/']);
+  await shell.openExternal('mailto:support@fastkiwi.app');
+  for (const url of ['mailto:someone@example.com', 'mailto:support@fastkiwi.app?subject=x', 'MAILTO:support@fastkiwi.app', 'mailto:']) await assert.rejects(shell.openExternal(url), /only https/, url);
+  assert.deepEqual(opened, ['https://github.com/', 'mailto:support@fastkiwi.app'], 'The support e-mail address is the only exception');
   assert.equal(await shell.openPath('C:\\data'), '');
   shell.showItemInFolder('C:\\data\\a.exe');
   assert.deepEqual(paths, ['C:\\data', 'show:C:\\data\\a.exe']);

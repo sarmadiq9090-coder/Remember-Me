@@ -2,7 +2,7 @@
 const { ACTIONS, checkRequest, fromPage } = require('../ipc');
 // One file per area. Each exports (ctx) => ({ action: { run(payload, request), readOnly } }).
 // readOnly actions change no data, so the scheduler does not rescan and the windows are not told to refresh.
-const AREAS = ['app', 'tasks', 'notes', 'trash', 'attachments', 'backups', 'settings', 'updates', 'about'].map(name => require('./' + name));
+const AREAS = ['app', 'tasks', 'notes', 'trash', 'attachments', 'backups', 'settings', 'updates', 'about', 'rating'].map(name => require('./' + name));
 
 // Every action in the allowlist has exactly one handler, and every handler is allowlisted.
 function createHandlers(ctx) {

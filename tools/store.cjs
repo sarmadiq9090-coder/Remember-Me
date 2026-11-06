@@ -74,7 +74,7 @@ function storeConfig(identity, resources) {
 }
 // Writes the logos and extensions.xml into the build resources folder.
 function prepareResources(identity, resources = path.join(root, 'release', 'store-resources')) {
-  const logos = writeStoreLogos(path.join(root, 'assets', 'icon.png'), path.join(resources, 'appx'), path.join(root, 'assets', 'icon.ico'));
+  const logos = writeStoreLogos(path.join(root, 'assets', 'icon.png'), path.join(resources, 'appx'), path.join(root, 'assets', 'icon.ico'), path.join(root, 'store', 'logos'));
   fs.writeFileSync(path.join(resources, 'extensions.xml'), startupTaskExtension(`app\\${common.productName}.exe`, identity.displayName));
   return { resources, logos };
 }

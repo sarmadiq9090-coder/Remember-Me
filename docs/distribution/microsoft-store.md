@@ -13,6 +13,16 @@ Remember Me is published in the Microsoft Store as **Remember Me Reminders** ("R
 
 [ملخص للمالك بالعربية](#ملخص-للمالك-بالعربية) at the end.
 
+## Submission status
+
+| Submission | Package | Submitted | Status | Publish setting |
+| --- | --- | --- | --- | --- |
+| 1 | v1.7.0, `Remember-Me-1.7.0-x64.appx` (146.4 MB) | 2026-11-06 | In certification | Publish this submission as soon as it passes certification (automatic, at the owner's request) |
+
+Submission 1 was filled in as described below: 11 listing languages, all complete ([Store listing](#store-listing)); the certification notes under **Supplemental info → Additional Testing Information** ([Notes for certification](#notes-for-certification)); the [runFullTrust justification](#restricted-capability-justification-runfulltrust); and **Properties** as in [step 4](#3-upload-in-partner-center).
+
+**Every later Store update is a new submission** with a package of a higher version (see **Versions** in [section 2](#2-build-and-download-the-package)). The GitHub updater is disabled in the Store build, so a Store user gets a new version only through a new submission.
+
 ## 1. The identity: `store/identity.json`
 
 ```json
@@ -47,18 +57,20 @@ The job runs the unit tests, `pnpm run package` and `pnpm run store`, then opens
 
 To build on a Windows PC instead: `pnpm install`, `pnpm run package`, `pnpm run store`. The package is written to `release/store/`. To try it before uploading, install it with `Add-AppxPackage -Register` from an unpacked copy, or sign a copy with a test certificate. An unsigned package doesn't install by double-click.
 
-**Versions:** the package version is `package.json`'s version plus `.0` (1.6.2 becomes 1.6.2.0). Partner Center needs a higher version for every new upload, so a Store-only fix needs a new app version. The fourth number must stay 0: the Store reserves it.
+**Versions:** the package version is `package.json`'s version plus `.0` (1.6.2 becomes 1.6.2.0). Partner Center needs a higher version for every new upload, so a Store-only fix needs a new app version. The fourth number must stay 0: the Store reserves it. The Store build never updates itself from GitHub, so every Store update means a new submission with a package carrying a higher version than the last one submitted.
 
 ## 3. Upload in Partner Center
 
 1. **Apps and games → Remember Me Reminders → Start your submission** (later: **Update** on the existing submission).
 2. **Packages:** drag `Remember-Me-<version>-x64.appx` into the upload area. Partner Center validates it and shows the identity, version, x64 and the languages. Under **Device families**, keep **Windows 10/11 Desktop** only. Save.
 3. **Pricing and availability:** Free, all markets (or choose), visibility Public. Save.
-4. **Properties:** category **Productivity**. Privacy policy URL `https://fastkiwi.app/privacy/` (see [Privacy policy](#privacy-policy)). Website `https://sarmadiq9090-coder.github.io/Remember-Me/`. Support contact `https://github.com/sarmadiq9090-coder/Remember-Me/issues`. Product declarations: "can be installed to alternate drives" may stay on; everything else (non-Microsoft drivers or NT services, own purchase system, accessibility testing claim) is off. Save.
+4. **Properties:** category **Productivity**. **Uses personal information: Yes**. This was answered Yes only so that Partner Center accepts a privacy policy URL; the app collects nothing (see [Privacy policy](#privacy-policy)). Privacy policy URL `https://fastkiwi.app/privacy/`. Website `https://sarmadiq9090-coder.github.io/Remember-Me/`. Support contact **support@fastkiwi.app**. Product declarations: "can be installed to alternate drives" may stay on; everything else (non-Microsoft drivers or NT services, own purchase system, accessibility testing claim) is off. Save.
 5. **Age ratings:** answer the questionnaire as in [Age rating](#age-rating-iarc-questionnaire).
-6. **Store listings:** English (United States) and Arabic only, with the text in [Store listing](#store-listing), and remove every other listing language (see there). Add the [screenshots](#screenshots) and their captions.
-7. **Submission options → Notes for certification:** paste [the notes](#notes-for-certification).
-8. **Submit to the Store.** Certification usually takes a few business days.
+6. **Store listings:** 11 languages, each complete: English (United States) and Arabic with the text in [Store listing](#store-listing), and nine more with their own translations in [store-listings-translations.md](store-listings-translations.md). Add the [screenshots](#screenshots) and their captions.
+7. **Supplemental info → Additional Testing Information:** paste [the notes for certification](#notes-for-certification). Partner Center moved this field here from Submission options.
+8. **Restricted capabilities:** Partner Center asks why the package uses `runFullTrust`. Paste [the justification](#restricted-capability-justification-runfulltrust).
+9. **Submission options → Publishing:** **Publish this submission as soon as it passes certification** (automatic, chosen by the owner), not manual publishing.
+10. **Submit to the Store.** Certification usually takes a few business days.
 
 ## 4. How the Store version differs
 
@@ -89,13 +101,27 @@ Settings shows this path and **Open data folder** opens it. The data, backups an
 
 **Uninstalling the Store version deletes its data** (Windows removes the package folder, and **Settings → Apps → Advanced options → Reset** empties it). Export a backup, or keep a Google Drive backup, before uninstalling or resetting.
 
+**Rating request.** Only the Store version asks, once, for a rating, after a first real success: a reminder marked done, or five reminders set (`ui/lib/rating.js`). **Rate in the Store** opens `ms-windows-store://review/?ProductId=9NGB1F7T7JGN`; **Not now** is final. Either answer is saved as `settings.ratingAsked`, also kept when a backup is restored. Nothing is offered in return for a rating. About has **More from FastKiwi** (`ms-windows-store://publisher/?name=FastKiwi`) in every version, next to **Support** and **Email support** (`LINKS` in `src/platform/about.js`).
+
 **Not changed:** the reminders, alerts, tray icon, backups, Google Drive folder copies and Report a problem work as in the installer version. Spellcheck is off in every version, so Chromium never downloads dictionaries.
 
 ## Store listing
 
 Partner Center limits: description up to 10,000 characters, short description up to 1,000, up to 20 features of up to 200 characters each, up to 7 search terms of up to 30 characters (21 words in all), release notes up to 1,500.
 
-The package declares the app's 12 interface languages, so Partner Center may list a Store listing for each. Fill only **English (United States)** and **Arabic** with the text below, and **remove the other ten listing languages** (Store listings → **Manage additional languages**, untick them). Don't paste the English text into them: policy 10.7 wants each listing in the language it is listed under. Customers in those languages see the English listing, and the app itself still opens in their language. If Partner Center refuses to remove a language because the package declares it, stop and ask: the package's language list can be cut to English and Arabic in `tools/store.cjs`.
+The package declares the app's 12 interface languages. The Store listings have **11 languages, all complete**:
+
+| Listing language | Text | Screenshots |
+| --- | --- | --- |
+| English (United States) | [below](#english-united-states) | the four English ones |
+| Arabic | [below](#arabic-العربية) | the four Arabic ones |
+| German, Spanish, French, Indonesian, Japanese, Portuguese (Brazil), Russian, Turkish, Chinese (China) | their own translations in [store-listings-translations.md](store-listings-translations.md) | the four English ones, with the translated captions from that file |
+
+Never paste the English text into another language's listing: policy 10.7 wants each listing in the language it is listed under.
+
+**Hindi** was removed from the listings (Store listings → **Manage additional languages**). The package still declares Hindi, and the app still opens in Hindi for Hindi users. A future Hindi listing needs a review by a native speaker first.
+
+This replaces the earlier instruction to fill only English and Arabic and remove the ten other listing languages: it is superseded.
 
 ### English (United States)
 
@@ -239,7 +265,7 @@ The expected result is the lowest rating everywhere (IARC 3+, ESRB Everyone, PEG
 
 ## Notes for certification
 
-Paste this into **Submission options → Notes for certification**:
+Paste this into **Supplemental info → Additional Testing Information** (Partner Center moved the field there; it used to be **Submission options → Notes for certification**):
 
 > Remember Me Reminders is a Win32 desktop app (Electron) packaged as MSIX. It needs runFullTrust because it is a classic desktop app and because of how reminders work:
 > - Persistent alerts: when a reminder is due, a small frameless window appears above the taskbar and stays on top of other windows until the user chooses Done or Snooze. It must keep running in the background to show alerts on time.
@@ -250,6 +276,12 @@ Paste this into **Submission options → Notes for certification**:
 > How to test (no account or sign-in needed, works offline): open the app, choose "Add task", enter a title, turn on the reminder and set it one or two minutes ahead, then save. When it is due, the alert appears above the taskbar; use Done, or a snooze choice (keys 1-6). Settings > "Preview alert" shows an alert immediately.
 >
 > Updates come only from the Microsoft Store: the app's own GitHub updater is disabled in the Store package. Data is stored locally in the package's LocalState folder. The app makes no network requests unless the user clicks a link, "Report a problem" (opens a pre-filled GitHub issue in the browser) or chooses a Google Drive for desktop folder for backups (plain file copies, no Google sign-in).
+
+## Restricted capability justification (runFullTrust)
+
+Partner Center asks why the package uses the restricted capability `runFullTrust` (at most 500 characters). Submission 1 used exactly this text (433 characters):
+
+> Remember Me is a classic Win32 desktop app (Electron) packaged as MSIX, so it needs runFullTrust. It keeps running in the notification area to show reminders on time: a small always-on-top alert window above the taskbar that stays until the user picks Done or Snooze. It also has a startup task (off by default) and an optional global shortcut for quick add (off by default). Data stays local in LocalState; no account, no analytics.
 
 ## Screenshots
 
@@ -270,6 +302,8 @@ Upload them in this order, each with its caption (Partner Center has a caption b
 | `store/notes-ar.png` | Arabic: notes | ملاحظات على ورق ملوّن، بجانب مهامك. |
 | `store/dark-ar.png` | Arabic: dark theme, Lavender palette | فاتح أو داكن، مع ست لوحات ألوان. |
 
+The nine other listing languages use the four English screenshots in the same order (`alert-en`, `main-en`, `notes-en`, `dark-en`), each with the translated caption from [store-listings-translations.md](store-listings-translations.md).
+
 Regenerate them after interface changes with `pnpm run screenshots -- --store` (on Windows, or on Linux under `xvfb-run`). It runs the app in test mode with sample data, sizes the main window to 1366×768, and draws the alert over the main window in the bottom corner of its side: right for English, left for Arabic, so it doesn't cover the right-to-left headline. The dark shots use the default Lavender palette, the purple of the app icon. The committed set comes from the **Store screenshots** job of `.github/workflows/store.yml`, which runs the same command on Windows (Segoe UI): download its `store-screenshots` artifact to update them.
 
 Store logos for the listing (1:1 box art, 2:3 poster art) are optional; without them the Store uses the logos from the package.
@@ -283,6 +317,10 @@ Store logos for the listing (1:1 box art, 2:3 poster art) are optional; without 
 
 ## ملخص للمالك بالعربية
 
+**حالة الإرسال:** أُرسل الإرسال الأول (الإصدار 1.7.0، الملف `Remember-Me-1.7.0-x64.appx` بحجم 146.4 ميغابايت) في 2026-11-06، وهو الآن قيد الاعتماد (certification). خيار النشر: «Publish this submission as soon as it passes certification»، أي يُنشر تلقائيًا فور نجاح الاعتماد، بطلبك، وليس يدويًا.
+
+**كل تحديث قادم في المتجر يحتاج إرسالًا جديدًا** بحزمة رقم إصدارها أعلى من السابق، لأن المحدِّث الداخلي من GitHub متوقف في نسخة المتجر.
+
 **الهوية جاهزة.** الملف `store/identity.json` فيه قيم Partner Center الحقيقية: الاسم `FastKiwi.RememberMeReminders`، والناشر `CN=8EFD6949-D088-481F-886D-82300679C5E5`، واسم الناشر `FastKiwi`، واسم العرض «Remember Me Reminders» (يجب أن يطابق الاسم المحجوز في المتجر). إن احتجت تغييرها، انسخها حرفيًا من: Partner Center ← Remember Me Reminders ← Product management ← Product identity. إذا بقي فيه قيمة فارغة أو تبدأ بـ TODO يرفض `pnpm run store` البناء، أما `--dry-run` فيبني حزمة تجريبية بقيم وهمية لا تُرفع.
 
 **بناء الحزمة وتنزيلها:**
@@ -290,11 +328,11 @@ Store logos for the listing (1:1 box art, 2:3 poster art) are optional; without 
 2. بعد انتهائه افتح التشغيل ونزّل الملف المرفق **store-package** من أسفل الصفحة، وفكّ ضغطه: ستجد `Remember-Me-<الإصدار>-x64.appx`، وهو حزمة MSIX.
 3. إذا ظهرت كلمة Dry run في ملخص التشغيل، فالهوية ناقصة والحزمة لا تُرفع.
 
-**الرفع في Partner Center:** Apps and games ← Remember Me Reminders ← Start your submission ← Packages، واسحب ملف `.appx` إليه، وأبقِ Windows 10/11 Desktop فقط. ثم: Pricing and availability (مجاني)، Properties (الفئة Productivity ورابط الخصوصية https://fastkiwi.app/privacy/)، Age ratings (الإجابات في الجدول أعلاه: كلها «لا»)، Store listings (النص الإنجليزي والعربي جاهز أعلاه)، Submission options (الصق «ملاحظات الاعتماد» أعلاه)، ثم Submit. كل رفع جديد يحتاج رقم إصدار أعلى في `package.json`.
+**الرفع في Partner Center:** Apps and games ← Remember Me Reminders ← Start your submission ← Packages، واسحب ملف `.appx` إليه، وأبقِ Windows 10/11 Desktop فقط. ثم: Pricing and availability (مجاني)، Properties (الفئة Productivity، وسؤال «Uses personal information» أُجيب عنه بـ «Yes» فقط ليقبل Partner Center رابط الخصوصية https://fastkiwi.app/privacy/، وجهة الدعم support@fastkiwi.app)، Age ratings (الإجابات في الجدول أعلاه: كلها «لا»)، Store listings (11 لغة، انظر أدناه)، Supplemental info ← Additional Testing Information (الصق «ملاحظات الاعتماد» أعلاه؛ نقل Partner Center هذه الخانة إلى هنا من Submission options)، وشرح القدرة المقيّدة runFullTrust (النص الحرفي في قسم «Restricted capability justification» أعلاه، 433 حرفًا من 500)، وخيار النشر التلقائي في Submission options، ثم Submit. كل رفع جديد يحتاج رقم إصدار أعلى في `package.json`.
 
 **قبل الإرسال:** صفحة الخصوصية https://fastkiwi.app/privacy/ ليس فيها قسم خاص بذكرني؛ أضف القسم المقترح أعلاه (بالعربية والإنجليزية). وصور المتجر الجاهزة في `docs/screenshots/store/` بمقاس 1366×768، أربع بالإنجليزية وأربع بالعربية، ولكل صورة تعليق جاهز في جدول «Screenshots» أعلاه؛ الصور القديمة في `docs/screenshots/` أصغر من الحد المطلوب.
 
-**صفحات المتجر:** املأ الإنجليزية والعربية فقط، واحذف اللغات العشر الأخرى من Store listings ← Manage additional languages، ولا تلصق فيها النص الإنجليزي (سياسة 10.7). الاسم العربي «ذكّرني - تذكير ومهام» يجب حجزه أولًا من Product management ← Manage app names ← Reserve another name. حقوق النشر: © FastKiwi.
+**صفحات المتجر:** 11 لغة، كلها مكتملة. الإنجليزية (الولايات المتحدة) والعربية بالنصوص الموجودة في هذا الملف. والألمانية والإسبانية والفرنسية والإندونيسية واليابانية والبرتغالية (البرازيل) والروسية والتركية والصينية (الصين) بترجمات خاصة بها في الملف [store-listings-translations.md](store-listings-translations.md)، مع لقطات الشاشة الإنجليزية الأربع وتعليقات مترجمة. لا تلصق النص الإنجليزي في لغة أخرى (سياسة 10.7). أُزيلت الهندية من صفحات المتجر، لكن الحزمة ما زالت تعلن دعمها؛ وأي صفحة هندية في المستقبل تحتاج مراجعة متحدث أصلي أولًا. التعليمات القديمة «احذف اللغات العشر الأخرى» لم تعد سارية. الاسم العربي «ذكّرني - تذكير ومهام» يجب حجزه أولًا من Product management ← Manage app names ← Reserve another name. حقوق النشر: © FastKiwi.
 
 **ما يختلف في نسخة المتجر:**
 - **التحديثات** من المتجر فقط؛ المحدِّث الداخلي من GitHub متوقف تمامًا، وتقول الإعدادات «التحديثات تأتي من Microsoft Store».

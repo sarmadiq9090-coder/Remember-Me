@@ -313,6 +313,26 @@ test('every Store logo is generated at its exact size, without scaling the icon 
   }
 });
 
+test('the brand logos in store/logos replace the generated ones and add the unplated taskbar symbols', () => {
+  const folder = path.join(tmp('remember-me-brand-logos-'), 'appx'), art = path.join(root, 'store', 'logos');
+  const names = logos.writeStoreLogos(path.join(root, 'assets', 'icon.png'), folder, path.join(root, 'assets', 'icon.ico'), art);
+  assert.deepEqual(fs.readdirSync(folder).sort(), [...names].sort());
+  const replaced = fs.readdirSync(art).filter(name => fs.readFileSync(path.join(folder, name)).equals(fs.readFileSync(path.join(art, name))));
+  assert.deepEqual(fs.readdirSync(art).filter(name => !replaced.includes(name)), ['StoreLogo.scale-125.png'], 'Only the brand file of the wrong size is left out');
+  for (const { name, width, height } of logos.logoFiles()) {
+    const image = logos.decodePng(fs.readFileSync(path.join(folder, name)));
+    assert.deepEqual([image.width, image.height], [width, height], name);
+  }
+  for (const size of [16, 24, 32, 48, 256]) {
+    for (const suffix of ['', '_altform-unplated', '_altform-lightunplated']) assert.ok(names.includes(`Square44x44Logo.targetsize-${size}${suffix}.png`), `${size}${suffix}`);
+    // The taskbar symbol has no tile: its corner is transparent where the plated logo is opaque inside the rounded edge.
+    const unplated = logos.decodePng(fs.readFileSync(path.join(art, `Square44x44Logo.targetsize-${size}_altform-unplated.png`)));
+    const plated = logos.decodePng(fs.readFileSync(path.join(art, `Square44x44Logo.targetsize-${size}.png`)));
+    const at = (Math.round(size * 0.12) * size + Math.round(size * 0.12)) * 4 + 3;
+    assert.equal(unplated.data[at], 0, `${size} unplated`); assert.equal(plated.data[at], 255, `${size} plated`);
+  }
+});
+
 test('the PNG helpers round-trip and average colours without dark fringes', () => {
   const size = 8, data = Buffer.alloc(size * size * 4);
   for (let i = 0; i < size * size; i++) data.set(i % 2 ? [121, 96, 202, 255] : [0, 0, 0, 0], i * 4);

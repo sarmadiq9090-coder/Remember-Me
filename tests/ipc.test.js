@@ -53,11 +53,12 @@ test('skip is allowed from the alert, needs an ID and validates the expected tim
 });
 
 test('openLink takes a link ID from the fixed list, never a URL, and not from the alert', () => {
-  for (const link of ['github', 'repo', 'releases', 'issues', 'privacy', 'license']) assert.deepEqual(checkRequest('openLink', { link }), { link });
+  for (const link of ['github', 'repo', 'releases', 'issues', 'privacy', 'license', 'support', 'supportAr', 'email']) assert.deepEqual(checkRequest('openLink', { link }), { link });
   for (const link of [undefined, null, '', 'https://github.com/sarmadiq9090-coder', 'file:///C:/Windows/System32/calc.exe', 'data:text/html,x', '__proto__', 'constructor', 'toString', 'GITHUB', ['github'], { toString: () => 'github' }, 7]) {
     assert.throws(() => checkRequest('openLink', { link }), /Unknown link/, String(link));
   }
   assert.throws(() => checkRequest('openLink', { link: 'mailto:x' }), /Unknown link/);
+  assert.throws(() => checkRequest('openLink', { link: 'mailto:support@fastkiwi.app' }), /Unknown link/, 'The ID, never the address');
   assert.throws(() => checkRequest('openLink', { link: 'github' }, { fromAlert: true }), /Request not allowed/);
   assert.throws(() => checkRequest('copyDiagnostics', {}, { fromAlert: true }), /Request not allowed/);
   assert.deepEqual(checkRequest('reportProblem', {}), {});

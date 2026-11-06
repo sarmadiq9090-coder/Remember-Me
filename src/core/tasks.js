@@ -2,16 +2,20 @@
 const { randomUUID } = require('node:crypto');
 const { attachmentIds, validateAttachment } = require('./records');
 const { nextOccurrence } = require('./repeat');
-const { LOCALES, DEFAULT: DEFAULT_LOCALE, ARABIC_MONTHS } = require('../../ui/lib/translate');
+const { LOCALES, DEFAULT: DEFAULT_LOCALE, ARABIC_MONTHS, findLocale } = require('../../ui/lib/translate');
 const { validPause } = require('./pause');
 const { DEFAULT_SNOOZE_PRESETS, normalizeSnoozePresets } = require('../../ui/lib/alert-format');
 const { DEFAULT_QUICK_ADD_SHORTCUT, normalizeAccelerator } = require('../../ui/lib/quickadd');
 const { DEFAULT_TEXT_SIZE, normalizeTextSize } = require('../../ui/lib/text-size');
 
 // language is the interface language of a fresh install (from Windows' preferred languages); English otherwise.
-function initialState(language = DEFAULT_LOCALE) {
+// alertSide is the side of the taskbar clock, which right-to-left Windows (Arabic, Hebrew…) has on the left
+// (systemAlertSide in src/main/i18n.js); without one, a right-to-left interface language means the left.
+// Saved data keeps its own side: validateState fills a missing one with the right, as it always was.
+function initialState(language = DEFAULT_LOCALE, alertSide) {
   if (!LOCALES.some(l => l.code === language)) language = DEFAULT_LOCALE;
-  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language, weekStart: 6, theme: 'system', palette: 'lavender', arabicMonths: 'auto', autoUpdate: null, pausedUntil: null, snoozePresets: DEFAULT_SNOOZE_PRESETS.map(p => ({ ...p })), quickAdd: false, quickAddShortcut: DEFAULT_QUICK_ADD_SHORTCUT, textSize: DEFAULT_TEXT_SIZE } };
+  if (alertSide !== 'left' && alertSide !== 'right') alertSide = findLocale(language).dir === 'rtl' ? 'left' : 'right';
+  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide, language, weekStart: 6, theme: 'system', palette: 'lavender', arabicMonths: 'auto', autoUpdate: null, pausedUntil: null, snoozePresets: DEFAULT_SNOOZE_PRESETS.map(p => ({ ...p })), quickAdd: false, quickAddShortcut: DEFAULT_QUICK_ADD_SHORTCUT, textSize: DEFAULT_TEXT_SIZE } };
 }
 // Interface palettes in ui/styles/theme.css; anything else shows Lavender.
 const PALETTES = ['lavender', 'ocean', 'forest', 'sunset', 'graphite', 'contrast'];
@@ -345,6 +349,8 @@ function validateState(data) {
   data.settings.quickAddShortcut = normalizeAccelerator(data.settings.quickAddShortcut) || DEFAULT_QUICK_ADD_SHORTCUT;
   // Text size in percent (ui/lib/text-size.js); older files have none and show 100%.
   data.settings.textSize = normalizeTextSize(data.settings.textSize);
+  // The Store version's one-time rating request: true once answered; absent until then.
+  if ('ratingAsked' in data.settings && data.settings.ratingAsked !== true) delete data.settings.ratingAsked;
   return data;
 }
 module.exports = { importTasks, normalizeChecklist, toggleStep, normalizeTags, PALETTES, NOTE_COLORS, NOTE_STYLES, noteLook, EARLY, upcomingTasks, TRASH_DAYS, undoComplete, trashItem, restoreItem, purgeItem, purgeTrash, initialState, saveTask, completeTask, snoozeTask, dueTasks, alertQueue, validateState, REMIND_AGAIN, skipOccurrence };

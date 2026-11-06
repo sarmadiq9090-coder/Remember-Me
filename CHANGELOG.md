@@ -4,11 +4,21 @@
 
 ### Added
 
+- Microsoft Store version: after a first real success (a reminder done, or five reminders set), Remember Me asks once for a rating in the Store. **Not now** is final: it never asks again. About also has **More from FastKiwi** (the publisher's page in the Store), next to Support. [#103]
+- About has **Support** («الدعم»): the support page on fastkiwi.app (in Arabic in the Arabic interface), which needs no GitHub account, and **Email support**, which writes to support@fastkiwi.app. The other ten languages show their three new texts in English until they are translated.
 - Text size: Settings → Appearance makes all text larger (100%, 115%, 130% or 150%), in the main window, the alert and quick add. Ctrl+= and Ctrl+- change it in any window and Ctrl+0 brings it back to 100%. The alert window grows with the text.
 
 ### Changed
 
+- On Arabic Windows, and other right-to-left Windows where the clock is on the left, a new install shows the reminder alert at the bottom left. The side you saved, or choose in Settings, is kept.
+- Electron 45.2.3 (was 45.1.0), with Chromium security fixes; electron-updater 6.8.12 and electron-builder 26.18.1.
 - No text is smaller than 12 px any more: small labels, hints, counts and badges that were 9 to 11 px are now 12 px.
+
+### For contributors
+
+- Tests check that no translation, page or script contains Arabic-Indic or Devanagari digits, and that every date, time and number formatter gets the Western-digit locale, so the Arabic interface shows 0-9 everywhere. The desktop smoke test no longer allows the removed digit option's sample.
+- README roadmap: code signing and Windows on ARM did not ship in v1.7.0 and move to "Later"; quick add from anywhere is listed under v1.7.0, where it shipped.
+- electron-builder 26.18.1, electron-updater 6.8.12 and electron-builder-squirrel-windows 26.18.1 are pinned exactly, because npm's `latest` tag still points at older releases (without the last one, pnpm installs the older electron-builder peer). Dependabot checks npm weekly instead of monthly.
 
 ## v1.7.0 (2026-11-06)
 

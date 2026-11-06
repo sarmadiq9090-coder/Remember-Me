@@ -45,9 +45,9 @@ async function alertPage() {
     await page.locator('.brand-mark').waitFor();
     await page.locator('[data-view="settings"]').click();
     assert.equal(await page.locator('#setting-language').inputValue(), 'en');
-    // No Arabic is left in the English interface, apart from the language's own name and the digit sample.
+    // No Arabic is left in the English interface, apart from the language's own name (there is no digit option).
     const arabicLeft = await page.evaluate(() => {
-      const found = [], allowed = /^(العربية|Arabic-Indic ١٢٣)$/;
+      const found = [], allowed = /^العربية$/;
       const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
       let node; while ((node = walker.nextNode())) { const text = node.nodeValue.trim(); if (/[؀-ۿ]/.test(text) && !allowed.test(text)) found.push(text); }
       for (const el of document.querySelectorAll('[placeholder],[title],[aria-label],[alt]')) for (const attr of ['placeholder', 'title', 'aria-label', 'alt']) if (/[؀-ۿ]/.test(el.getAttribute(attr) || '')) found.push(attr + ': ' + el.getAttribute(attr));
