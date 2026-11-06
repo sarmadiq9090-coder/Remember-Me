@@ -36,6 +36,21 @@ through Claude sessions, with no fixed computer.
 - Commit only your own files (`git add <paths>`).
 - Commit trailer: `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
+## Coding discipline (shared, same in every repo)
+
+Adapted from the "Karpathy guidelines" CLAUDE.md (github.com/multica-ai/andrej-karpathy-skills,
+MIT). Adopted by the owner on 2026-11-06. The owner's live message and the rules above win.
+
+- **Think before coding.** State your assumptions. If a request can be read two ways, or a simpler
+  path exists, say so and ask instead of guessing. Stop when confused.
+- **Simplicity first.** Write the least code that solves the request. No features, abstractions,
+  settings or error handling that nobody asked for. If 200 lines could be 50, rewrite it.
+- **Surgical changes.** Every changed line traces to the request. Match the existing style; don't
+  reformat, rename or "improve" neighbouring code. Mention unrelated problems instead of fixing
+  them. Remove only what your own change made unused.
+- **Goal-driven.** Turn the task into a check first (a failing test, a command, a screenshot), then
+  loop until it passes. Report what you verified and how.
+
 ## What this is
 
 Remember Me («ذكرني», internal name up to v1.4: "Waqt") is an offline-first task, note and reminder
