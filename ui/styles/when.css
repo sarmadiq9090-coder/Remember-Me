@@ -1,0 +1,19 @@
+/* The date chip under the quick-add title (ui/lib/when-chip.js), in the main window and the quick-add window.
+   Every color is a theme token from ui/styles/theme.css. --text-scale is the text size setting; 1 without it. */
+.when-chip{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;min-width:0;padding-block:5px;padding-inline:10px 6px;border-radius:8px;background:var(--accent-soft);color:var(--accent-ink);font-size:calc(12px*var(--text-scale,1));line-height:1.5}
+.when-chip.asking{background:var(--warning-soft);color:var(--warning-ink)}
+.when-icon svg{width:15px;height:15px}
+.when-due{font-weight:600}
+.when-title{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.when-question{font-weight:600}
+.when-option{background:var(--field);color:var(--accent-ink);border:1px solid var(--border-strong);border-radius:6px;padding:3px 9px;font-size:calc(12px*var(--text-scale,1))}
+.when-keep{margin-inline-start:auto;width:24px;height:24px;border-radius:6px;font-size:calc(15px*var(--text-scale,1));line-height:1}
+.when-keep:hover{background:var(--hover)}
+/* The main window: the chip sits under the dashed quick-add row, and hides with it. */
+#quick-when{margin:-8px 0 15px}
+#quick-form[hidden]+#quick-when{display:none}
+/* The quick-add window: the chip takes the tip's line, so the window keeps one fixed height; choices
+   that do not fit on the line scroll sideways. */
+#quickadd-when{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;white-space:nowrap;min-height:28px}
+#quickadd-when:not([hidden])+.when-tip{display:none}
+.when-tip{margin:0;min-height:28px;display:flex;align-items:center;font-size:calc(12px*var(--text-scale,1));color:var(--muted)}

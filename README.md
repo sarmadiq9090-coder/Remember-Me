@@ -45,6 +45,7 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 - **Safe file handling:** programs, scripts, installers and shortcuts are revealed in File Explorer instead of being launched.
 - **Clear overdue status:** task rows say how late a reminder is, such as "Overdue by 2 hours", and finishing a repeating task tells you when it comes back ("Done. Next: …").
 - **Quick add from anywhere:** turn it on in Settings, then press Ctrl+Alt+R (or a shortcut you choose) in any app to type a task and an optional time in a small window above the taskbar. Enter saves, Esc closes. Settings tells you if another app already uses the shortcut.
+- **Dates as you type:** in quick add (the row above the task list and the quick-add window), write the time with the task, in English or Arabic, including everyday Iraqi, Gulf and Levantine speech: "tomorrow 5pm", "in 2 hours", "next Thursday 8pm", "every day 7am", «بكرة 5 العصر», «باچر الصبح», «بعد ساعتين», «الخميس الجاي 8 بالليل», «كل يوم 7 الصبح», «اليوم المغرب». Arabic-Indic and Western digits both work. A chip under the field shows the time, the repeat and the title it understood before you save; when the phrase could mean two things (5 AM or 5 PM, this Thursday or next), it asks instead of guessing, and × keeps your text as typed. It all runs on your PC.
 - **Smart search (Ctrl+K):** searches tasks and notes, and matches Arabic text regardless of diacritics and common spelling variants.
 - **12 interface languages:** English (the default), العربية (a full right-to-left interface), Español, Français, Deutsch, Português (Brasil), Русский, 中文 (简体), 日本語, Türkçe, हिन्दी and Bahasa Indonesia, switchable in Settings. Dates, numbers and plurals follow the chosen language, and mixed-language text keeps its reading order. The translations other than English and Arabic are machine-assisted; corrections from native speakers are very welcome (see [Translations](#translations)).
 - **Tags and checklists:** tag tasks, filter the list by tag and find tags in search, sort tasks by due time, priority, newest or title, and break a task into steps you tick off from the list; a repeating task starts each occurrence with its steps unticked.
@@ -258,6 +259,8 @@ In detail:
 - If you allow automatic updates, or choose **Check now**, Remember Me contacts GitHub Releases for this repository to check for and download new versions. That's a standard HTTPS request, covered by [GitHub's privacy statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement), and none of your data is included.
 
 ## Acknowledgements
+
+English dates in quick add are read with [chrono-node](https://github.com/wanasit/chrono) (MIT license); the Arabic rules are Remember Me's own.
 
 The task and note layout was inspired by [TickTick for Windows](https://www.ticktick.com/windows), and the Done and Snooze buttons by [its reminders](https://help.ticktick.com/articles/7055782395743567872). Remember Me's design and code are independent, with a particular focus on sticky alerts and snoozing to a custom time.
 

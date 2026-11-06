@@ -527,5 +527,15 @@
   "{day}, {time}": "{day} {time}",
   "{index} of {count}": "{index}/{count}",
   "{shortcut} is used by another app. Choose another shortcut.": "{shortcut} 已被其他应用占用。请选择其他快捷键。",
-  "→ {day} {time}": "→ {day} {time}"
+  "→ {day} {time}": "→ {day} {time}",
+  "At what time?": "几点？",
+  "Check the time shown, then press Enter again.": "请确认显示的时间，然后再按一次 Enter。",
+  "Choose one of the options first.": "请先选择一个选项。",
+  "Keep the text as typed": "保留原样文字",
+  "That time has passed. Use this one instead?": "这个时间已经过了。改用这个吗？",
+  "Tip: add the time as you type, like “tomorrow 5pm”.": "提示：可以用英语或阿拉伯语写上时间，例如“tomorrow 5pm”。",
+  "Title: {title}": "标题：{title}",
+  "Which day did you mean?": "你指的是哪一天？",
+  "Which one did you mean?": "你指的是哪一个？",
+  "Which time did you mean?": "你指的是哪个时间？"
 }

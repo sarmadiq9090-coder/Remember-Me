@@ -55,11 +55,25 @@ $('task-form').addEventListener('submit', async e => {
   } catch (err) { $('task-error').textContent = err.message; } finally { submit.disabled = false; }
 });
 let quickBusy = false;
+// A date typed in the quick-add title ("tomorrow 5pm", «بكرة 5 العصر») shows in a chip under the row
+// before it is saved (ui/lib/when-chip.js). The chip sits outside the form, so the row keeps one button.
+const quickWhenChip = document.createElement('div');
+quickWhenChip.id = 'quick-when';
+$('quick-form').after(quickWhenChip);
+const quickWhen = createWhenChip({ input: $('quick-title'), chip: quickWhenChip, weekStart: () => state.settings.weekStart });
 $('quick-form').addEventListener('submit', async e => {
   e.preventDefault(); const input = $('quick-title');
   // A second Enter while the first add is still saving would create the task twice.
   if (quickBusy) return; quickBusy = true; if (e.submitter) e.submitter.disabled = true;
-  try { await api('saveTask', { title: input.value }); input.value = ''; if (view === 'upcoming') view = 'all'; await refresh(); toast(tr("Task added. Open it to add a due time.")); } catch (err) { toast(err.message); }
+  try {
+    const typed = await quickWhen.take();
+    if (typed.wait) { toast(typed.wait); return; }
+    await api('saveTask', typed);
+    input.value = ''; quickWhen.reset();
+    if (view === 'upcoming') view = 'all';
+    await refresh();
+    toast(typed.dueAt ? tr("Task saved. Your next step is in place.") : tr("Task added. Open it to add a due time."));
+  } catch (err) { toast(err.message); }
   finally { quickBusy = false; if (e.submitter) e.submitter.disabled = false; }
 });
 $('add-step').addEventListener('click', () => { steps.push({ text: '', done: false }); renderSteps(); $('task-steps').querySelector('li:last-child input[type=text]').focus(); });

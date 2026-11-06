@@ -539,5 +539,15 @@
   "{day}, {time}": "{day} à {time}",
   "{index} of {count}": "{index} sur {count}",
   "{shortcut} is used by another app. Choose another shortcut.": "{shortcut} est déjà utilisé par une autre application. Choisissez un autre raccourci.",
-  "→ {day} {time}": "→ {day} {time}"
+  "→ {day} {time}": "→ {day} {time}",
+  "At what time?": "À quelle heure ?",
+  "Check the time shown, then press Enter again.": "Vérifiez l’heure affichée, puis appuyez de nouveau sur Entrée.",
+  "Choose one of the options first.": "Choisissez d’abord une des options.",
+  "Keep the text as typed": "Garder le texte tel quel",
+  "That time has passed. Use this one instead?": "Cette heure est passée. Utiliser celle-ci à la place ?",
+  "Tip: add the time as you type, like “tomorrow 5pm”.": "Astuce : écrivez l’heure en anglais ou en arabe, par exemple « tomorrow 5pm ».",
+  "Title: {title}": "Titre : {title}",
+  "Which day did you mean?": "Quel jour vouliez-vous dire ?",
+  "Which one did you mean?": "Laquelle vouliez-vous dire ?",
+  "Which time did you mean?": "Quelle heure vouliez-vous dire ?"
 }

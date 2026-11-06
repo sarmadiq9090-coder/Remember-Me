@@ -87,21 +87,26 @@ test('a shortcut another app holds is reported and logged once, not retried', ()
 
 test('the quick-add window sits centered above the taskbar, or below a taskbar at the top', () => {
   const bottom = { bounds: { x: 0, y: 0, width: 1920, height: 1080 }, workArea: { x: 0, y: 0, width: 1920, height: 1040 } };
-  assert.deepEqual(quickAddBounds(bottom), { x: 730, y: 860, width: 460, height: 168 });
+  assert.deepEqual(quickAddBounds(bottom), { x: 730, y: 822, width: 460, height: 206 });
   const top = { bounds: { x: 1920, y: 0, width: 1280, height: 720 }, workArea: { x: 1920, y: 40, width: 1280, height: 680 } };
-  assert.deepEqual(quickAddBounds(top), { x: 2330, y: 52, width: 460, height: 168 });
+  assert.deepEqual(quickAddBounds(top), { x: 2330, y: 52, width: 460, height: 206 });
   const tiny = { bounds: { x: 0, y: 0, width: 400, height: 300 }, workArea: { x: 0, y: 0, width: 400, height: 260 } };
   const fit = quickAddBounds(tiny);
   assert.ok(fit.x >= 0 && fit.width <= 400 - 24 && fit.y + fit.height <= 260, JSON.stringify(fit));
 });
 
-test('the quick-add window may only read its language and add one task with a title and an optional time', () => {
-  assert.deepEqual([...QUICK_ADD_ACTIONS].sort(), ['language', 'locale', 'quickAdd']);
+test('the quick-add window may only read its language, read a typed date, and add one task with a title and an optional time', () => {
+  assert.deepEqual([...QUICK_ADD_ACTIONS].sort(), ['language', 'locale', 'parseWhen', 'quickAdd']);
   for (const action of ['state', 'saveTask', 'deleteTask', 'settings', 'complete', 'snooze', 'open', 'attachFiles', 'export', 'openLink']) assert.throws(() => checkRequest(action, { id: 'a' }, { fromQuickAdd: true }), /Request not allowed/, action);
   assert.deepEqual(checkRequest('quickAdd', { title: 'Call Sami' }, { fromQuickAdd: true }), { title: 'Call Sami' });
   assert.doesNotThrow(() => checkRequest('quickAdd', { title: 'x', dueAt: '2026-11-03T17:30:00.000Z' }, { fromQuickAdd: true }));
   assert.doesNotThrow(() => checkRequest('quickAdd', { title: 'x', dueAt: null }, { fromQuickAdd: true }));
-  for (const payload of [{}, { title: 5 }, { title: 'x', repeat: 'daily' }, { title: 'x', attachments: ['a'] }, { title: 'x', id: 'a' }]) assert.throws(() => checkRequest('quickAdd', payload, { fromQuickAdd: true }), /Invalid/, JSON.stringify(payload));
+  // A typed phrase can carry a repeat («كل يوم 7 الصبح»): only the task editor's repeat modes and rules, nothing else.
+  for (const payload of [{ title: 'x', dueAt: null, repeat: 'daily' }, { title: 'x', repeat: 'days', repeatDays: [0, 4] }, { title: 'x', repeat: 'interval', repeatEvery: 3 }]) assert.doesNotThrow(() => checkRequest('quickAdd', payload, { fromQuickAdd: true }), JSON.stringify(payload));
+  for (const payload of [{}, { title: 5 }, { title: 'x', repeat: 'hourly' }, { title: 'x', repeatDays: [7] }, { title: 'x', repeatDays: [] }, { title: 'x', repeatDays: '1' }, { title: 'x', repeatEvery: 1 }, { title: 'x', repeatEvery: 2.5 },
+    { title: 'x', attachments: ['a'] }, { title: 'x', id: 'a' }, { title: 'x', priority: 'high' }]) assert.throws(() => checkRequest('quickAdd', payload, { fromQuickAdd: true }), /Invalid/, JSON.stringify(payload));
+  assert.deepEqual(checkRequest('parseWhen', { text: 'بكرة 5 العصر' }, { fromQuickAdd: true }), { text: 'بكرة 5 العصر' });
+  for (const payload of [{}, { text: 5 }, { text: 'x'.repeat(201) }, { text: 'x', now: 1 }]) assert.throws(() => checkRequest('parseWhen', payload, { fromQuickAdd: true }), /Invalid/, JSON.stringify(payload));
   assert.throws(() => checkRequest('quickAdd', { title: 'x', dueAt: 'tomorrow' }, { fromQuickAdd: true }), /Invalid time/);
   assert.throws(() => checkRequest('quickAdd', { title: 'x' }, { fromAlert: true }), /Request not allowed/);
 });

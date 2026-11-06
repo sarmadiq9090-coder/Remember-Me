@@ -55,7 +55,7 @@ test('text on a filled background uses a tested pair, never --accent on a tint',
   // text on tinted fills (the active nav item, tag chips) is --accent-ink, which reaches 4.5:1 there.
   const alias = { purple: 'accent', 'purple-light': 'accent-soft', green: 'success' };
   const tested = new Set(PAIRS.map(([fg, bg]) => `${fg} on ${bg}`)), untested = [];
-  for (const name of ['styles.css', 'alert.css', 'quickadd.css']) {
+  for (const name of ['styles.css', 'alert.css', 'quickadd.css', 'when.css']) {
     const source = fs.readFileSync(path.join(__dirname, '../ui/styles', name), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
     for (const [, selector, body] of source.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
       const [fg, bg] = [/(?:^|;)color:var\(--([\w-]+)\)/, /(?:^|;)background(?:-color)?:var\(--([\w-]+)\)/].map(re => body.match(re)?.[1]).map(t => alias[t] || t);
@@ -102,7 +102,7 @@ test('every note color has a light and a dark paper with readable ink', () => {
 test('stylesheets take their colors from the theme tokens', () => {
   // Neutral shadows, the photo caption overlay and the fixed illustration colors are the only literals left.
   const allowed = new Set(['#0001', '#0002', '#0003', '#30293b99', 'white', '#c5dfbd', '#54774f']);
-  for (const name of ['styles.css', 'alert.css', 'quickadd.css']) {
+  for (const name of ['styles.css', 'alert.css', 'quickadd.css', 'when.css']) {
     const source = fs.readFileSync(path.join(__dirname, '../ui/styles', name), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
     const literals = (source.match(/#[0-9a-f]{3,8}\b|\b(?:white|black)\b|rgba?\([^)]*\)/gi) || []).filter(c => !allowed.has(c.toLowerCase()));
     assert.deepEqual(literals, [], `${name} has hard-coded colors; add a token to ui/styles/theme.css instead`);

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { TEXT_SIZES, DEFAULT_TEXT_SIZE, normalizeTextSize, stepTextSize, textSizeStep, scaledSize } = require('../ui/lib/text-size');
-const { alertBounds } = require('../src/core/placement');
+const { alertBounds, QUICK_ADD_SIZE } = require('../src/core/placement');
 const { createHandlers } = require('../src/main/handlers');
 const { initialState, validateState } = require('../src/core/tasks');
 const { LOCALES } = require('../ui/lib/translate');
@@ -48,13 +48,14 @@ test('the alert and quick-add windows grow with the text and stay inside the scr
   assert.deepEqual(scaledSize({ width: 410, height: 570 }, 100), { width: 410, height: 570 });
   assert.deepEqual(scaledSize({ width: 410, height: 570 }, 150), { width: 615, height: 855 });
   assert.deepEqual(scaledSize({ width: 460, height: 168 }, 130), { width: 598, height: 218 });
+  assert.deepEqual(scaledSize(QUICK_ADD_SIZE, 150), { width: 690, height: 309 }, 'The taller quick-add window (date chip line) grows with the text');
   const display = { bounds: { x: 0, y: 0, width: 1366, height: 768 }, workArea: { x: 0, y: 0, width: 1366, height: 728 } };
   const bounds = alertBounds(display, 'right', scaledSize({ width: 410, height: 570 }, 150));
   assert.ok(bounds.y >= 0 && bounds.y + bounds.height <= 728, 'A small screen keeps the whole alert visible');
   assert.equal(bounds.width, 615);
   const windows = read('src/main/windows.js');
   assert.match(windows, /alertBounds\(screen\.getPrimaryDisplay\(\), [^;]*, alertSize\(\)\)/, 'The alert is placed at its scaled size');
-  assert.match(windows, /quickAddBounds\(display, scaledSize\(/, 'The quick-add window opens at its scaled size');
+  assert.match(windows, /quickAddBounds\(display, scaledSize\(QUICK_ADD_SIZE, ctx\.store\.state\.settings\.textSize\)\)/, 'The quick-add window opens at its scaled size, date chip line included');
   assert.equal(windows.match(/textSizeKeys\(\w+\);/g).length, 3, 'All three windows take the shortcut keys');
 });
 
