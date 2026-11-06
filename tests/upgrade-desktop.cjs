@@ -1,8 +1,9 @@
 // Upgrade test (.github/workflows/desktop.yml, job "upgrade"): installs the previous release as a user
 // would, gives it realistic Arabic data, installs the new build over it, and checks that the tasks, notes,
 // attachment, settings and language are all still there and the app runs. Then it uninstalls and checks
-// that the data folder is kept. It changes the real %APPDATA%\Remember Me, the HKCU uninstall and Run keys
-// and the install folder, so run it only on a CI runner or a throwaway VM without Remember Me:
+// that the data folder is kept and start with Windows is removed. It changes the real %APPDATA%\Remember Me,
+// the HKCU uninstall and Run keys and the install folder, so run it only on a CI runner or a throwaway VM
+// without Remember Me:
 //   node tests/upgrade-desktop.cjs <old Remember-Me-Setup-x.y.z-x64.exe> <new Remember-Me-Setup-x.y.z-x64.exe>
 // The new installer must be built from a desktop-test package (WAQT_DESKTOP_TEST_BUILD=1) so Playwright can
 // attach. The old one is the published release, whose fuses forbid that, so it is checked through its log.
@@ -173,6 +174,9 @@ function differences(before, after) {
   expect('one Remember Me in Apps & features', entries.length === 1 && entries[0].key === oldEntry.key && `${entries[0].name} ${entries[0].version}, same key (appId)`, JSON.stringify(entries));
   expect(`Apps & features shows ${version}`, entries[0]?.version === version, JSON.stringify(entries));
   expect('installed in the same folder', fs.existsSync(exe) && path.dirname(uninstallerOf(entries[0])) === installDir && installDir, JSON.stringify(entries));
+  // The old uninstaller runs with --updated here, so start with Windows must survive the upgrade.
+  const upgradedRun = runEntries();
+  expect('the upgrade keeps start with Windows', upgradedRun.length === 1 && upgradedRun[0].value, JSON.stringify(upgradedRun));
   expect('the installer leaves the data alone', sha256(path.join(dataDir, 'data.json')) === beforeHash && fs.existsSync(path.join(dataDir, 'attachments', attachment.id, attachment.name)) && 'data.json and the attachment unchanged');
 
   // 3. The new version, started as a user would (no test mode), with the real data folder.
@@ -227,8 +231,9 @@ function differences(before, after) {
   for (let i = 0; i < 240 && (uninstallEntries().length || fs.existsSync(exe)); i++) await sleep(500);
   expect('the uninstaller removes the app', !uninstallEntries().length && !fs.existsSync(exe) && 'no Apps & features entry, no exe', JSON.stringify(uninstallEntries()));
   expect('the uninstaller keeps the data folder', fs.existsSync(path.join(dataDir, 'data.json')) && sha256(path.join(dataDir, 'attachments', attachment.id, attachment.name)) === attachmentHash && dataDir);
+  // installer/installer.nsh (customUnInstall) removes the HKCU Run value, which would otherwise point at the deleted exe.
   const leftRun = runEntries();
-  console.log(`INFO start with Windows entries left after uninstalling: ${leftRun.length ? JSON.stringify(leftRun) : 'none'}`);
+  expect('the uninstaller removes start with Windows', !leftRun.length && 'no Run entry left', JSON.stringify(leftRun));
   removeRunEntries();
 
   console.log(failures.length ? `\n${failures.length} upgrade checks failed: ${failures.join(', ')}` : `\nUpgrade from v${oldVersion} to v${version}: every check passed`);
