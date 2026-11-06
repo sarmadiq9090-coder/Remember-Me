@@ -9,7 +9,7 @@ const quickWhen = createWhenChip({ input: quickField('quickadd-title'), chip: qu
 async function applyQuickLook() {
   try {
     const look = await api('language');
-    await setLanguage(look); applyPalette(look.palette);
+    await setLanguage(look); applyPalette(look.palette); applyTextSize(look.textSize);
     quickWeekStart = look.weekStart;
     document.title = tr('Remember Me • Quick add');
     quickWhen.render();

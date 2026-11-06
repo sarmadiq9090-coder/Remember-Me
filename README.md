@@ -110,12 +110,12 @@ v1.4.0 can't update itself: install the next version from Releases once by hand,
 - **Opening files:** click an attachment to open it with the default Windows app. Excel files need a compatible app such as Excel.
 - **Settings:**
   - *Reminders and background:* alert sound, **Remind me again**, the six **Snooze choices** of the alert, start with Windows, **Quick add from anywhere** and its shortcut (click it and press the new one), alert position (left or right), interface language, and a preview alert.
-  - *Appearance:* light, dark or same as Windows, and one of six palettes, picked from preview cards. The change shows at once in the main window and the alert.
+  - *Appearance:* light, dark or same as Windows, and one of six palettes, picked from preview cards, and the **Text size** (100%, 115%, 130% or 150%). The change shows at once in the main window and the alert.
   - *Calendar:* the first day of the week; in Arabic also the month names.
   - *Your data:* export, restore, storage use and cleanup, the data folder, and Google Drive backups with how many automatic copies to keep.
   - *Updates:* automatic checks and **Check now**.
 - **About:** at the end of Settings, or **About Remember Me** in the tray menu. It shows the version, links to the source code, release notes, ideas and feedback, the privacy notice and the MIT license, and has **Report a problem**, **Check for updates** and **Open log folder**. **Copy diagnostic info** copies the app, Electron, Chromium and Windows versions plus the interface language and theme, to paste into a problem report. It never includes your tasks, notes, files or folder paths.
-- **Shortcuts:** Ctrl+N creates a task or note, Ctrl+K focuses search. With Quick add from anywhere on, Ctrl+Alt+R (or your own shortcut) opens the quick-add window from any app; a time already past today means tomorrow.
+- **Shortcuts:** Ctrl+N creates a task or note, Ctrl+K focuses search. Ctrl+= and Ctrl+- make the text larger or smaller in every window, and Ctrl+0 brings it back to 100%. With Quick add from anywhere on, Ctrl+Alt+R (or your own shortcut) opens the quick-add window from any app; a time already past today means tomorrow.
 
 The bell button at the top shows a **preview alert**. Snoozing a preview only closes it, while reminders you set on tasks are real.
 
@@ -205,6 +205,7 @@ The website at <https://sarmadiq9090-coder.github.io/Remember-Me/> is plain HTML
 - `tests/early-notices.test.js`: each "coming up" notice shows once per due time, none pile up after a pause, and clicked or old notices are let go.
 - `tests/focus.test.js`: a rebuilt list gives focus back to the same control of the same item, or to the next item when it is gone.
 - `tests/structure.test.js`: every `require` and import, every script and stylesheet the pages load, and every fixed path the main process builds exists.
+- `tests/text-size.test.js`: the text size setting, its Ctrl+= / Ctrl+- / Ctrl+0 keys, the alert window growing with it, every stylesheet font size following it with none below 12 px, and the strings in all 12 languages.
 - `tests/quick-add.test.js`: the quick-add shortcut rules and recorder, the due time, registering and releasing the global shortcut and reporting a conflict, the window's placement and limited IPC actions, and the setting's defaults.
 - `tests/web-security.test.js`: every page denies new windows, navigation and webviews, windows stay sandboxed with the strict CSP and spellcheck off, and only `https://` links open in the browser.
 - `tests/store.test.js`: the Microsoft Store version never loads the updater or writes the Run key, its startup task and package data folder (including the copy from the installer version), the Store identity check and package settings, and the generated logos.

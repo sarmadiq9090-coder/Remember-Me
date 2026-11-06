@@ -90,6 +90,8 @@
   "Close the window normally and Remember Me stays by the clock. Use its tray menu to exit fully. Alerts cannot appear while the PC is off or asleep; missed reminders appear when you return. The app uses your device time.": "ウィンドウを普通に閉じても、Remember Me は時計の横に残ります。完全に終了するにはトレイのメニューを使います。PC の電源が切れているかスリープ中は通知を表示できず、見逃したリマインダーは戻ったときに表示されます。アプリはデバイスの時刻を使います。",
   "Closing the window keeps Remember Me near the clock": "ウィンドウを閉じても Remember Me は時計の横に残ります",
   "Colors": "カラー",
+  "Text size": "文字サイズ",
+  "Makes all text larger. Ctrl+= and Ctrl+- also change it, and Ctrl+0 brings it back to 100%.": "すべての文字を大きくします。Ctrl+= と Ctrl+- でも変更でき、Ctrl+0 で 100% に戻ります。",
   "Coming up: {title}": "まもなく: {title}",
   "Complete any task to see it in this list.": "タスクを完了するとこの一覧に表示されます。",
   "Complete {title}": "「{title}」を完了",

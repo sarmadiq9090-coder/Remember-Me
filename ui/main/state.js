@@ -55,8 +55,8 @@ async function refresh() {
     trash = [...state.tasks.filter(t => t.deletedAt).map(item => ({ kind: 'Task', item })), ...state.notes.filter(n => n.deletedAt).map(item => ({ kind: 'Note', item }))].sort((a, b) => Date.parse(b.item.deletedAt) - Date.parse(a.item.deletedAt));
     state.tasks = state.tasks.filter(t => !t.deletedAt); state.notes = state.notes.filter(n => !n.deletedAt);
     await setLanguage({ language: state.settings.language, dates: state.dates });
-    // While a palette choice is being saved, an older refresh must not switch the page back.
-    if (!appearanceSaving) applyPalette(state.settings.palette);
+    // While a palette or text size choice is being saved, an older refresh must not switch the page back.
+    if (!appearanceSaving) { applyPalette(state.settings.palette); applyTextSize(state.settings.textSize); }
     // Shown before rendering: nothing in a hidden page can take the focus.
     showPage();
     render();

@@ -7,11 +7,13 @@
 - Microsoft Store version: after a first real success (a reminder done, or five reminders set), Remember Me asks once for a rating in the Store. **Not now** is final: it never asks again. About also has **More from FastKiwi** (the publisher's page in the Store), next to Support. [#103]
 - Quick add understands dates as you type, in English and in Arabic, including everyday Iraqi, Gulf and Levantine speech: "tomorrow 5pm", "in 2 hours", "next Thursday 8pm", "every day 7am", «بكرة 5 العصر», «باچر الصبح», «بعد ساعتين», «الخميس الجاي 8 بالليل», «كل يوم 7 الصبح», «بعد بكرة», «اليوم المغرب», with Arabic-Indic or Western digits. A chip under the field shows the time, the repeat and the title before you save. When a phrase could mean two things (5 AM or 5 PM, this Thursday or next, a day with no time), it asks with a button per choice instead of guessing, and × keeps the text as typed. Works in the row above the task list and in the quick-add window, whose time field still wins when you use it. English is read with chrono-node 2.10.3 (MIT), locally; nothing is sent anywhere. The other ten languages show the chip's questions in their own language and read English and Arabic phrases.
 - About has **Support** («الدعم»): the support page on fastkiwi.app (in Arabic in the Arabic interface), which needs no GitHub account, and **Email support**, which writes to support@fastkiwi.app. The other ten languages show their three new texts in English until they are translated.
+- Text size: Settings → Appearance makes all text larger (100%, 115%, 130% or 150%), in the main window, the alert and quick add. Ctrl+= and Ctrl+- change it in any window and Ctrl+0 brings it back to 100%. The alert window grows with the text.
 
 ### Changed
 
 - On Arabic Windows, and other right-to-left Windows where the clock is on the left, a new install shows the reminder alert at the bottom left. The side you saved, or choose in Settings, is kept.
 - Electron 45.2.3 (was 45.1.0), with Chromium security fixes; electron-updater 6.8.12 and electron-builder 26.18.1.
+- No text is smaller than 12 px any more: small labels, hints, counts and badges that were 9 to 11 px are now 12 px.
 
 ### For contributors
 

@@ -90,6 +90,8 @@
   "Close the window normally and Remember Me stays by the clock. Use its tray menu to exit fully. Alerts cannot appear while the PC is off or asleep; missed reminders appear when you return. The app uses your device time.": "विंडो को सामान्य तरीके से बंद करें, Remember Me घड़ी के पास बना रहेगा। पूरी तरह बाहर निकलने के लिए उसके ट्रे मेन्यू का उपयोग करें। पीसी बंद या स्लीप में हो तो अलर्ट नहीं दिख सकते; छूटे हुए रिमाइंडर लौटने पर दिखेंगे। ऐप आपके डिवाइस का समय इस्तेमाल करता है।",
   "Closing the window keeps Remember Me near the clock": "विंडो बंद करने पर Remember Me घड़ी के पास रहता है",
   "Colors": "रंग",
+  "Text size": "टेक्स्ट का आकार",
+  "Makes all text larger. Ctrl+= and Ctrl+- also change it, and Ctrl+0 brings it back to 100%.": "सारा टेक्स्ट बड़ा करता है। Ctrl+= और Ctrl+- से भी इसे बदला जा सकता है, और Ctrl+0 इसे 100% पर वापस लाता है।",
   "Coming up: {title}": "जल्द ही: {title}",
   "Complete any task to see it in this list.": "इस सूची में देखने के लिए कोई कार्य पूरा करें।",
   "Complete {title}": "{title} पूरा करें",

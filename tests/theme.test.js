@@ -124,7 +124,7 @@ test('windows get the palette through the preload and keep plain page URLs', () 
   const loads = [...main.matchAll(/loadFile\(([^;]*)\);/g)].map(m => m[1]);
   assert.ok(loads.length >= 2);
   for (const args of loads) assert.match(args, /^path\.join\(__dirname, '\.\.\/\.\.\/ui\/\w+\.html'\)$/, `loadFile(${args}) adds nothing to the URL`);
-  assert.match(main, /additionalArguments: \[`--waqt-palette=\$\{store\.state\.settings\.palette\}`, `--waqt-language=\$\{locale\.code\}`, `--waqt-dir=\$\{locale\.dir\}`\]/);
+  assert.match(main, /additionalArguments: \[`--waqt-palette=\$\{store\.state\.settings\.palette\}`, `--waqt-text-size=\$\{store\.state\.settings\.textSize\}`, `--waqt-language=\$\{locale\.code\}`, `--waqt-dir=\$\{locale\.dir\}`\]/);
   const run = argv => {
     let exposed;
     const electron = { contextBridge: { exposeInMainWorld: (name, api) => { exposed = api; } }, ipcRenderer: {} };

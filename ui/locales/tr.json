@@ -90,6 +90,8 @@
   "Close the window normally and Remember Me stays by the clock. Use its tray menu to exit fully. Alerts cannot appear while the PC is off or asleep; missed reminders appear when you return. The app uses your device time.": "Pencereyi normal şekilde kapatın; Remember Me saatin yanında kalır. Tamamen çıkmak için bildirim alanındaki menüsünü kullanın. Bilgisayar kapalıyken veya uyku modundayken uyarı gösterilemez; kaçırılan hatırlatıcılar döndüğünüzde görünür. Uygulama cihazınızın saatini kullanır.",
   "Closing the window keeps Remember Me near the clock": "Pencereyi kapatmak Remember Me'yi saatin yanında tutar",
   "Colors": "Renkler",
+  "Text size": "Yazı boyutu",
+  "Makes all text larger. Ctrl+= and Ctrl+- also change it, and Ctrl+0 brings it back to 100%.": "Tüm yazıları büyütür. Ctrl+= ve Ctrl+- ile de değiştirilebilir, Ctrl+0 ile %100’e döner.",
   "Coming up: {title}": "Yaklaşıyor: {title}",
   "Complete any task to see it in this list.": "Bu listede görmek için herhangi bir görevi tamamlayın.",
   "Complete {title}": "{title} görevini tamamla",
