@@ -27,7 +27,7 @@ Quick add from anywhere, a Microsoft Store package, and a new install that opens
 ### For contributors
 
 - `CLAUDE.md` with the repository guide, and `ROADMAP.md` with the phase plan, the weekly release trains and the rollback steps. [#96] [#97]
-- The **Desktop** workflow has an upgrade job: it installs v1.6.1 from its GitHub release, adds Arabic tasks, notes, an attachment and settings, installs the new build over it, and checks that everything loads unchanged in Arabic before it uninstalls (`tests/upgrade-desktop.cjs`). [#104]
+- The **Desktop** workflow has an upgrade job: it installs v1.6.2 (and v1.6.1) from its GitHub release, adds Arabic tasks, notes, an attachment and settings, installs the new build over it, and checks that everything loads unchanged in Arabic before it uninstalls (`tests/upgrade-desktop.cjs`). [#104]
 
 ### Upgrading
 
