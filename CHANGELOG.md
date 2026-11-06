@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- About has **Support** («الدعم»): the support page on fastkiwi.app (in Arabic in the Arabic interface), which needs no GitHub account, and **Email support**, which writes to support@fastkiwi.app. The other ten languages show their three new texts in English until they are translated.
+
+### Changed
+
+- On Arabic Windows, and other right-to-left Windows where the clock is on the left, a new install shows the reminder alert at the bottom left. The side you saved, or choose in Settings, is kept.
+
+### For contributors
+
+- Tests check that no translation, page or script contains Arabic-Indic or Devanagari digits, and that every date, time and number formatter gets the Western-digit locale, so the Arabic interface shows 0-9 everywhere. The desktop smoke test no longer allows the removed digit option's sample.
+- README roadmap: code signing and Windows on ARM did not ship in v1.7.0 and move to "Later"; quick add from anywhere is listed under v1.7.0, where it shipped.
+
 ## v1.7.0 (2026-11-06)
 
 Quick add from anywhere, a Microsoft Store package, and a new install that opens in your Windows language. Your tasks, notes, attachments and settings load unchanged.

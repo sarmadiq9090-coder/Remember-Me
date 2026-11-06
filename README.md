@@ -265,10 +265,11 @@ The task and note layout was inspired by [TickTick for Windows](https://www.tick
 Planned work is tracked in [milestones](https://github.com/sarmadiq9090-coder/Remember-Me/milestones):
 
 - **v1.6.1:** the snooze fixes, and the first end-to-end test of automatic updates.
-- **v1.7.0, trust and reach:** code signing, the Microsoft Store, Windows on ARM, and quality and accessibility work.
-- **v1.8.0, faster input:** quick add from anywhere, due dates in plain language, and templates.
+- **v1.7.0 (released):** quick add from anywhere, a Microsoft Store package, and a new install that opens in your Windows language. Code signing and Windows on ARM were planned for it but did not ship.
+- **v1.8.0, faster input:** due dates in plain language, and templates.
 - **v1.9.0, planning:** a calendar view, a daily summary and local statistics.
 - **v2.0.0:** sync between PCs through a folder you choose, with no account.
+- **Later:** code signing and Windows on ARM.
 
 Ideas are welcome in [Discussions](https://github.com/sarmadiq9090-coder/Remember-Me/discussions/categories/ideas).
 
