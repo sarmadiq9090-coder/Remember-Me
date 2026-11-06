@@ -22,6 +22,7 @@ Quick add from anywhere, a Microsoft Store package, and a new install that opens
 ### Fixed
 
 - Arabic: the hint in the search box and other empty fields now ends with its ellipsis («ابحث عن مهمة أو ملاحظة…»), instead of starting with it. [#102]
+- Uninstalling Remember Me also removes its Start with Windows entry, which was left pointing at the removed app. Updating keeps it, and your data folder is still kept. [#105]
 
 ### For contributors
 
@@ -299,3 +300,4 @@ Everything since v1.4.0. Your tasks, notes, attachments and settings from v1.4.0
 [#101]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/101
 [#102]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/102
 [#104]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/104
+[#105]: https://github.com/sarmadiq9090-coder/Remember-Me/pull/105
