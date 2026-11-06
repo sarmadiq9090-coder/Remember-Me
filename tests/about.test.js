@@ -1,12 +1,12 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { LINKS, STORE_LINKS, ABOUT_LINK_IDS, linkUrl, isStoreUrl, windowsVersion, diagnostics } = require('../src/platform/about');
+const { LINKS, STORE_LINKS, ABOUT_LINK_IDS, SUPPORT_EMAIL, linkUrl, isStoreUrl, windowsVersion, diagnostics } = require('../src/platform/about');
+const SUPPORT_IDS = ['email', 'support', 'supportAr'];
 
-test('every About link is an exact https address on the project’s GitHub, or the help page on fastkiwi.app', () => {
-  assert.deepEqual([...LINKS.keys()].sort(), ['github', 'help', 'issues', 'license', 'privacy', 'releases', 'repo']);
-  assert.equal(linkUrl('help'), 'https://fastkiwi.app/#support', 'Help that needs no GitHub account');
+test('every About link is an exact https address on the project’s GitHub, apart from Support', () => {
+  assert.deepEqual([...LINKS.keys()].sort(), ['email', 'github', 'issues', 'license', 'privacy', 'releases', 'repo', 'support', 'supportAr']);
   for (const [id, url] of LINKS) {
-    if (id === 'help') continue;
+    if (SUPPORT_IDS.includes(id)) continue;
     const parsed = new URL(url);
     assert.equal(parsed.protocol, 'https:');
     assert.equal(parsed.host, 'github.com');
@@ -20,9 +20,20 @@ test('every About link is an exact https address on the project’s GitHub, or t
 test('the Microsoft Store pages are fixed: the publisher page and this app\'s review page', () => {
   assert.equal(STORE_LINKS.get('moreApps'), 'ms-windows-store://publisher/?name=FastKiwi');
   assert.equal(STORE_LINKS.get('rate'), 'ms-windows-store://review/?ProductId=9NGB1F7T7JGN');
-  assert.deepEqual([...ABOUT_LINK_IDS].sort(), ['github', 'help', 'issues', 'license', 'moreApps', 'privacy', 'releases', 'repo'], 'The About card cannot send rate');
+  assert.deepEqual([...ABOUT_LINK_IDS].sort(), ['email', 'github', 'issues', 'license', 'moreApps', 'privacy', 'releases', 'repo', 'support', 'supportAr'], 'The About card cannot send rate');
   for (const url of STORE_LINKS.values()) assert.ok(isStoreUrl(url), url);
   for (const url of ['https://fastkiwi.app', 'ms-windows-store://pdp/?ProductId=x', 'ms-settings:startupapps', 'file:///C:/x', null]) assert.equal(isStoreUrl(url), false, String(url));
+});
+
+test('Support opens fastkiwi.app\'s support page, in Arabic for the Arabic interface, or an e-mail to support', () => {
+  assert.equal(linkUrl('support'), 'https://fastkiwi.app/support/');
+  assert.equal(linkUrl('supportAr'), 'https://fastkiwi.app/ar/support/');
+  assert.equal(linkUrl('email'), 'mailto:support@fastkiwi.app');
+  assert.equal(SUPPORT_EMAIL, linkUrl('email'));
+  // The About card lists both, and sends supportAr in the Arabic interface.
+  const fs = require('node:fs'), path = require('node:path');
+  const card = fs.readFileSync(path.join(__dirname, '../ui/main/settings-cards.js'), 'utf8');
+  for (const id of SUPPORT_IDS) assert.ok(card.includes(`'${id}'`), id);
 });
 
 test('diagnostic info names versions and display settings, nothing about the user’s data', () => {

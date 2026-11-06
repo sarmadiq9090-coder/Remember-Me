@@ -64,7 +64,7 @@ test('"More from FastKiwi" opens the publisher page in the Store; other About li
   assert.deepEqual(checkRequest('openLink', { link: 'moreApps' }), { link: 'moreApps' });
   assert.throws(() => checkRequest('openLink', { link: 'rate' }), /Unknown link/, 'The rating page opens only through the rating request');
   await openLink.run({ link: 'moreApps' });
-  await openLink.run({ link: 'help' });
+  await openLink.run({ link: 'support' });
   assert.deepEqual(opened, ['ms-windows-store://publisher/?name=FastKiwi']);
-  assert.deepEqual(browsed, ['https://fastkiwi.app/#support']);
+  assert.deepEqual(browsed, ['https://fastkiwi.app/support/']);
 });

@@ -35,6 +35,17 @@ function systemLanguage(app) {
   try { tags = app.getPreferredSystemLanguages(); } catch { /* not available: English */ }
   return matchLocale(tags);
 }
+// Where a fresh install puts the alert: by the taskbar clock, which Windows shows on the left when its display
+// language (the first preferred one) is written right to left, such as Arabic, Hebrew, Persian or Kurdish
+// in Arabic script, even when the app doesn't have that language.
+const RTL_LANGUAGES = ['ar', 'he', 'iw', 'fa', 'ur', 'ps', 'sd', 'ug', 'yi', 'dv', 'ckb', 'syr'];
+const RTL_SCRIPTS = ['arab', 'hebr', 'syrc', 'thaa', 'nkoo', 'adlm', 'rohg'];
+function systemAlertSide(app) {
+  let tags = [];
+  try { tags = app.getPreferredSystemLanguages(); } catch { /* not available: the right, as before */ }
+  const first = Array.isArray(tags) && typeof tags[0] === 'string' ? tags[0].trim().toLowerCase().split(/[-_]/) : [];
+  return RTL_LANGUAGES.includes(first[0]) || first.slice(1).some(part => RTL_SCRIPTS.includes(part)) ? 'left' : 'right';
+}
 // The Windows region ('IQ', 'SA'…), for the Arabic month names: from the regional format (getSystemLocale,
 // after ready), else from the preferred languages ('ar-IQ'). '' when neither has one.
 function systemRegion(app) {
@@ -53,4 +64,4 @@ function startupControlsLocale(folder, firstRunLanguage = DEFAULT_LOCALE) {
   }
   return findLocale(firstRunLanguage).chromium;
 }
-module.exports = { createI18n, systemLanguage, systemRegion, startupControlsLocale };
+module.exports = { createI18n, systemLanguage, systemAlertSide, systemRegion, startupControlsLocale };

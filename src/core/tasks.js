@@ -2,15 +2,19 @@
 const { randomUUID } = require('node:crypto');
 const { attachmentIds, validateAttachment } = require('./records');
 const { nextOccurrence } = require('./repeat');
-const { LOCALES, DEFAULT: DEFAULT_LOCALE, ARABIC_MONTHS } = require('../../ui/lib/translate');
+const { LOCALES, DEFAULT: DEFAULT_LOCALE, ARABIC_MONTHS, findLocale } = require('../../ui/lib/translate');
 const { validPause } = require('./pause');
 const { DEFAULT_SNOOZE_PRESETS, normalizeSnoozePresets } = require('../../ui/lib/alert-format');
 const { DEFAULT_QUICK_ADD_SHORTCUT, normalizeAccelerator } = require('../../ui/lib/quickadd');
 
 // language is the interface language of a fresh install (from Windows' preferred languages); English otherwise.
-function initialState(language = DEFAULT_LOCALE) {
+// alertSide is the side of the taskbar clock, which right-to-left Windows (Arabic, Hebrew…) has on the left
+// (systemAlertSide in src/main/i18n.js); without one, a right-to-left interface language means the left.
+// Saved data keeps its own side: validateState fills a missing one with the right, as it always was.
+function initialState(language = DEFAULT_LOCALE, alertSide) {
   if (!LOCALES.some(l => l.code === language)) language = DEFAULT_LOCALE;
-  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language, weekStart: 6, theme: 'system', palette: 'lavender', arabicMonths: 'auto', autoUpdate: null, pausedUntil: null, snoozePresets: DEFAULT_SNOOZE_PRESETS.map(p => ({ ...p })), quickAdd: false, quickAddShortcut: DEFAULT_QUICK_ADD_SHORTCUT } };
+  if (alertSide !== 'left' && alertSide !== 'right') alertSide = findLocale(language).dir === 'rtl' ? 'left' : 'right';
+  return { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide, language, weekStart: 6, theme: 'system', palette: 'lavender', arabicMonths: 'auto', autoUpdate: null, pausedUntil: null, snoozePresets: DEFAULT_SNOOZE_PRESETS.map(p => ({ ...p })), quickAdd: false, quickAddShortcut: DEFAULT_QUICK_ADD_SHORTCUT } };
 }
 // Interface palettes in ui/styles/theme.css; anything else shows Lavender.
 const PALETTES = ['lavender', 'ocean', 'forest', 'sunset', 'graphite', 'contrast'];

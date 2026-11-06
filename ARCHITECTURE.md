@@ -181,7 +181,7 @@ all data. The shape (`version` is always `1`):
            attachments, createdAt, updatedAt, deletedAt? }],
   attachments: [{ id, name, size, addedAt }],
   settings: {
-    sound: true, startAtLogin: false, alertSide: 'right'|'left', language: 'en'|'ar'|'es'|…,  // a code from LOCALES in ui/lib/translate.js; new installs use Windows' preferred language if the app has it, else 'en'
+    sound: true, startAtLogin: false, alertSide: 'right'|'left', language: 'en'|'ar'|'es'|…,  // a code from LOCALES in ui/lib/translate.js; new installs use Windows' preferred language if the app has it, else 'en'; alertSide is 'left' for a new install on right-to-left Windows, such as Arabic, whose clock is on the left (systemAlertSide in src/main/i18n.js)
     weekStart: 6|0|1, theme: 'system'|'light'|'dark',
     palette: 'lavender'|'ocean'|'forest'|'sunset'|'graphite'|'contrast',  // ui/styles/theme.css
     arabicMonths: 'auto'|'levant'|'standard',  // Arabic month names: «تشرين الثاني» or «نوفمبر»; auto follows the Windows region (dateLocale() in ui/lib/translate.js)
@@ -335,8 +335,13 @@ name, version and links, "Check for updates" (the same `checkUpdates` action and
 Updates card), "Copy diagnostic info" and "Open log folder".
 
 - Links: the page sends `openLink` with an ID (`github`, `repo`, `releases`, `issues`, `privacy`,
-  `license`), never a URL. The About module maps the ID to an exact `https://github.com/...` address
-  and main passes only that to `shell.openExternal`. An unknown ID is rejected in `checkRequest`.
+  `license`, `support`, `supportAr`, `email`), never a URL. The About module maps the ID to an exact
+  address (`https://github.com/...`, the support page on `https://fastkiwi.app/support/` or, in the
+  Arabic interface, `/ar/support/`) and main passes only that to `shell.openExternal`, which opens
+  https only, plus the one address `mailto:support@fastkiwi.app`. An unknown ID is rejected in
+  `checkRequest`. `moreApps` (More from FastKiwi) opens the publisher page in the Microsoft Store through
+  `ctx.openStoreLink`, which accepts only `ms-windows-store://publisher|review/?…` addresses; the card cannot
+  send the review page, which only the rating request opens.
 - `copyDiagnostics` builds the text in main and writes it with Electron's `clipboard` (the pages
   have no clipboard permission): the app, Electron, Chromium and Node versions, the Windows version
   and architecture, the UI language and the theme. Never tasks, notes, file names or paths.

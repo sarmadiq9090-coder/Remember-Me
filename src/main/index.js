@@ -11,7 +11,7 @@ const { migrateDataFolder, storeDataFolder } = require('../platform/data-folder'
 const { setLoginItem, refreshLoginItem, appUserModelId, STARTUP_SETTINGS } = require('../platform/login-item');
 const { createPause } = require('../core/pause');
 const { registerHandlers } = require('./handlers');
-const { createI18n, systemLanguage, systemRegion, startupControlsLocale } = require('./i18n');
+const { createI18n, systemLanguage, systemAlertSide, systemRegion, startupControlsLocale } = require('./i18n');
 const { createWindows } = require('./windows');
 const { createTray } = require('./tray');
 const { createScheduler } = require('./scheduler');
@@ -36,6 +36,8 @@ app.setPath('userData', dataFolder.folder);
 // English. A saved language is always kept. This matters most for the Store version, which has no
 // installer page to ask.
 const firstRunLanguage = systemLanguage(app);
+// And it puts the alert by the taskbar clock: bottom left on right-to-left Windows, such as Arabic.
+const firstRunAlertSide = systemAlertSide(app);
 // Native date, time and number fields follow the app's language rather than Windows'. Chromium reads
 // this only before ready, so a new language reaches them after a restart (see the settings action).
 const controlsLocale = startupControlsLocale(dataFolder.folder, firstRunLanguage);
@@ -114,7 +116,7 @@ async function start() {
   session.defaultSession.setPermissionCheckHandler(() => false);
   // No spellchecker, so Chromium never downloads dictionaries (the windows also set spellcheck: false).
   session.defaultSession.setSpellCheckerEnabled(false);
-  const store = ctx.store = new Store(app.getPath('userData'), { language: firstRunLanguage });
+  const store = ctx.store = new Store(app.getPath('userData'), { language: firstRunLanguage, alertSide: firstRunAlertSide });
   // For the Arabic month names: Iraq and the Levant say «تشرين الثاني», elsewhere «نوفمبر».
   ctx.region = systemRegion(app);
   log.info('start', { version: app.getVersion(), packaged: app.isPackaged, windowsStore, ...(windowsStore ? { dataFolder: dataFolder.store } : {}), tasks: store.state.tasks.length, notes: store.state.notes.length, attachments: store.state.attachments.length });
