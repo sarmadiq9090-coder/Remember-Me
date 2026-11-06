@@ -5,12 +5,15 @@ name: Store package
 # the package itself, so no certificate or secret is used. While store/identity.json still has the
 # placeholder identity name, the job builds a --dry-run package with test values instead, which
 # proves the package builds but can't be uploaded. See docs/distribution/microsoft-store.md.
+# Every run also installs a copy signed with a throwaway certificate on the runner and checks that the
+# packaged app starts in Store mode and imports an installer version's data (tests/store-install.ps1),
+# and retakes the Store listing screenshots with Windows fonts (`store-screenshots` artifact).
 on:
   push:
     tags: ['v*']
   # Builds the package on pull requests that touch it too, so a broken Store build shows before merging.
   pull_request:
-    paths: ['store/**', 'tools/store.cjs', 'tools/installer.cjs', '.github/workflows/store.yml', 'package.json', 'src/**']
+    paths: ['store/**', 'tools/store.cjs', 'tools/installer.cjs', 'tools/desktop-screenshots.cjs', 'tests/store-install.ps1', '.github/workflows/store.yml', 'package.json', 'src/**']
   workflow_dispatch:
 
 permissions:
@@ -83,8 +86,49 @@ jobs:
           if ($manifest.OuterXml -notmatch 'TaskId="RememberMeStartup" Enabled="false"') { throw 'The startup task is missing' }
           "Package: $($packages[0].Name), $([math]::Round($packages[0].Length / 1MB, 1)) MB"
           "Identity: $($manifest.Package.Identity.Name) $($manifest.Package.Identity.Version) $($manifest.Package.Identity.Publisher)"
+      - name: Install a test-signed copy and check Store mode
+        # Windows PowerShell 5.1: the Appx module is unreliable in pwsh 7.
+        shell: powershell
+        env:
+          MODE: ${{ steps.build.outputs.mode }}
+        run: |
+          $package = Get-ChildItem release/store -Filter 'Remember-Me-*.appx' | Select-Object -First 1
+          if ($env:MODE -eq 'store') {
+            $identity = Get-Content store/identity.json -Raw | ConvertFrom-Json
+            $name = $identity.identityName; $publisher = $identity.publisher
+          } else { $name = 'FastKiwiTest.RememberMe'; $publisher = 'CN=FastKiwiTest' }
+          ./tests/store-install.ps1 -Package $package.FullName -Name $name -Publisher $publisher
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: store-package
           path: release/store/Remember-Me-*.appx
+          if-no-files-found: error
+
+  # The Store listing images (docs/screenshots/store) with Windows' own fonts, from the sources in test mode
+  # with made-up sample data. Download the artifact to update the committed set.
+  screenshots:
+    name: Store screenshots
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 10
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # pnpm 10 skips dependency install scripts, so Electron's own download runs here.
+      - run: node node_modules/electron/install.js
+      - run: pnpm run screenshots -- --store
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: store-screenshots
+          path: docs/screenshots/store/*.png
           if-no-files-found: error

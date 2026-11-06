@@ -8,10 +8,10 @@ const { safetyBackup } = require('../data/backups');
 const { createLogger } = require('../platform/logger');
 const { Updates, updateSource, createUpdater } = require('../platform/updates');
 const { migrateDataFolder, storeDataFolder } = require('../platform/data-folder');
-const { setLoginItem, refreshLoginItem, STARTUP_SETTINGS } = require('../platform/login-item');
+const { setLoginItem, refreshLoginItem, appUserModelId, STARTUP_SETTINGS } = require('../platform/login-item');
 const { createPause } = require('../core/pause');
 const { registerHandlers } = require('./handlers');
-const { createI18n, startupControlsLocale } = require('./i18n');
+const { createI18n, systemLanguage, systemRegion, startupControlsLocale } = require('./i18n');
 const { createWindows } = require('./windows');
 const { createTray } = require('./tray');
 const { createScheduler } = require('./scheduler');
@@ -32,13 +32,17 @@ const dataFolder = testMode && process.env.WAQT_DATA_DIR ? { folder: process.env
     : migrateDataFolder(app.getPath('appData'));
 if (dataFolder.error) console.error('Could not move the data folder; using the old one:', dataFolder.error);
 app.setPath('userData', dataFolder.folder);
+// A fresh install (no data.json yet) starts in Windows' preferred language when the app has it, else
+// English. A saved language is always kept. This matters most for the Store version, which has no
+// installer page to ask.
+const firstRunLanguage = systemLanguage(app);
 // Native date, time and number fields follow the app's language rather than Windows'. Chromium reads
 // this only before ready, so a new language reaches them after a restart (see the settings action).
-const controlsLocale = startupControlsLocale(dataFolder.folder);
+const controlsLocale = startupControlsLocale(dataFolder.folder, firstRunLanguage);
 app.commandLine.appendSwitch('lang', controlsLocale);
-// The ID predates the Remember Me name. Keep it: it names the start-with-Windows entry and taskbar
-// group of v1.4.0, and the installer's appId must stay the same for upgrades and updates.
-app.setAppUserModelId('com.waqt.reminder');
+// The installer version keeps the ID from v1.4.0; the Store package uses the one its identity gives it.
+const userModelId = appUserModelId({ windowsStore });
+if (userModelId) app.setAppUserModelId(userModelId);
 // Local log for bug reports: ids, counts and outcomes only, never task or note content or paths.
 const log = createLogger(app.getPath('userData'));
 if (dataFolder.migrated !== 'none') log.info('data-folder-migrated', { result: dataFolder.migrated });
@@ -50,9 +54,13 @@ let interval, backupInterval;
 // shell.openExternal opens only https:// addresses.
 const ctx = { app, log, testMode, electron: { dialog, shell: httpsShell(shell), clipboard }, UNDO_MS: 6000, imagePreview: createPreviewService(nativeImage),
   quitting: false, store: null, pause: null, driveBackup: null, updates: null, setLogin, controlsLocale, windowsStore,
+  // The Store version just copied the installer version's data: the page suggests uninstalling that one.
+  importedFromInstaller: dataFolder.migrated === 'imported',
   // Windows' own Startup apps page: the Store version's start with Windows is a startup task the user turns on there.
   openStartupSettings: () => shell.openExternal(STARTUP_SETTINGS) };
-Object.assign(ctx, createI18n(() => ctx.store?.state?.settings?.language));
+// Before the data is read (a start error), the fresh-install language is the best guess.
+Object.assign(ctx, createI18n(() => ctx.store?.state?.settings?.language || firstRunLanguage,
+  () => ({ months: ctx.store?.state?.settings?.arabicMonths, region: ctx.region })));
 // Crashes and uncaught errors go to the log; after one, or after repeated errors, the user is offered a pre-filled GitHub issue.
 ctx.problems = createProblems(ctx);
 ctx.problems.install();
@@ -106,8 +114,10 @@ async function start() {
   session.defaultSession.setPermissionCheckHandler(() => false);
   // No spellchecker, so Chromium never downloads dictionaries (the windows also set spellcheck: false).
   session.defaultSession.setSpellCheckerEnabled(false);
-  const store = ctx.store = new Store(app.getPath('userData'));
-  log.info('start', { version: app.getVersion(), packaged: app.isPackaged, tasks: store.state.tasks.length, notes: store.state.notes.length, attachments: store.state.attachments.length });
+  const store = ctx.store = new Store(app.getPath('userData'), { language: firstRunLanguage });
+  // For the Arabic month names: Iraq and the Levant say «تشرين الثاني», elsewhere «نوفمبر».
+  ctx.region = systemRegion(app);
+  log.info('start', { version: app.getVersion(), packaged: app.isPackaged, windowsStore, ...(windowsStore ? { dataFolder: dataFolder.store } : {}), tasks: store.state.tasks.length, notes: store.state.notes.length, attachments: store.state.attachments.length });
   if (store.recovered) log.warn('data-recovered-from-bak');
   ctx.pause = createPause({ read: () => store.state.settings.pausedUntil, write: value => { store.change(s => { s.settings.pausedUntil = value; }); tray.rebuildTrayMenu(); windows.notifyViews(); } });
   nativeTheme.themeSource = store.state.settings.theme;

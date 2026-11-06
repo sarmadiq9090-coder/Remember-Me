@@ -189,8 +189,12 @@ test('data saved with the removed Hijri date and digit style options still loads
   const loaded = validateState(old);
   assert.ok(!('hijri' in loaded.settings) && !('digits' in loaded.settings));
   assert.equal(loaded.tasks[0].title, 'kept');
-  const odd = validateState({ ...initialState(), settings: { hijri: 'yes', digits: 'roman' } }).settings;
+  const odd = validateState({ ...initialState(), settings: { hijri: 'yes', digits: 'roman', arabicMonths: 'syriac' } }).settings;
   assert.ok(!('hijri' in odd) && !('digits' in odd));
+  assert.equal(odd.arabicMonths, 'auto');
+  assert.ok(!('digits' in initialState().settings));
+  assert.equal(initialState().settings.arabicMonths, 'auto');
+  assert.equal(validateState({ ...initialState(), settings: { arabicMonths: 'levant' } }).settings.arabicMonths, 'levant');
 });
 test('tags are trimmed, de-duplicated, limited and kept through edits, repeats and loading', () => {
   const { normalizeTags, validateState } = require('../src/core/tasks');

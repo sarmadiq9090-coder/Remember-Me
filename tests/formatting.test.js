@@ -32,6 +32,16 @@ test('dates, times and counts use Western digits in every interface language', (
   assert.equal(arabic('locale()'), 'ar-IQ-u-nu-latn');
 });
 
+test('the Arabic interface uses the month names the main process chose, with Western digits', () => {
+  const run = loadUi('ar');
+  run(`uiDates = 'ar-EG-u-nu-latn';`);
+  assert.equal(run(`new Date(2026, 10, 3).toLocaleDateString(locale(), { day: 'numeric', month: 'long' })`), '3 نوفمبر');
+  assert.equal(run('num(1234)'), '1234');
+  run(`uiDates = 'ar-IQ-u-nu-latn';`);
+  assert.equal(run(`new Date(2026, 10, 3).toLocaleDateString(locale(), { day: 'numeric', month: 'long' })`), '3 تشرين الثاني');
+  assert.equal(run('num(1234)'), '1234');
+});
+
 test('tags survive the editor round trip in every interface language', () => {
   for (const { code } of require('../ui/lib/translate').LOCALES) {
     const run = loadUi(code);

@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { EventEmitter } = require('node:events');
 const { Updates, updateSource, createUpdater, CHECK_EVERY, FEED } = require('../src/platform/updates');
-const { setLoginItem, startupTaskExtension, STARTUP_TASK_ID, STARTUP_SETTINGS } = require('../src/platform/login-item');
+const { setLoginItem, startupTaskExtension, appUserModelId, APP_USER_MODEL_ID, STARTUP_TASK_ID, STARTUP_SETTINGS } = require('../src/platform/login-item');
 const { packageFamilyName, storeDataFolder, STORE_ITEMS } = require('../src/platform/data-folder');
 const { createHandlers } = require('../src/main/handlers');
 const { checkRequest } = require('../src/main/ipc');
@@ -111,6 +111,17 @@ test('the Store version never writes the Run key; the installer version does', (
   assert.deepEqual(calls, [{ openAtLogin: true, path: 'C:\\Apps\\Remember Me.exe', args: ['--background'] }]);
 });
 
+test("the installer version keeps its AppUserModelID; the Store version uses its package identity's", () => {
+  assert.equal(APP_USER_MODEL_ID, 'com.waqt.reminder');
+  assert.equal(appUserModelId(), 'com.waqt.reminder');
+  assert.equal(appUserModelId({ windowsStore: false }), 'com.waqt.reminder');
+  assert.equal(appUserModelId({ windowsStore: true }), null);
+  assert.match(fs.readFileSync(path.join(root, 'tools/installer.cjs'), 'utf8'), new RegExp(`appId: '${APP_USER_MODEL_ID.replace(/\./g, '\\.')}'`), 'Same as the installer appId');
+  const main = fs.readFileSync(path.join(root, 'src/main/index.js'), 'utf8');
+  assert.match(main, /const userModelId = appUserModelId\(\{ windowsStore \}\);\s*if \(userModelId\) app\.setAppUserModelId\(userModelId\);/);
+  assert.equal((main.match(/setAppUserModelId\(/g) || []).length, 1, 'No other call sets it unconditionally');
+});
+
 test('the package declares a startup task that stays off until the user turns it on', () => {
   const xml = startupTaskExtension('app\\Remember Me.exe', 'Remember "Me" & <you>');
   assert.match(xml, /<desktop:Extension Category="windows\.startupTask" Executable="app\\Remember Me\.exe" EntryPoint="Windows\.FullTrustApplication">/);
@@ -133,6 +144,24 @@ test('the Startup apps page opens only in the Store version, and the page learns
   assert.equal(handlers.state.run({}).windowsStore, true);
   ctx.windowsStore = undefined;
   assert.equal(handlers.state.run({}).windowsStore, false);
+  assert.equal(handlers.state.run({}).importedFromInstaller, false);
+  ctx.importedFromInstaller = true;
+  assert.equal(handlers.state.run({}).importedFromInstaller, true, "After copying the installer version's data, the page suggests uninstalling it");
+});
+
+test("the Store version's startup help names the entry as Windows lists it, in every language", () => {
+  // Windows' Startup apps page shows the startup task's DisplayName, which tools/store.cjs takes from
+  // store/identity.json ("Remember Me Reminders"), not "Remember Me". These texts appear only in the Store version.
+  const { displayName } = store.readIdentity(store.IDENTITY_FILE);
+  const { loadLocale } = require('../tools/i18n-keys.cjs');
+  const keys = Object.keys(loadLocale('en')).filter(key => /Startup apps|Apps → Startup/.test(key));
+  assert.equal(keys.length, 3);
+  for (const { code } of LOCALES) {
+    const messages = loadLocale(code);
+    for (const key of keys) assert.ok(messages[key]?.includes(displayName), `${code}: "${key}" names ${displayName}`);
+  }
+  const page = fs.readFileSync(path.join(root, 'ui/index.html'), 'utf8');
+  assert.ok(page.includes(`Startup, turn on ${displayName}.`), 'The settings row names it too');
 });
 
 // --- Data folder: the Store version copies the installer version's data into its package folder.

@@ -3,6 +3,8 @@
 //   pnpm run screenshots
 //   pnpm run screenshots -- --store   Microsoft Store listing images: 1366x768 main window shots, and
 //                                     the alert over the main window, in docs/screenshots/store
+// The Store set has the same four shots in each language (main, alert, notes, dark); docs/screenshots has notes
+// and dark in English only, as the website and README use them (tests/site.test.js wants a WebP copy of each).
 // Needs Playwright (a devDependency). Set WAQT_PLAYWRIGHT to use another copy, and
 // ELECTRON_OVERRIDE_DIST_PATH to use an Electron outside node_modules.
 const fs = require('node:fs');
@@ -52,7 +54,8 @@ const SAMPLES = {
 };
 
 // data.json for one language: times are relative to now, so "today" is always today. Two tasks are
-// overdue, so the alert shows its queue.
+// overdue, so the alert shows its queue. A right-to-left interface puts the alert at the bottom left,
+// next to the clock of a right-to-left Windows and away from the page's headline.
 function sampleData(language) {
   const now = Date.now(), iso = ms => new Date(ms).toISOString();
   const tasks = SAMPLES[language].tasks.map(([title, body, priority, minutes, repeat = 'none', tags = [], steps = []], i) => {
@@ -64,7 +67,8 @@ function sampleData(language) {
   });
   const notes = SAMPLES[language].notes.map(([title, body, color, style], i) => ({ id: `sample-note-${i}`, title, body, color, style, attachments: [],
     createdAt: iso(now - 86400000 * (i + 1)), updatedAt: iso(now - 3600000 * (i + 1)) }));
-  return { version: 1, tasks, notes, attachments: [], settings: { sound: false, startAtLogin: true, alertSide: 'right', language, weekStart: 6,
+  const alertSide = language === 'ar' ? 'left' : 'right';
+  return { version: 1, tasks, notes, attachments: [], settings: { sound: false, startAtLogin: true, alertSide, language, weekStart: 6,
     theme: 'light', palette: 'lavender', autoUpdate: false, pausedUntil: null, remindAgain: 0 } };
 }
 
@@ -103,18 +107,19 @@ async function run(language) {
     }, STORE_SIZE);
     await shot(main, `main-${language}.png`);
     await shot(await waitFor(app, 'alert.html'), `alert-${language}.png`);
-    // The Store wants every image at 1366x768 or larger: the alert goes over the main window, at the
-    // bottom right (the sample data's alertSide), as on screen.
-    if (STORE_SIZE) overlay(`main-${language}.png`, `alert-${language}.png`, `alert-${language}.png`);
-    if (language === 'en') {
+    // The Store wants every image at 1366x768 or larger: the alert goes over the main window, in the
+    // bottom corner of the sample data's alertSide, as on screen.
+    if (STORE_SIZE) overlay(`main-${language}.png`, `alert-${language}.png`, `alert-${language}.png`, sampleData(language).settings.alertSide);
+    if (STORE_SIZE || language === 'en') {
       await main.evaluate(() => globalThis.setView('notes'));
-      await shot(main, 'notes-en.png');
-      await main.evaluate(async () => {
+      await shot(main, `notes-${language}.png`);
+      // The Store shot keeps the default Lavender palette, the purple of the app icon; the README's shows off Ocean.
+      await main.evaluate(async palette => {
         const state = await globalThis.waqt.call('state');
-        await globalThis.waqt.call('settings', { ...state.value.settings, theme: 'dark', palette: 'ocean' });
+        await globalThis.waqt.call('settings', { ...state.value.settings, theme: 'dark', palette });
         globalThis.setView('today');
-      });
-      await shot(main, 'dark-en.png');
+      }, STORE_SIZE ? 'lavender' : 'ocean');
+      await shot(main, `dark-${language}.png`);
     }
   } finally {
     await app.close();
@@ -122,10 +127,10 @@ async function run(language) {
   }
 }
 
-function overlay(backgroundName, foregroundName, name) {
+function overlay(backgroundName, foregroundName, name, side = 'right') {
   const { decodePng, encodePng } = require('./store-logos.cjs');
   const back = decodePng(fs.readFileSync(path.join(out, backgroundName))), front = decodePng(fs.readFileSync(path.join(out, foregroundName)));
-  const margin = 24, left = back.width - front.width - margin, top = back.height - front.height - margin;
+  const margin = 24, left = side === 'left' ? margin : back.width - front.width - margin, top = back.height - front.height - margin;
   for (let y = 0; y < front.height; y++) front.data.copy(back.data, ((top + y) * back.width + left) * 4, y * front.width * 4, (y + 1) * front.width * 4);
   fs.writeFileSync(path.join(out, name), encodePng(back));
 }

@@ -84,6 +84,7 @@ The automatic update itself can only be tested end to end once v1.5.1 exists: in
 - [ ] Microsoft Store: the tag also ran **Actions → Store package**. Download its `store-package` artifact and upload the `.appx` in Partner Center as a new submission. See [docs/distribution/microsoft-store.md](docs/distribution/microsoft-store.md).
 - [ ] Run `node tools/package-managers.mjs --sums SHA256SUMS.txt --out docs/distribution` with the release's `SHA256SUMS.txt` and commit the result, so the files in the repository match the latest release.
 - [ ] Add a new `## vX.Y.Z (unreleased)` heading at the top of `CHANGELOG.md` for the next version.
+- [ ] In `.github/workflows/desktop.yml`, put the new tag first in the `upgrade` job's `previous` list and keep the one before it as the second entry, so every pull request tests upgrading from the version users now have.
 
 ## If something is wrong
 

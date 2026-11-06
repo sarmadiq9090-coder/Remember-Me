@@ -86,6 +86,8 @@ test('lookups fall back to English, then to the key, and choose plural forms by 
 
 test('new installs start in English, saved languages are kept and unknown ones fall back to English', () => {
   assert.equal(initialState().settings.language, 'en');
+  assert.equal(initialState('ar').settings.language, 'ar', 'A fresh install can start in the system language');
+  for (const code of ['xx', 'EN', 'ar-IQ', 5, null]) assert.equal(initialState(code).settings.language, 'en', String(code));
   const v140 = { version: 1, tasks: [], notes: [], attachments: [], settings: { sound: true, startAtLogin: false, alertSide: 'right', language: 'ar' } };
   assert.equal(validateState(structuredClone(v140)).settings.language, 'ar', 'A v1.4.0 file keeps Arabic');
   for (const code of ['en', 'fr', 'zh-CN', 'pt-BR']) assert.equal(validateState({ ...structuredClone(v140), settings: { ...v140.settings, language: code } }).settings.language, code);
@@ -93,6 +95,80 @@ test('new installs start in English, saved languages are kept and unknown ones f
   const older = { ...v140.settings }; delete older.language;
   assert.equal(validateState({ ...structuredClone(v140), settings: older }).settings.language, 'ar', 'Settings from before the language option were Arabic');
   assert.equal(validateState({ ...structuredClone(v140), settings: 'broken' }).settings.language, 'en');
+});
+
+test('a fresh install picks the first of Windows\' preferred languages that the app has, else English', () => {
+  const { matchLocale } = require('../ui/lib/translate');
+  assert.equal(matchLocale([]), 'en');
+  assert.equal(matchLocale(undefined), 'en');
+  assert.equal(matchLocale(['en-US']), 'en');
+  assert.equal(matchLocale(['ar-IQ', 'en-US']), 'ar');
+  assert.equal(matchLocale(['ar']), 'ar');
+  assert.equal(matchLocale(['ar-SA']), 'ar');
+  assert.equal(matchLocale(['en-GB', 'ar-IQ']), 'en', 'The most preferred language wins');
+  assert.equal(matchLocale(['ku-Arab-IQ', 'ar-IQ', 'en-US']), 'ar', 'A language the app lacks moves on to the next');
+  assert.equal(matchLocale(['ku-IQ', 'fa-IR']), 'en', 'None of them: English');
+  assert.deepEqual(['es-419', 'es-ES', 'fr-CA', 'de-AT', 'ru-RU', 'ja-JP', 'tr-TR', 'hi-IN', 'id-ID'].map(tag => matchLocale([tag])), ['es', 'es', 'fr', 'de', 'ru', 'ja', 'tr', 'hi', 'id']);
+  assert.equal(matchLocale(['pt-BR']), 'pt-BR');
+  assert.equal(matchLocale(['pt-PT']), 'pt-BR', 'Portuguese is Brazilian Portuguese');
+  assert.equal(matchLocale(['pt']), 'pt-BR');
+  for (const tag of ['zh-CN', 'zh-Hans-CN', 'zh-Hans', 'zh-SG', 'zh', 'zh-Hans-HK', 'ZH_cn']) assert.equal(matchLocale([tag]), 'zh-CN', tag);
+  for (const tag of ['zh-TW', 'zh-Hant-TW', 'zh-HK', 'zh-Hant', 'zh-MO']) assert.equal(matchLocale([tag]), 'en', tag + ': Traditional Chinese is not Simplified');
+  assert.equal(matchLocale(['zh-Hant-TW', 'ja-JP']), 'ja');
+  assert.equal(matchLocale([' AR-iq ']), 'ar', 'Case and spaces do not matter');
+  assert.equal(matchLocale([null, 5, '', 'fr-FR']), 'fr', 'Entries that are not tags are skipped');
+  assert.equal(matchLocale('de-DE'), 'de', 'A single tag works too');
+  for (const { code } of LOCALES) assert.equal(matchLocale([code]), code, 'Every shipped code matches itself');
+});
+
+test('the system language comes from Electron\'s preferred system languages, and reaches a fresh data folder only', () => {
+  const os = require('node:os');
+  const { systemLanguage, startupControlsLocale } = require('../src/main/i18n');
+  const { Store } = require('../src/core/store');
+  assert.equal(systemLanguage({ getPreferredSystemLanguages: () => ['ar-IQ', 'en-US'] }), 'ar');
+  assert.equal(systemLanguage({ getPreferredSystemLanguages: () => ['fr-CA', 'en-US'] }), 'fr');
+  assert.equal(systemLanguage({ getPreferredSystemLanguages: () => [] }), 'en');
+  assert.equal(systemLanguage({ getPreferredSystemLanguages: () => { throw new Error('unavailable'); } }), 'en');
+  assert.equal(systemLanguage({}), 'en', 'An Electron without the API: English');
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'waqt-first-run-'));
+  assert.equal(new Store(dir, { language: 'ar' }).state.settings.language, 'ar', 'A fresh install starts in the system language');
+  assert.equal(new Store(dir).state.settings.language, 'en', 'Without one, English');
+  assert.equal(startupControlsLocale(dir, 'fr'), 'fr', 'Native fields of a fresh install follow the system language too');
+  const store = new Store(dir, { language: 'de' });
+  store.change(state => { state.settings.language = 'en'; });
+  assert.equal(new Store(dir, { language: 'ar' }).state.settings.language, 'en', 'A saved language is never replaced by the system one');
+  assert.equal(startupControlsLocale(dir, 'ar'), 'en-US');
+  store.change(state => { state.settings.language = 'ja'; });
+  assert.equal(new Store(dir, { language: 'ar' }).state.settings.language, 'ja');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('Arabic month names follow the Windows region unless chosen, always with Western digits', () => {
+  const { dateLocale, regionOf, LEVANT_REGIONS } = require('../ui/lib/translate');
+  const { systemRegion, createI18n } = require('../src/main/i18n');
+  assert.deepEqual(LEVANT_REGIONS, ['IQ', 'SY', 'LB', 'JO', 'PS']);
+  for (const region of ['IQ', 'SY', 'LB', 'JO', 'iq']) assert.equal(dateLocale('ar', { region }), 'ar-IQ-u-nu-latn', region);
+  for (const region of ['SA', 'AE', 'KW', 'EG', 'MA', 'US', '']) assert.equal(dateLocale('ar', { region }), 'ar-EG-u-nu-latn', region || 'no region');
+  assert.equal(dateLocale('ar', { months: 'standard', region: 'IQ' }), 'ar-EG-u-nu-latn', 'A choice beats the region');
+  assert.equal(dateLocale('ar', { months: 'levant', region: 'SA' }), 'ar-IQ-u-nu-latn');
+  assert.equal(dateLocale('ar', { digits: 'arab', region: 'IQ' }), 'ar-IQ-u-nu-latn', 'No Arabic-Indic digits, whatever is asked');
+  for (const { code, intl } of LOCALES.slice(2)) assert.equal(dateLocale(code, { months: 'levant', region: 'IQ' }), intl + '-u-nu-latn', 'Other languages are unchanged');
+  const month = tag => new Date(2026, 10, 3).toLocaleDateString(tag, { month: 'long' });
+  assert.equal(month(dateLocale('ar', { region: 'IQ' })), 'تشرين الثاني');
+  assert.equal(month(dateLocale('ar', { region: 'SA' })), 'نوفمبر');
+  assert.deepEqual(['en-IQ', 'ar-Arab-SY', 'ar_LB', 'ar', 'zh-Hans', '', null].map(regionOf), ['IQ', 'SY', 'LB', '', '', '', '']);
+  assert.equal(systemRegion({ getSystemLocale: () => 'en-IQ', getPreferredSystemLanguages: () => ['en-US'] }), 'IQ', 'The regional format first');
+  assert.equal(systemRegion({ getSystemLocale: () => { throw new Error('not ready'); }, getPreferredSystemLanguages: () => ['ar-JO'] }), 'JO');
+  assert.equal(systemRegion({ getSystemLocale: () => 'ar', getPreferredSystemLanguages: () => ['ar'] }), '');
+  assert.equal(systemRegion({}), '');
+  const settings = { language: 'ar', arabicMonths: 'auto' };
+  const i18n = createI18n(() => settings.language, () => ({ months: settings.arabicMonths, digits: 'arab', region: 'IQ' }));
+  assert.equal(i18n.localeTag(), 'ar-IQ-u-nu-latn');
+  assert.equal(i18n.tr('{count} items', { count: 12 }), '12 items', 'Counts in main-process text use 0-9');
+  settings.arabicMonths = 'standard';
+  assert.equal(i18n.localeTag(), 'ar-EG-u-nu-latn');
+  assert.equal(createI18n(() => 'ar').localeTag(), 'ar-EG-u-nu-latn', 'No region known: standard month names');
 });
 
 test('user text in a sentence is isolated, so its direction cannot reorder the punctuation around it', () => {
