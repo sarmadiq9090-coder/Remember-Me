@@ -61,3 +61,57 @@ test('weekday repeat labels follow the chosen first day of the week', () => {
   assert.equal(label(1), 'Fri – Sun', 'Monday first: Fri, Sat, Sun are a range');
   assert.equal(label(6), 'Sat, Sun, Fri', 'Saturday first: they are not');
 });
+
+// The code that shows text, read once: the windows (ui/) and the main process (src/), not the vendored files.
+const root = path.join(__dirname, '..');
+function sourceFiles(dir) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) return entry.name === 'vendor' ? [] : sourceFiles(full);
+    return /\.(c?js|html)$/.test(entry.name) ? [full] : [];
+  });
+}
+const sources = [...sourceFiles(path.join(root, 'ui')), ...sourceFiles(path.join(root, 'src'))]
+  .map(file => ({ name: path.relative(root, file).replaceAll(path.sep, '/'), text: fs.readFileSync(file, 'utf8') }));
+test('no translation, page or script types Eastern digits: the Arabic interface shows 0-9 everywhere', () => {
+  // Arabic-Indic, Extended Arabic-Indic and Devanagari digits (TRANSLATING.md: digits are 0-9 in every language).
+  const otherDigits = /[٠-٩۰-۹०-९]/;
+  for (const { name, text } of sources) assert.doesNotMatch(text, otherDigits, name);
+  for (const { code } of require('../ui/lib/translate').LOCALES) {
+    const found = Object.entries(JSON.parse(fs.readFileSync(path.join(root, 'ui/locales', code + '.json'), 'utf8')))
+      .filter(([, value]) => otherDigits.test(JSON.stringify(value))).map(([key]) => key);
+    assert.deepEqual(found, [], `${code}: translations with Eastern digits`);
+  }
+});
+
+test('every date, time and number formatter takes the Western-digit locale, never the bare language', () => {
+  // locale() in the windows and localeTag() in the main process both end in -u-nu-latn (tested above). intl
+  // is the parameter of the alert-format and formatSize helpers, whose callers are checked here too; tag is
+  // the month-name sample in Settings, called with ar-IQ-u-nu-latn and ar-EG-u-nu-latn.
+  const allowed = /^(?:locale\(\)|localeTag\(\)|ctx\.localeTag\(\)|intl|'[a-z]{2}(?:-[A-Z]{2})?-u-nu-latn')$/;
+  const allowedIn = { 'ui/main/settings.js': ['tag'] };
+  const arg = String.raw`([\w.]+\(\)|'[^']*'|\w+)`;
+  const formatters = [
+    new RegExp(String.raw`\.toLocale(?:Date|Time)?String\((?:${arg})?`, 'g'),
+    new RegExp(String.raw`new Intl\.(?:NumberFormat|DateTimeFormat|RelativeTimeFormat|ListFormat)\((?:${arg})?`, 'g'),
+    // The helpers' last argument is the locale; their own definitions (function name(…, intl)) pass too.
+    new RegExp(String.raw`\b(?:durationText|overdueFor|overdueAge|dueWhen|snoozePreview|formatSize)\((?:[^()]|\([^()]*\))*?,\s*${arg}\)`, 'g'),
+  ];
+  const found = [];
+  let calls = 0;
+  for (const { name, text } of sources) {
+    for (const pattern of formatters) for (const match of text.matchAll(pattern)) {
+      calls++;
+      const value = match[1] ?? '';
+      if (!allowed.test(value) && !allowedIn[name]?.includes(value)) found.push(`${name}: ${match[0].slice(0, 90)}`);
+    }
+  }
+  assert.ok(calls >= 20, `Only ${calls} formatter calls found: the patterns no longer match the code`);
+  assert.deepEqual(found, [], 'Formatters given a locale that may not have Western digits');
+  const run = loadUi('ar');
+  for (const code of ['(1234.5).toLocaleString(locale())', 'new Intl.NumberFormat(locale()).format(1234)', 'fileSize(1536)']) {
+    const label = run(code);
+    assert.doesNotMatch(label, easternDigits, `${code}: ${label}`);
+    assert.match(label, /[0-9]/, code);
+  }
+});

@@ -29,11 +29,11 @@ function copyDurable(from, to) {
 }
 class Store {
   // language is used only when there is no data yet (a fresh install); saved data keeps its own.
-  constructor(directory, { language } = {}) {
+  constructor(directory, { language, alertSide } = {}) {
     this.file = path.join(directory, 'data.json');
     fs.mkdirSync(directory, { recursive: true });
     this.recovered = false;
-    if (!fs.existsSync(this.file)) { this.state = initialState(language); return; }
+    if (!fs.existsSync(this.file)) { this.state = initialState(language, alertSide); return; }
     try { this.state = validateState(JSON.parse(fs.readFileSync(this.file, 'utf8'))); }
     catch {
       try {

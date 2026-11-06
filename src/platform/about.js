@@ -2,11 +2,17 @@
 // The only pages the About card can open. The window sends one of these IDs, never a URL; the
 // main process maps it to the exact address here before calling shell.openExternal.
 const REPO = 'https://github.com/sarmadiq9090-coder/Remember-Me';
+const SUPPORT_EMAIL = 'mailto:support@fastkiwi.app';
 const LINKS = new Map([
   ['github', 'https://github.com/sarmadiq9090-coder'],
   ['repo', REPO],
   ['releases', `${REPO}/releases`],
   ['issues', `${REPO}/issues/new/choose`],
+  // Support on fastkiwi.app, which needs no GitHub account: the page in English or in Arabic (the card sends
+  // supportAr in the Arabic interface), and the support e-mail address, the only mailto: the app opens.
+  ['support', 'https://fastkiwi.app/support/'],
+  ['supportAr', 'https://fastkiwi.app/ar/support/'],
+  ['email', SUPPORT_EMAIL],
   ['privacy', `${REPO}#privacy`],
   ['license', `${REPO}/blob/main/LICENSE`],
 ]);
@@ -31,4 +37,4 @@ function diagnostics({ version, packaged, versions, windows, arch, language, the
     `Theme: ${theme}`,
   ].join('\n');
 }
-module.exports = { LINKS, linkUrl, windowsVersion, diagnostics };
+module.exports = { LINKS, SUPPORT_EMAIL, linkUrl, windowsVersion, diagnostics };
