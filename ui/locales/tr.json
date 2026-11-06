@@ -528,5 +528,15 @@
   "{day}, {time}": "{day} {time}",
   "{index} of {count}": "{index}/{count}",
   "{shortcut} is used by another app. Choose another shortcut.": "{shortcut} başka bir uygulama tarafından kullanılıyor. Başka bir kısayol seçin.",
-  "→ {day} {time}": "→ {day} {time}"
+  "→ {day} {time}": "→ {day} {time}",
+  "At what time?": "Saat kaçta?",
+  "Check the time shown, then press Enter again.": "Gösterilen zamanı kontrol edip Enter'a yeniden basın.",
+  "Choose one of the options first.": "Önce seçeneklerden birini seçin.",
+  "Keep the text as typed": "Metni yazıldığı gibi bırak",
+  "That time has passed. Use this one instead?": "Bu saat geçti. Bunun yerine bu kullanılsın mı?",
+  "Tip: add the time as you type, like “tomorrow 5pm”.": "İpucu: Zamanı İngilizce veya Arapça yazabilirsiniz, örneğin “tomorrow 5pm”.",
+  "Title: {title}": "Başlık: {title}",
+  "Which day did you mean?": "Hangi günü kastettiniz?",
+  "Which one did you mean?": "Hangisini kastettiniz?",
+  "Which time did you mean?": "Hangi saati kastettiniz?"
 }

@@ -535,5 +535,15 @@
   "{day}, {time}": "{day}, {time}",
   "{index} of {count}": "{count} में से {index}",
   "{shortcut} is used by another app. Choose another shortcut.": "{shortcut} किसी दूसरे ऐप में इस्तेमाल हो रहा है। कोई दूसरा शॉर्टकट चुनें।",
-  "→ {day} {time}": "→ {day} {time}"
+  "→ {day} {time}": "→ {day} {time}",
+  "At what time?": "किस समय?",
+  "Check the time shown, then press Enter again.": "दिखाया गया समय जाँचें, फिर Enter दोबारा दबाएँ।",
+  "Choose one of the options first.": "पहले कोई एक विकल्प चुनें।",
+  "Keep the text as typed": "पाठ जैसा लिखा है वैसा रखें",
+  "That time has passed. Use this one instead?": "यह समय निकल चुका है। इसकी जगह यह रखें?",
+  "Tip: add the time as you type, like “tomorrow 5pm”.": "सुझाव: समय अंग्रेज़ी या अरबी में लिखें, जैसे “tomorrow 5pm”।",
+  "Title: {title}": "शीर्षक: {title}",
+  "Which day did you mean?": "आपका मतलब कौन-सा दिन था?",
+  "Which one did you mean?": "आपका मतलब कौन-सा था?",
+  "Which time did you mean?": "आपका मतलब कौन-सा समय था?"
 }

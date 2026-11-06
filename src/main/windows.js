@@ -1,7 +1,7 @@
 'use strict';
 const { BrowserWindow, screen, nativeTheme } = require('electron');
 const path = require('node:path');
-const { alertBounds, quickAddBounds } = require('../core/placement');
+const { alertBounds, quickAddBounds, QUICK_ADD_SIZE } = require('../core/placement');
 const { windowColors } = require('../platform/themes');
 const { findLocale } = require('../../ui/lib/translate');
 const { PAGE_PREFERENCES } = require('./web-security');
@@ -85,7 +85,7 @@ function createWindows(ctx) {
   function showQuickAdd() {
     if (quickAddWindow && !quickAddWindow.isDestroyed()) { quickAddWindow.show(); quickAddWindow.focus(); return; }
     const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-    const win = quickAddWindow = new BrowserWindow({ ...quickAddBounds(display), frame: false, resizable: false, minimizable: false, maximizable: false,
+    const win = quickAddWindow = new BrowserWindow({ ...quickAddBounds(display, QUICK_ADD_SIZE), frame: false, resizable: false, minimizable: false, maximizable: false,
       skipTaskbar: true, alwaysOnTop: true, show: false, title: tr('Remember Me • Quick add'), backgroundColor: background('alert'), icon: windowIcon, webPreferences: options() });
     win.setAlwaysOnTop(true, 'pop-up-menu');
     win.loadFile(path.join(__dirname, '../../ui/quickadd.html'));

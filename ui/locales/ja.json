@@ -525,5 +525,15 @@
   "{day}, {time}": "{day} {time}",
   "{index} of {count}": "{index}/{count}",
   "{shortcut} is used by another app. Choose another shortcut.": "{shortcut} は別のアプリで使われています。別のショートカットを選んでください。",
-  "→ {day} {time}": "→ {day} {time}"
+  "→ {day} {time}": "→ {day} {time}",
+  "At what time?": "何時ですか？",
+  "Check the time shown, then press Enter again.": "表示された日時を確認してから、もう一度 Enter を押してください。",
+  "Choose one of the options first.": "先にいずれかを選んでください。",
+  "Keep the text as typed": "入力したとおりのテキストにする",
+  "That time has passed. Use this one instead?": "その時刻は過ぎています。代わりにこちらにしますか？",
+  "Tip: add the time as you type, like “tomorrow 5pm”.": "ヒント: 英語かアラビア語で時刻を書き添えられます（例: “tomorrow 5pm”）。",
+  "Title: {title}": "タイトル: {title}",
+  "Which day did you mean?": "どの日ですか？",
+  "Which one did you mean?": "どれですか？",
+  "Which time did you mean?": "どの時刻ですか？"
 }

@@ -1,10 +1,16 @@
 'use strict';
 const { saveTask, completeTask, skipOccurrence, undoComplete, toggleStep, snoozeTask } = require('../../core/tasks');
+const { parseWhen } = require('../../core/natural-dates');
 
 module.exports = ctx => ({
   saveTask: { run: payload => { ctx.store.change(s => saveTask(s, payload)); } },
-  // From the quick-add window: a new task with a title and an optional due time; the window then closes.
-  quickAdd: { run: payload => { ctx.store.change(s => saveTask(s, { title: payload.title, dueAt: payload.dueAt || null })); } },
+  // From the quick-add window: a new task with a title, an optional due time and repeat; the window then closes.
+  quickAdd: { run: payload => {
+    const { title, dueAt, repeat, repeatDays, repeatEvery } = payload;
+    ctx.store.change(s => saveTask(s, { title, dueAt: dueAt || null, repeat, repeatDays, repeatEvery }));
+  } },
+  // The date or time typed in a quick-add title, for the preview chip (src/core/natural-dates.js).
+  parseWhen: { readOnly: true, run: payload => parseWhen(payload.text, { weekStart: ctx.store.state.settings.weekStart }) },
   complete: { run: (payload, { fromAlert }) => {
     if (payload.id === '__preview') { ctx.preview = null; return undefined; }
     // done is null when the reminder was already handled (a double click or another window).

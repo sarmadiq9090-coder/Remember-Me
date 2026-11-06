@@ -550,5 +550,15 @@
   "In dates. Iraq and the Levant name the months differently from Egypt and the Gulf.": "In dates. Iraq and the Levant name the months differently from Egypt and the Gulf.",
   "Same as the Windows region": "Same as the Windows region",
   "Uninstall the old Remember Me": "Uninstall the old Remember Me",
-  "Your tasks and notes were copied from the Remember Me installed from the website, and they are safe here. If both copies run, every reminder shows twice. Uninstall the old one in Windows Settings → Apps → Installed apps, where it is listed as Remember Me, not Remember Me Reminders.": "Your tasks and notes were copied from the Remember Me installed from the website, and they are safe here. If both copies run, every reminder shows twice. Uninstall the old one in Windows Settings → Apps → Installed apps, where it is listed as Remember Me, not Remember Me Reminders."
+  "Your tasks and notes were copied from the Remember Me installed from the website, and they are safe here. If both copies run, every reminder shows twice. Uninstall the old one in Windows Settings → Apps → Installed apps, where it is listed as Remember Me, not Remember Me Reminders.": "Your tasks and notes were copied from the Remember Me installed from the website, and they are safe here. If both copies run, every reminder shows twice. Uninstall the old one in Windows Settings → Apps → Installed apps, where it is listed as Remember Me, not Remember Me Reminders.",
+  "At what time?": "At what time?",
+  "Check the time shown, then press Enter again.": "Check the time shown, then press Enter again.",
+  "Choose one of the options first.": "Choose one of the options first.",
+  "Keep the text as typed": "Keep the text as typed",
+  "That time has passed. Use this one instead?": "That time has passed. Use this one instead?",
+  "Tip: add the time as you type, like “tomorrow 5pm”.": "Tip: add the time as you type, like “tomorrow 5pm”.",
+  "Title: {title}": "Title: {title}",
+  "Which day did you mean?": "Which day did you mean?",
+  "Which one did you mean?": "Which one did you mean?",
+  "Which time did you mean?": "Which time did you mean?"
 }

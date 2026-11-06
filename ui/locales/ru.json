@@ -566,5 +566,15 @@
   "{day}, {time}": "{day}, {time}",
   "{index} of {count}": "{index} из {count}",
   "{shortcut} is used by another app. Choose another shortcut.": "{shortcut} уже используется другим приложением. Выберите другое сочетание.",
-  "→ {day} {time}": "→ {day} {time}"
+  "→ {day} {time}": "→ {day} {time}",
+  "At what time?": "В какое время?",
+  "Check the time shown, then press Enter again.": "Проверьте показанное время и снова нажмите Enter.",
+  "Choose one of the options first.": "Сначала выберите один из вариантов.",
+  "Keep the text as typed": "Оставить текст как есть",
+  "That time has passed. Use this one instead?": "Это время уже прошло. Выбрать это вместо него?",
+  "Tip: add the time as you type, like “tomorrow 5pm”.": "Совет: допишите время по-английски или по-арабски, например «tomorrow 5pm».",
+  "Title: {title}": "Название: {title}",
+  "Which day did you mean?": "Какой день вы имели в виду?",
+  "Which one did you mean?": "Что вы имели в виду?",
+  "Which time did you mean?": "Какое время вы имели в виду?"
 }

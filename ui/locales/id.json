@@ -525,5 +525,15 @@
   "{day}, {time}": "{day}, {time}",
   "{index} of {count}": "{index} dari {count}",
   "{shortcut} is used by another app. Choose another shortcut.": "{shortcut} dipakai aplikasi lain. Pilih pintasan lain.",
-  "→ {day} {time}": "→ {day} {time}"
+  "→ {day} {time}": "→ {day} {time}",
+  "At what time?": "Pukul berapa?",
+  "Check the time shown, then press Enter again.": "Periksa waktu yang ditampilkan, lalu tekan Enter lagi.",
+  "Choose one of the options first.": "Pilih salah satu opsi dulu.",
+  "Keep the text as typed": "Biarkan teks seperti yang diketik",
+  "That time has passed. Use this one instead?": "Waktu itu sudah lewat. Pakai yang ini saja?",
+  "Tip: add the time as you type, like “tomorrow 5pm”.": "Tips: tulis waktunya dalam bahasa Inggris atau Arab, misalnya “tomorrow 5pm”.",
+  "Title: {title}": "Judul: {title}",
+  "Which day did you mean?": "Hari mana yang Anda maksud?",
+  "Which one did you mean?": "Yang mana yang Anda maksud?",
+  "Which time did you mean?": "Jam berapa yang Anda maksud?"
 }

@@ -30,6 +30,9 @@ true (see "Keeping this document current").
 | English errors with a translation key (`UserError`) | `src/core/errors.js` |
 | "Remind me again" sound timer | `src/core/repeat-beep.js` |
 | Alert and quick-add window placement next to the taskbar | `src/core/placement.js` |
+| Dates typed in a quick-add title ("tomorrow 5pm", «بكرة 5 العصر»): working out the time or the choices to ask about, and the title left | `src/core/natural-dates.js` |
+| Arabic date phrases (standard, Iraqi, Gulf and Levantine) | `src/core/natural-dates-ar.js` |
+| English date phrases, read with chrono-node | `src/core/natural-dates-en.js` |
 | Pausing reminders from the tray | `src/core/pause.js` |
 | "Coming up" notifications, each once and kept clickable | `src/core/early-notices.js` |
 | Attachment files: import, lookup, orphan cleanup, backup export | `src/data/attachments.js` |
@@ -48,7 +51,7 @@ true (see "Keeping this document current").
 | Main window scripts: plain scripts loaded in order, sharing one scope (state, render, cards, editors, trash, settings, events, boot) | `ui/main/*.js` |
 | Alert window script | `ui/alert/alert.js` |
 | Quick-add window script | `ui/quickadd/quickadd.js` |
-| Shared by both windows: languages (`translate.js`, `i18n.js`), helpers and icons (`shared.js`), keeping keyboard focus when lists are rebuilt (`focus.js`), search, alert formatting, the quick-add shortcut rules and due time (`quickadd.js`), when the Store version asks for a rating (`rating.js`) | `ui/lib/*.js` |
+| Shared by both windows: languages (`translate.js`, `i18n.js`), helpers and icons (`shared.js`), keeping keyboard focus when lists are rebuilt (`focus.js`), search, alert formatting, the quick-add shortcut rules and due time (`quickadd.js`), the date chip under the quick-add title (`when-chip.js`), when the Store version asks for a rating (`rating.js`) | `ui/lib/*.js` |
 | Stylesheets and theme tokens | `ui/styles/*.css` |
 | Translations | `ui/locales/*.json` |
 | Packaging, installer, Microsoft Store package and its logos, winget manifests, icon generator, screenshots, website images | `tools/` |
@@ -98,7 +101,8 @@ which:
    window's own bundled page (`fromPage`);
 2. runs `checkRequest(action, payload, { fromAlert, fromQuickAdd })`, which rejects unknown actions (`ACTIONS`),
    limits the alert window to `ALERT_ACTIONS` and the quick-add window to `QUICK_ADD_ACTIONS` (`language`,
-   `locale` and `quickAdd`, which takes only a string `title` and an optional `dueAt`), requires a plain-object payload, requires a short
+   `locale`, `parseWhen`, which takes only a `text` of up to 200 characters, and `quickAdd`, which takes only a string `title`, an
+   optional `dueAt` and an optional `repeat` with its `repeatDays` or `repeatEvery`), requires a plain-object payload, requires a short
    string `id` for `ID_ACTIONS`, checks `expectedDueAt` for `DUE_ACTIONS`, and accepts `openLink`
    only with a `link` ID from the About module's fixed list;
 3. runs the action's handler. Anything that changes data goes through `store.change()`, after which
@@ -113,7 +117,7 @@ registry throws if an allowed action has no handler, has two, or a handler is no
 | Group | Actions |
 |---|---|
 | Read | `state`, `alerts`, `language`, `locale`, `undoable`, `storage` |
-| Tasks | `saveTask`, `quickAdd`, `complete`, `skip`, `snooze`, `undoComplete`, `reopen`, `toggleStep` |
+| Tasks | `saveTask`, `quickAdd`, `parseWhen` (read only), `complete`, `skip`, `snooze`, `undoComplete`, `reopen`, `toggleStep` |
 | Trash | `deleteTask`, `restoreTask`, `purgeTask`, `deleteNote`, `restoreNote`, `purgeNote`, `emptyTrash` |
 | Notes | `saveNote` |
 | Attachments | `attachFiles`, `openAttachment`, `imagePreview`, `cleanOrphans` |
@@ -130,6 +134,37 @@ reminder it is currently showing.
 `complete`, `skip` and `snooze` carry the `expectedDueAt` the user saw. When the task has moved on
 (a double click, or an action from the other window), core ignores the call: `completeTask` returns
 `null`, `skipOccurrence` and `snoozeTask` return `false`.
+
+## Dates typed in quick add
+
+Both quick-add places (the row above the task list and the quick-add window) read a date or time typed
+in the title. As you type, the page sends the text to `parseWhen` (debounced); the main process reads it
+with `src/core/natural-dates.js` and answers with the title without the phrase, the due time and the
+repeat, or, when the phrase allows more than one time, `dueAt: null` with `ask` and up to four `options`:
+
+- `meridiem`: an hour from 1 to 12 with no part of the day («بكرة 5», "at 7:30"); 24-hour times
+  ("17:30", «الساعة 20:00») and a leading zero ("07:30") are certain.
+- `day`: "next Thursday" / «الخميس الجاي» while this week's Thursday is still ahead (the week starts on
+  Settings' first day of the week), a weekday that is today, and a night hour after a named day
+  («الخميس 2 بالليل»: early Thursday or the night after it).
+- `time`: a day with no time («بعد بكرة», "on Friday"): morning, noon or evening.
+- `choose`: both; `past`: the day and time named have gone («اليوم 5 العصر» at 8 PM), and the option is the next one.
+
+A part of the day alone is read as a fixed time, the same in both languages: الفجر 5:00, morning / الصبح
+9:00, noon / الظهر 12:00, afternoon 15:00, العصر 16:00, evening / المغرب / المسا 18:00, العشا 20:00,
+night / tonight / بالليل 21:00. A bare number is a time only after «الساعة» or «على», with minutes or a
+part of the day, or right after a day word, so «اشتري 5 كيلو» keeps its number. Arabic is matched after
+removing diacritics and tatweel and unifying letter forms (أ/إ/آ, ى, ة, چ, گ) and digits (Arabic-Indic and
+Persian to 0-9); English goes through chrono-node (MIT, pinned in `package.json`), with repeats ("every
+day", "weekdays", "every Monday and Thursday") and the AM/PM and next-week checks done here. Everything
+runs locally; nothing is sent anywhere.
+
+`ui/lib/when-chip.js` shows the result as a chip under the title before saving: the due time with its
+weekday, the repeat and the title that will be saved, or the question with one button per option. Enter
+saves only what the chip showed: a phrase the chip has not shown yet, or an unanswered question, keeps
+the task unsaved with a message. × keeps the text as typed. In the quick-add window a time picked in the
+time field wins and the chip steps aside. Dates and times use `locale()`, so they follow the interface
+language's 12- or 24-hour clock and Settings' Arabic month names.
 
 ## Data: data.json
 
@@ -407,7 +442,7 @@ says how many were left out.
 
 - `pnpm run package` (`tools/package.mjs`) runs `@electron/packager` into `release/v<version>/`,
   producing `Remember Me.exe`. It bundles only `package.json`, `LICENSE`, `src/`, `ui/` and
-  `assets/`, plus the runtime dependencies (electron-updater and what it needs) copied in as one flat
+  `assets/`, plus the runtime dependencies (electron-updater and what it needs, and chrono-node) copied in as one flat
   `node_modules` folder, since pnpm links packages instead of nesting them. It keeps only the Chromium
   locales of the interface languages and writes `resources/app-update.yml` for the updater. Finally it
   sets Electron fuses on the exe and reads them back: no running as Node.js, no `NODE_OPTIONS`, no
