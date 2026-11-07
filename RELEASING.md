@@ -18,7 +18,7 @@ Releases are built only by `.github/workflows/release.yml` on GitHub Actions, ne
 ## 2. Dry run (recommended)
 
 - [ ] In GitHub, open **Actions → Release → Run workflow** and run it on `main`. It builds and uploads files but publishes nothing.
-- [ ] Download the `installer` artifact. It must contain `Remember-Me-Setup-1.5.0-x64.exe`, `Remember-Me-Setup-1.5.0-x64.exe.blockmap`, `latest.yml` and `SHA256SUMS.txt`.
+- [ ] Download the `installer` artifact. It must contain `Remember-Me-Setup-1.5.0-x64.exe`, `Remember-Me-Setup-1.5.0-x64.exe.blockmap`, `latest.yml`, `latest.json` (the update manifest, docs/specs/update-manifest.md) and `SHA256SUMS.txt`.
 - [ ] Download the `winget-manifests` artifact (three `Sarmad.RememberMe*.yaml` files) and run `winget validate --manifest <folder>`.
 - [ ] Download the `package-managers` artifact: `scoop/remember-me.json` and the `chocolatey/` package sources.
 
@@ -38,7 +38,7 @@ git push origin v1.5.0
 
 ## 4. Verify the release
 
-- [ ] The release lists exactly four files: the installer, its `.blockmap`, `latest.yml` and `SHA256SUMS.txt`.
+- [ ] The release lists the installer, its `.blockmap`, `latest.yml`, `SHA256SUMS.txt` and `latest.json`, plus `latest.json.minisig` once the `release` Environment has `MINISIGN_SECRET_KEY` (without it the publish job warns that the manifest is not signed).
 - [ ] The release is marked **Latest** and is not a pre-release or draft. The app's updater only follows the latest full release.
 - [ ] `latest.yml` says `version: 1.5.0`, and its `path` and `url` are `Remember-Me-Setup-1.5.0-x64.exe`.
 - [ ] The checksum and attestation match. Download the installer and `SHA256SUMS.txt` into one folder, then:

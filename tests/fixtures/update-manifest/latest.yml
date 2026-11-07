@@ -1,0 +1,8 @@
+version: 9.9.9
+files:
+  - url: Remember-Me-Setup-9.9.9-x64.exe
+    sha512: 61lR1U9Z5qc39Ux17tDx3psDoBAYTToPo0S+Zh1MwWFxvW8LhIUKVI+pkkQdNZlsvtoyWSQDrsKvaBG7eh0cow==
+    size: 61
+path: Remember-Me-Setup-9.9.9-x64.exe
+sha512: 61lR1U9Z5qc39Ux17tDx3psDoBAYTToPo0S+Zh1MwWFxvW8LhIUKVI+pkkQdNZlsvtoyWSQDrsKvaBG7eh0cow==
+releaseDate: '2026-11-13T06:00:00.000Z'

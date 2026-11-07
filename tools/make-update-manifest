@@ -1,0 +1,434 @@
+#!/usr/bin/env python3
+"""Build, sign and verify a FastKiwi update manifest (latest.json).
+
+Spec: docs/specs/update-manifest.md. Python 3.8+, standard library only. The
+same file lives in arabic-file-search, local-ai-chat and Remember-Me; keep the
+copies identical (tools/test_make_update_manifest.py is shared too).
+
+    make-update-manifest build --app instafind --version 9.9.9 \
+        --repo sarmadiq9090-coder/arabic-file-search \
+        --asset x64=dist/bahth.exe --asset x86=dist/bahth-x86.exe \
+        [--notes-file releases/v9.9.9-notes.md] [--out latest.json]
+    make-update-manifest sign latest.json      # skips (exit 0) without MINISIGN_SECRET_KEY
+    make-update-manifest verify latest.json --pub keys/minisign-primary.pub [--assets dist]
+    make-update-manifest verify https://updates.fastkiwi.app/instafind/latest.json --download
+
+The manifest is served at https://updates.fastkiwi.app/<app>/latest.json with
+a detached minisign signature next to it (latest.json.minisig). Its trusted
+comment is "<app> update-manifest <tag>". Each asset's signature, when the
+release is signed, is "<url>.minisig" next to every download URL.
+"""
+
+import argparse
+import base64
+import datetime
+import hashlib
+import ipaddress
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import urllib.error
+import urllib.parse
+import urllib.request
+
+SCHEMA = 1
+MIRROR = "https://updates.fastkiwi.app"
+GITHUB = "https://github.com"
+ARCHES = ("x64", "x86", "arm64")
+MAX_MANIFEST_BYTES = 64 * 1024
+MAX_ASSET_BYTES = 512 * 1024 * 1024
+MAX_NOTES_CHARS = 2000
+APP_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,39}$")
+# Releases only: the updaters never offer a pre-release.
+VERSION_RE = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+RELEASED_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")
+
+
+class ManifestError(Exception):
+    pass
+
+
+def trusted_comment(app, tag):
+    """The trusted comment latest.json.minisig must carry."""
+    return "%s update-manifest %s" % (app, tag)
+
+
+def is_loopback(host):
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host.strip("[]")).is_loopback
+    except ValueError:
+        return False
+
+
+def check_url(url, allow_local_http=False):
+    """https only; plain http only to a loopback host and only for tests."""
+    try:
+        u = urllib.parse.urlsplit(url)
+        host = u.hostname
+    except ValueError:
+        return False
+    if not host or u.username or u.password or any(c in url for c in " \t\r\n"):
+        return False
+    if u.scheme == "https":
+        return True
+    return u.scheme == "http" and allow_local_http and is_loopback(host)
+
+
+def validate(m, app=None, allow_local_http=False):
+    """All problems with manifest `m` (a dict), as a list of strings."""
+    errs = []
+    if not isinstance(m, dict):
+        return ["the manifest is not a JSON object"]
+    if m.get("schema") != SCHEMA:
+        errs.append("schema must be %d" % SCHEMA)
+    a = m.get("app")
+    if not isinstance(a, str) or not APP_RE.match(a):
+        errs.append("bad app %r" % (a,))
+    elif app is not None and a != app:
+        errs.append("app is %r, expected %r" % (a, app))
+    v = m.get("version")
+    if not isinstance(v, str) or not VERSION_RE.match(v):
+        errs.append("bad version %r (MAJOR.MINOR.PATCH, no pre-release)" % (v,))
+    elif m.get("tag") != "v" + v:
+        errs.append("tag must be v%s" % v)
+    if not isinstance(m.get("released"), str) or not RELEASED_RE.match(m["released"]):
+        errs.append("released must look like 2026-11-13T06:00:00Z")
+    nu = m.get("notes_url")
+    if not isinstance(nu, str) or not check_url(nu, allow_local_http):
+        errs.append("notes_url must be an https URL")
+    notes = m.get("notes", "")
+    if not isinstance(notes, str) or len(notes) > MAX_NOTES_CHARS:
+        errs.append("notes must be text of at most %d characters" % MAX_NOTES_CHARS)
+    assets = m.get("assets")
+    if not isinstance(assets, dict) or not assets:
+        errs.append("assets must be a non-empty object")
+        return errs
+    for arch, x in assets.items():
+        where = "assets.%s" % arch
+        if arch not in ARCHES:
+            errs.append("%s: unknown architecture (one of %s)" % (where, ", ".join(ARCHES)))
+        if not isinstance(x, dict):
+            errs.append("%s: not an object" % where)
+            continue
+        name = x.get("name")
+        if not isinstance(name, str) or not NAME_RE.match(name):
+            errs.append("%s: bad name %r" % (where, name))
+            name = None
+        size = x.get("size")
+        if not isinstance(size, int) or isinstance(size, bool) or not 0 < size <= MAX_ASSET_BYTES:
+            errs.append("%s: bad size %r" % (where, size))
+        if not isinstance(x.get("sha256"), str) or not SHA256_RE.match(x["sha256"]):
+            errs.append("%s: sha256 must be 64 lower-case hex digits" % where)
+        s512 = x.get("sha512")
+        try:
+            ok512 = isinstance(s512, str) and len(base64.b64decode(s512, validate=True)) == 64
+        except ValueError:
+            ok512 = False
+        if not ok512:
+            errs.append("%s: sha512 must be base64 of 64 bytes" % where)
+        urls = x.get("urls")
+        if not isinstance(urls, list) or not urls or len(urls) > 8:
+            errs.append("%s: urls must be a list of 1 to 8 URLs" % where)
+            continue
+        if len(set(map(str, urls))) != len(urls):
+            errs.append("%s: duplicate URL" % where)
+        for u in urls:
+            if not isinstance(u, str) or not check_url(u, allow_local_http):
+                errs.append("%s: %r is not an https URL" % (where, u))
+            elif name and urllib.parse.urlsplit(u).path.rsplit("/", 1)[-1] != name:
+                errs.append("%s: %s does not end in /%s" % (where, u, name))
+    return errs
+
+
+def parse(data, app=None, allow_local_http=False):
+    if len(data) > MAX_MANIFEST_BYTES:
+        raise ManifestError("the manifest is larger than %d bytes" % MAX_MANIFEST_BYTES)
+    try:
+        m = json.loads(data.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError) as e:
+        raise ManifestError("the manifest is not JSON: %s" % e)
+    errs = validate(m, app, allow_local_http)
+    if errs:
+        raise ManifestError("; ".join(errs))
+    return m
+
+
+def file_digests(path):
+    h256, h512, size = hashlib.sha256(), hashlib.sha512(), 0
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h256.update(chunk)
+            h512.update(chunk)
+            size += len(chunk)
+    return size, h256.hexdigest(), base64.b64encode(h512.digest()).decode("ascii")
+
+
+def read_notes(path):
+    """Release notes as plain text: the body, without a leading "# title" line."""
+    with open(path, encoding="utf-8-sig") as f:
+        text = f.read().replace("\r\n", "\n")
+    lines = text.split("\n")
+    if lines and lines[0].startswith("# "):
+        lines = lines[1:]
+    text = "\n".join(lines).strip()
+    if len(text) > MAX_NOTES_CHARS:
+        text = text[: MAX_NOTES_CHARS - 1].rstrip() + "…"
+    return text
+
+
+def build(app, version, repo, assets, released=None, notes="", notes_url=None,
+          mirror=MIRROR, layout="tag", github=GITHUB):
+    """The manifest dict for release `version` of `app` with `assets` ({arch: path})."""
+    if not APP_RE.match(app):
+        raise ManifestError("bad app %r" % app)
+    if not VERSION_RE.match(version):
+        raise ManifestError("bad version %r (MAJOR.MINOR.PATCH, no pre-release)" % version)
+    if not re.match(r"^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$", repo):
+        raise ManifestError("bad repo %r (owner/name)" % repo)
+    tag = "v" + version
+    out = {}
+    for arch, path in assets.items():
+        if arch not in ARCHES:
+            raise ManifestError("unknown architecture %r (one of %s)" % (arch, ", ".join(ARCHES)))
+        name = os.path.basename(path)
+        size, sha256, sha512 = file_digests(path)
+        mirror_dir = "%s/%s/%s" % (mirror.rstrip("/"), app, tag) if layout == "tag" else "%s/%s" % (mirror.rstrip("/"), app)
+        out[arch] = {
+            "name": name,
+            "size": size,
+            "sha256": sha256,
+            "sha512": sha512,
+            # In order: the Cloudflare mirror first, then the GitHub release.
+            "urls": [
+                "%s/%s" % (mirror_dir, name),
+                "%s/%s/releases/download/%s/%s" % (github.rstrip("/"), repo, tag, name),
+            ],
+        }
+    if released is None:
+        released = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    m = {
+        "schema": SCHEMA,
+        "app": app,
+        "version": version,
+        "tag": tag,
+        "released": released,
+        "notes_url": notes_url or "%s/%s/releases/tag/%s" % (github.rstrip("/"), repo, tag),
+        "notes": notes,
+        "assets": out,
+    }
+    errs = validate(m, allow_local_http=True)
+    if errs:
+        raise ManifestError("; ".join(errs))
+    return m
+
+
+def dumps(m):
+    return (json.dumps(m, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+
+
+def fetch(url, limit, allow_local_http=False, timeout=20):
+    if not check_url(url, allow_local_http):
+        raise ManifestError("refusing to fetch %s (https only)" % url)
+    req = urllib.request.Request(url, headers={"User-Agent": "make-update-manifest/1"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            if r.status != 200:
+                raise ManifestError("%s: HTTP %d" % (url, r.status))
+            data = r.read(limit + 1)
+    except urllib.error.HTTPError as e:
+        raise ManifestError("%s: HTTP %d" % (url, e.code))
+    except (urllib.error.URLError, OSError) as e:
+        raise ManifestError("%s: %s" % (url, e))
+    if len(data) > limit:
+        raise ManifestError("%s: larger than %d bytes" % (url, limit))
+    return data
+
+
+def minisign_bin(path):
+    found = shutil.which(path)
+    if not found:
+        raise ManifestError("minisign not found (%s): install it, e.g. apt-get install minisign" % path)
+    return found
+
+
+def sign(manifest_path, key_text, password, minisign="minisign"):
+    """Writes <manifest_path>.minisig (pre-hashed, trusted comment for its app/tag)."""
+    with open(manifest_path, "rb") as f:
+        m = parse(f.read(), allow_local_http=True)
+    exe = minisign_bin(minisign)
+    sig_path = manifest_path + ".minisig"
+    fd, key_path = tempfile.mkstemp(prefix="minisign-", suffix=".key")
+    try:
+        os.chmod(key_path, 0o600)
+        with os.fdopen(fd, "w") as f:
+            f.write(key_text.strip() + "\n")
+        r = subprocess.run(
+            [exe, "-S", "-s", key_path, "-m", manifest_path, "-x", sig_path, "-t", trusted_comment(m["app"], m["tag"])],
+            input=(password or "") + "\n", universal_newlines=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+    finally:
+        os.unlink(key_path)
+    if r.returncode != 0:
+        raise ManifestError("minisign could not sign: %s" % (r.stderr.strip() or r.stdout.strip()))
+    return sig_path
+
+
+def verify_signature(manifest_path, sig_path, pub_paths, app, tag, minisign="minisign"):
+    """The name of the public key that verifies the signature with the expected comment."""
+    exe = minisign_bin(minisign)
+    want = trusted_comment(app, tag)
+    for pub in pub_paths:
+        # -H: pre-hashed signatures only, as the apps require. -Q prints the trusted comment.
+        r = subprocess.run([exe, "-V", "-H", "-Q", "-m", manifest_path, "-x", sig_path, "-p", pub],
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        if r.returncode == 0:
+            got = r.stdout.strip()
+            if got != want:
+                raise ManifestError("the signature's trusted comment is %r, expected %r" % (got, want))
+            return os.path.basename(pub)
+    raise ManifestError("latest.json.minisig does not verify with %s" % ", ".join(map(os.path.basename, pub_paths)))
+
+
+# ---------------------------------------------------------------- command line
+
+def _assets_arg(values):
+    assets = {}
+    for v in values:
+        arch, sep, path = v.partition("=")
+        if not sep or not path:
+            raise ManifestError("--asset takes ARCH=PATH, got %r" % v)
+        if arch in assets:
+            raise ManifestError("--asset %s given twice" % arch)
+        if not os.path.isfile(path):
+            raise ManifestError("%s: no such file" % path)
+        assets[arch] = path
+    return assets
+
+
+def cmd_build(a):
+    notes = read_notes(a.notes_file) if a.notes_file and os.path.isfile(a.notes_file) else ""
+    m = build(a.app, a.version.lstrip("v"), a.repo, _assets_arg(a.asset), released=a.released,
+              notes=notes, notes_url=a.notes_url, mirror=a.mirror, layout=a.layout, github=a.github)
+    with open(a.out, "wb") as f:
+        f.write(dumps(m))
+    print("wrote %s: %s %s, %s" % (a.out, m["app"], m["tag"], ", ".join(sorted(m["assets"]))))
+    return 0
+
+
+def cmd_sign(a):
+    key = os.environ.get(a.key_env, "")
+    if not key.strip():
+        msg = "%s is not set: %s is NOT signed (the apps then cross-check it with GitHub)" % (a.key_env, a.manifest)
+        if a.require:
+            print("::error::" + msg, file=sys.stderr)
+            return 1
+        print("::warning::" + msg)
+        return 0
+    path = sign(a.manifest, key, os.environ.get(a.password_env, ""), a.minisign)
+    print("wrote %s" % path)
+    return 0
+
+
+def cmd_verify(a):
+    remote = a.manifest.startswith(("https://", "http://"))
+    tmp = tempfile.mkdtemp(prefix="manifest-")
+    try:
+        if remote:
+            data = fetch(a.manifest, MAX_MANIFEST_BYTES, a.allow_local_http)
+            path = os.path.join(tmp, "latest.json")
+            with open(path, "wb") as f:
+                f.write(data)
+        else:
+            path = a.manifest
+            with open(path, "rb") as f:
+                data = f.read()
+        m = parse(data, a.app, a.allow_local_http)
+        print("%s %s: manifest is valid (%s)" % (m["app"], m["tag"], ", ".join(sorted(m["assets"]))))
+        problems = 0
+        if a.pub:
+            sig = a.sig or (a.manifest + ".minisig")
+            if remote:
+                sig_path = os.path.join(tmp, "latest.json.minisig")
+                with open(sig_path, "wb") as f:
+                    f.write(fetch(sig, 4096, a.allow_local_http))
+            else:
+                sig_path = sig
+            print("signature verified with %s" % verify_signature(path, sig_path, a.pub, m["app"], m["tag"], a.minisign))
+        for arch, x in sorted(m["assets"].items()):
+            if a.assets:
+                local = os.path.join(a.assets, x["name"])
+                got = file_digests(local) if os.path.isfile(local) else None
+                if got != (x["size"], x["sha256"], x["sha512"]):
+                    print("::error::%s: %s does not match the manifest" % (arch, local))
+                    problems += 1
+            if a.download:
+                for u in x["urls"]:
+                    try:
+                        body = fetch(u, x["size"], a.allow_local_http, timeout=120)
+                    except ManifestError as e:
+                        print("::error::%s: %s" % (arch, e))
+                        problems += 1
+                        continue
+                    if len(body) != x["size"] or hashlib.sha256(body).hexdigest() != x["sha256"]:
+                        print("::error::%s: %s does not match the manifest's sha256" % (arch, u))
+                        problems += 1
+                    else:
+                        print("%s: %s ok" % (arch, u))
+        return 1 if problems else 0
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(prog="make-update-manifest", description=__doc__.split("\n\n")[0])
+    sub = p.add_subparsers(dest="cmd")
+    b = sub.add_parser("build", help="write latest.json for a release")
+    b.add_argument("--app", required=True, help="instafind, local-ai-chat or remember-me")
+    b.add_argument("--version", required=True, help="9.9.9 (a leading v is dropped)")
+    b.add_argument("--repo", required=True, help="owner/name of the GitHub repository")
+    b.add_argument("--asset", action="append", required=True, metavar="ARCH=PATH", help="x64, x86 or arm64; repeat per CPU")
+    b.add_argument("--released", help="UTC time, 2026-11-13T06:00:00Z (default: now)")
+    b.add_argument("--notes-file", help="release notes (Markdown); a missing file means no notes")
+    b.add_argument("--notes-url", help="default: the GitHub release page")
+    b.add_argument("--mirror", default=MIRROR)
+    b.add_argument("--github", default=GITHUB, help=argparse.SUPPRESS)
+    b.add_argument("--layout", choices=("tag", "flat"), default="tag",
+                   help="mirror path: <app>/<tag>/<name> (default) or <app>/<name>")
+    b.add_argument("--out", default="latest.json")
+    s = sub.add_parser("sign", help="write latest.json.minisig; skips when the secret key is missing")
+    s.add_argument("manifest")
+    s.add_argument("--key-env", default="MINISIGN_SECRET_KEY")
+    s.add_argument("--password-env", default="MINISIGN_PASSWORD")
+    s.add_argument("--require", action="store_true", help="fail instead of skipping without a key")
+    s.add_argument("--minisign", default="minisign")
+    v = sub.add_parser("verify", help="check a manifest file or URL")
+    v.add_argument("manifest")
+    v.add_argument("--app")
+    v.add_argument("--pub", action="append", default=[], help="minisign public key file; repeat for the backup key")
+    v.add_argument("--sig", help="default: <manifest>.minisig")
+    v.add_argument("--assets", help="folder with the release files to compare")
+    v.add_argument("--download", action="store_true", help="download every URL and check its sha256")
+    v.add_argument("--minisign", default="minisign")
+    v.add_argument("--allow-local-http", action="store_true", help=argparse.SUPPRESS)
+    a = p.parse_args(argv)
+    if not a.cmd:
+        p.print_help()
+        return 2
+    try:
+        return {"build": cmd_build, "sign": cmd_sign, "verify": cmd_verify}[a.cmd](a)
+    except ManifestError as e:
+        print("::error::%s" % e, file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

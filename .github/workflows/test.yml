@@ -25,3 +25,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
       - run: pnpm lint
+      # tools/make-update-manifest (the release workflow writes latest.json with it). The signing
+      # round trip is skipped here: minisign is not installed on the Windows runner.
+      - run: python -m unittest discover -s tools -p "test_*.py"

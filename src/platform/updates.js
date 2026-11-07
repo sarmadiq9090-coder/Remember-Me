@@ -1,8 +1,11 @@
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
-// New versions come from this repository's GitHub Releases, over HTTPS only. tools/package.mjs
-// writes the same feed into resources/app-update.yml, which electron-updater also reads.
+const { matchesExpected } = require('./update-feed.js');
+// New versions come from the update mirror on Cloudflare when it is trusted (update-feed.js,
+// docs/specs/update-manifest.md), otherwise from this repository's GitHub Releases, over HTTPS only.
+// tools/package.mjs writes the GitHub feed into resources/app-update.yml, which electron-updater
+// also reads, and the installer's latest.yml is made for it.
 const FEED = { provider: 'github', owner: 'sarmadiq9090-coder', repo: 'Remember-Me', protocol: 'https' };
 const UPDATER_CACHE = 'remember-me-updater';
 const PROGRESS_STEP = 10;
@@ -35,7 +38,8 @@ function createUpdater({ source, testMode = false, load = () => require('electro
 // Applies the app's update policy to electron-updater's autoUpdater.
 function configure(updater) {
   updater.setFeedURL(FEED);
-  updater.autoDownload = true;
+  // Updates.check starts the download itself, once it has checked what the mirror answered.
+  updater.autoDownload = false;
   // Installing on quit is done by Updates.beforeQuit, after a safety backup.
   updater.autoInstallOnAppQuit = false;
   updater.allowPrerelease = false;
@@ -54,10 +58,14 @@ class Updates {
   // available: false for a copy that gets its updates elsewhere; the window then doesn't ask for consent.
   // source 'store': Microsoft Store updates this copy, so nothing is ever checked, downloaded or
   // installed here, and the window says updates come from the Store.
-  constructor({ updater, consent, version, backup, prepareQuit, quit, available = true, source = 'github', onChange = () => {}, clock = () => Date.now(), timers = globalThis }) {
+  // chooseFeed: resolves to { feed, expect } to read the update mirror (update-feed.js chooseFeed), or
+  // null for the GitHub feed. The default never asks the mirror.
+  constructor({ updater, consent, version, backup, prepareQuit, quit, available = true, source = 'github', onChange = () => {}, clock = () => Date.now(), timers = globalThis, chooseFeed = async () => null, githubFeed = FEED }) {
     if (source === 'store') available = false;
-    Object.assign(this, { updater, consent, version, backup, prepareQuit, quit, available, source, onChange, clock, timers });
+    Object.assign(this, { updater, consent, version, backup, prepareQuit, quit, available, source, onChange, clock, timers, chooseFeed, githubFeed });
     this.state = 'idle';
+    // True while a failure would only mean "try GitHub instead": no 'error' state for it.
+    this.quiet = false;
     this.next = null; this.percent = 0; this.checkedAt = null; this.dismissed = false;
     this.running = null; this.timeout = null; this.interval = null;
     updater.on('update-available', info => this.set({ state: 'downloading', next: info.version, percent: 0 }));
@@ -68,6 +76,7 @@ class Updates {
     });
     updater.on('update-downloaded', info => this.set({ state: 'ready', next: info.version, dismissed: false }));
     updater.on('error', () => {
+      if (this.quiet) return;
       if (['checking', 'downloading'].includes(this.state)) this.set({ state: 'error' });
       // The installer could not be started after the app began quitting: finish quitting.
       else if (this.state === 'installing') { this.set({ state: 'error' }); this.quit(); }
@@ -98,20 +107,51 @@ class Updates {
     this.set({ state: 'checking' });
     this.running = (async () => {
       try {
-        const result = await this.updater.checkForUpdates();
+        const { result, mirror } = await this.find();
         this.checkedAt = this.clock();
         // null: not an installed build, so electron-updater does nothing.
         if (!result) this.set({ state: 'unavailable' });
         else if (!result.isUpdateAvailable) this.set({ state: 'latest' });
         else {
-          result.downloadPromise?.catch(() => {});
           if (this.state === 'checking') this.set({ state: 'downloading', next: result.updateInfo.version });
+          this.download(mirror);
         }
       } catch { this.checkedAt = this.clock(); this.set({ state: 'error' }); }
       finally { this.running = null; }
       return this.status();
     })();
     return this.running;
+  }
+  // electron-updater's answer: from the mirror when chooseFeed trusts it and electron-updater read
+  // exactly what was checked, otherwise from GitHub.
+  async find() {
+    let choice;
+    try { choice = await this.chooseFeed(); } catch { choice = null; }
+    if (choice) {
+      this.updater.setFeedURL(choice.feed);
+      this.quiet = true;
+      try {
+        const result = await this.updater.checkForUpdates();
+        if (!result?.isUpdateAvailable || matchesExpected(result.updateInfo, choice.expect)) return { result, mirror: true };
+      } catch { /* the mirror failed: GitHub below */ }
+      finally { this.quiet = false; }
+      this.updater.setFeedURL(this.githubFeed);
+    }
+    return { result: await this.updater.checkForUpdates(), mirror: false };
+  }
+  // A download from the mirror that fails is tried once more from GitHub; electron-updater checks
+  // each download against the SHA-512 of the latest.yml it read.
+  download(mirror) {
+    this.quiet = mirror;
+    Promise.resolve().then(() => this.updater.downloadUpdate()).then(() => { this.quiet = false; }, async () => {
+      this.quiet = false;
+      if (!mirror) return; // the 'error' event already showed it
+      this.updater.setFeedURL(this.githubFeed);
+      try {
+        const result = await this.updater.checkForUpdates();
+        if (result?.isUpdateAvailable) this.download(false); else this.set({ state: 'error' });
+      } catch { this.set({ state: 'error' }); }
+    });
   }
   dismiss() { this.set({ dismissed: true }); }
   async safetyBackup() {

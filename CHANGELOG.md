@@ -11,6 +11,7 @@
 
 ### Changed
 
+- Updates no longer depend on GitHub alone: an installed copy first asks the update mirror on Cloudflare (`updates.fastkiwi.app/remember-me/`) and falls back to GitHub Releases when the mirror is unreachable, not confirmed, or its download fails. Until signing keys are added, the mirror is used only when GitHub's `latest.yml` names the same version and installer with the same SHA-512; a download starts only after the mirror's answer was checked. Never a downgrade, no new messages. The release workflow writes `latest.json` with `tools/make-update-manifest` and signs it when the release Environment has `MINISIGN_SECRET_KEY`. Details: `docs/specs/update-manifest.md`.
 - On Arabic Windows, and other right-to-left Windows where the clock is on the left, a new install shows the reminder alert at the bottom left. The side you saved, or choose in Settings, is kept.
 - Electron 45.2.3 (was 45.1.0), with Chromium security fixes; electron-updater 6.8.12 and electron-builder 26.18.1.
 - No text is smaller than 12 px any more: small labels, hints, counts and badges that were 9 to 11 px are now 12 px.

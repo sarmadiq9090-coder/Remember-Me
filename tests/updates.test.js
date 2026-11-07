@@ -29,22 +29,28 @@ function fakeTimers() {
 }
 // Stands in for electron-updater's autoUpdater.
 class FakeUpdater extends EventEmitter {
-  constructor() { super(); this.checks = 0; this.result = { isUpdateAvailable: false, updateInfo: { version: '1.5.0' } }; this.installs = []; }
-  setFeedURL(feed) { this.feed = feed; }
+  constructor() { super(); this.checks = 0; this.downloads = 0; this.feeds = []; this.result = { isUpdateAvailable: false, updateInfo: { version: '1.5.0' } }; this.installs = []; }
+  setFeedURL(feed) { this.feed = feed; this.feeds.push(feed.provider); }
   async checkForUpdates() {
     this.checks++;
-    if (this.offline) { const error = new Error('net::ERR_INTERNET_DISCONNECTED'); this.emit('error', error); throw error; }
-    if (this.result?.isUpdateAvailable) this.emit('update-available', this.result.updateInfo);
-    return this.result;
+    const result = typeof this.result === 'function' ? this.result(this.feed) : this.result;
+    if (this.offline || result instanceof Error) { const error = result instanceof Error ? result : new Error('net::ERR_INTERNET_DISCONNECTED'); this.emit('error', error); throw error; }
+    if (result?.isUpdateAvailable) this.emit('update-available', result.updateInfo);
+    return result;
+  }
+  async downloadUpdate() {
+    this.downloads++;
+    if (this.failDownloadFrom && this.failDownloadFrom === this.feed?.provider) { const error = new Error('net::ERR_CONNECTION_RESET'); this.emit('error', error); throw error; }
+    return [];
   }
   quitAndInstall(isSilent, runAfter) { this.installs.push({ isSilent, runAfter, quitting: this.app.quitting, backups: this.app.backups }); }
 }
-function setup({ consent = null, backup } = {}) {
+function setup({ consent = null, backup, chooseFeed } = {}) {
   const timers = fakeTimers(), updater = new FakeUpdater();
-  const app = { consent, quitting: false, backups: 0, quits: 0, changes: 0 };
+  const app = { consent, quitting: false, backups: 0, quits: 0, changes: 0, states: [] };
   updater.app = app;
-  const updates = new Updates({ updater, timers, clock: timers.now, version: '1.5.0', consent: () => app.consent,
-    backup: backup || (async () => { app.backups++; }), prepareQuit: () => { app.quitting = true; }, quit: () => { app.quits++; }, onChange: () => { app.changes++; } });
+  const updates = new Updates({ updater, timers, clock: timers.now, version: '1.5.0', consent: () => app.consent, chooseFeed,
+    backup: backup || (async () => { app.backups++; }), prepareQuit: () => { app.quitting = true; }, quit: () => { app.quits++; }, onChange: () => { app.changes++; app.states.push(updates.state); } });
   return { timers, updater, app, updates };
 }
 const available = { isUpdateAvailable: true, updateInfo: { version: '1.6.0' }, downloadPromise: Promise.resolve([]) };
@@ -163,7 +169,76 @@ test('if the safety backup fails on quit, the app still quits and installs nothi
 test('the updater is set up for stable GitHub releases over HTTPS, never downgrading', () => {
   const updater = configure(new FakeUpdater());
   assert.deepEqual(updater.feed, { provider: 'github', owner: 'sarmadiq9090-coder', repo: 'Remember-Me', protocol: 'https' });
-  assert.deepEqual([updater.autoDownload, updater.autoInstallOnAppQuit, updater.allowPrerelease, updater.allowDowngrade], [true, false, false, false]);
+  // autoDownload is off: Updates.check starts the download once it has checked the mirror's answer.
+  assert.deepEqual([updater.autoDownload, updater.autoInstallOnAppQuit, updater.allowPrerelease, updater.allowDowngrade], [false, false, false, false]);
+});
+
+// ---------------------------------------------------------------- update mirror (update-feed.js)
+const MIRROR = { feed: { provider: 'generic', url: 'https://updates.fastkiwi.app/remember-me/' }, expect: { version: '9.9.9', path: 'Remember-Me-Setup-9.9.9-x64.exe', sha512: 'S'.repeat(86) + '==' } };
+const offer = (version = '9.9.9', file = { url: MIRROR.expect.path, sha512: MIRROR.expect.sha512 }) => ({ isUpdateAvailable: true, updateInfo: { version, files: [file] } });
+
+test('a trusted mirror is read first, and the download starts only after its answer was checked', async () => {
+  const { updater, updates } = setup({ consent: true, chooseFeed: async () => MIRROR });
+  updater.result = () => offer();
+  assert.equal((await updates.check()).state, 'downloading');
+  assert.deepEqual(updater.feeds, ['generic'], 'GitHub is not asked');
+  assert.equal(updater.downloads, 1);
+  // Without the mirror (unreachable or not trusted) it is GitHub, as before.
+  const plain = setup({ consent: true });
+  plain.updater.result = () => offer();
+  await plain.updates.check();
+  assert.deepEqual(plain.updater.feeds, []);
+  assert.equal(plain.updater.downloads, 1);
+});
+
+test('the mirror failing, or serving something other than what was checked, falls back to GitHub', async () => {
+  const github = { version: '9.9.9', files: [{ url: 'Remember-Me-Setup-9.9.9-x64.exe', sha512: 'G'.repeat(86) + '==' }] };
+  for (const [what, fromMirror] of [
+    ['mirror error', new Error('HTTP 503')],
+    ['another version', offer('9.9.10')],
+    ['another file', offer('9.9.9', { url: 'evil.exe', sha512: MIRROR.expect.sha512 })],
+    ['another checksum', offer('9.9.9', { url: MIRROR.expect.path, sha512: 'X'.repeat(86) + '==' })],
+  ]) {
+    const { updater, updates, app } = setup({ consent: true, chooseFeed: async () => MIRROR });
+    updater.result = feed => feed.provider === 'generic' ? fromMirror : { isUpdateAvailable: true, updateInfo: github };
+    assert.equal((await updates.check()).state, 'downloading', what);
+    assert.deepEqual(updater.feeds, ['generic', 'github'], what);
+    assert.ok(!app.states.includes('error'), `${what}: the mirror's failure is not shown`);
+  }
+  // chooseFeed itself failing is the same as no mirror.
+  const { updater, updates } = setup({ consent: true, chooseFeed: async () => { throw new Error('boom'); } });
+  updater.result = () => offer();
+  assert.equal((await updates.check()).state, 'downloading');
+  assert.deepEqual(updater.feeds, []);
+});
+
+test('a failed download from the mirror is tried again from GitHub', async () => {
+  const { updater, updates, app } = setup({ consent: true, chooseFeed: async () => MIRROR });
+  updater.result = () => offer();
+  updater.failDownloadFrom = 'generic';
+  await updates.check();
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(updater.feeds, ['generic', 'github']);
+  assert.equal(updater.downloads, 2);
+  assert.ok(!app.states.includes('error'));
+  assert.equal(updates.status().state, 'downloading');
+  // GitHub failing too is an error, as before.
+  const both = setup({ consent: true, chooseFeed: async () => MIRROR });
+  both.updater.result = () => offer();
+  both.updater.failDownloadFrom = 'generic';
+  both.updater.setFeedURL = function (feed) { this.feed = feed; this.feeds.push(feed.provider); this.failDownloadFrom = feed.provider; };
+  await both.updates.check();
+  for (let i = 0; i < 4; i++) await new Promise(resolve => setImmediate(resolve));
+  assert.equal(both.updates.status().state, 'error');
+});
+
+test('an up-to-date mirror means up to date; nothing older is ever offered', async () => {
+  const { updater, updates } = setup({ consent: true, chooseFeed: async () => MIRROR });
+  updater.result = () => ({ isUpdateAvailable: false, updateInfo: { version: '1.5.0' } });
+  assert.equal((await updates.check()).state, 'latest');
+  assert.deepEqual(updater.feeds, ['generic']);
+  assert.equal(updater.downloads, 0);
 });
 
 test('settings.autoUpdate is null until the user answers, and unknown values become null', () => {
