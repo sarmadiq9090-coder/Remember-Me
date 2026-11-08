@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build, sign and verify a FastKiwi update manifest (latest.json).
+"""Build, sign, verify and stage a FastKiwi update manifest (latest.json).
 
 Spec: docs/specs/update-manifest.md. Python 3.8+, standard library only. The
 same file lives in arabic-file-search, local-ai-chat and Remember-Me; keep the
@@ -11,12 +11,18 @@ copies identical (tools/test_make_update_manifest.py is shared too).
         [--notes-file releases/v9.9.9-notes.md] [--out latest.json]
     make-update-manifest sign latest.json      # skips (exit 0) without MINISIGN_SECRET_KEY
     make-update-manifest verify latest.json --pub keys/minisign-primary.pub [--assets dist]
-    make-update-manifest verify https://updates.fastkiwi.app/instafind/latest.json --download
+    make-update-manifest stage latest.json --out site-updates
+    make-update-manifest verify https://fastkiwi.app/updates/instafind/latest.json --download
 
-The manifest is served at https://updates.fastkiwi.app/<app>/latest.json with
-a detached minisign signature next to it (latest.json.minisig). Its trusted
-comment is "<app> update-manifest <tag>". Each asset's signature, when the
-release is signed, is "<url>.minisig" next to every download URL.
+The manifest is served by the website (Cloudflare Pages) at
+https://fastkiwi.app/updates/<app>/latest.json, with a detached minisign
+signature next to it (latest.json.minisig). `stage` lays both out as
+updates/<app>/ in a folder that CI uploads as an artifact; the site repo's
+deploy picks it up. This tool uploads nothing. The trusted comment is
+"<app> update-manifest <tag>". Each asset lists its GitHub release download
+first, then the GitLab release-asset link (a fallback that is populated
+later). When the release is signed, each asset's signature is "<url>.minisig"
+next to every download URL.
 """
 
 import argparse
@@ -36,8 +42,12 @@ import urllib.parse
 import urllib.request
 
 SCHEMA = 1
-MIRROR = "https://updates.fastkiwi.app"
+# Where the website serves the manifests: <SITE>/<app>/latest.json(.minisig).
+SITE = "https://fastkiwi.app/updates"
 GITHUB = "https://github.com"
+# The GitLab copy of each repository (fallback downloads, populated later).
+GITLAB = "https://gitlab.com"
+GITLAB_GROUP = "fastkiwi1"
 ARCHES = ("x64", "x86", "arm64")
 MAX_MANIFEST_BYTES = 64 * 1024
 MAX_ASSET_BYTES = 512 * 1024 * 1024
@@ -184,15 +194,26 @@ def read_notes(path):
     return text
 
 
+def gitlab_asset_url(gitlab, project, tag, name):
+    """GitLab's permanent link to release asset `name` of release `tag`."""
+    return "%s/%s/-/releases/%s/downloads/%s" % (gitlab.rstrip("/"), project, tag, name)
+
+
 def build(app, version, repo, assets, released=None, notes="", notes_url=None,
-          mirror=MIRROR, layout="tag", github=GITHUB):
-    """The manifest dict for release `version` of `app` with `assets` ({arch: path})."""
+          github=GITHUB, gitlab=GITLAB, gitlab_project=None):
+    """The manifest dict for release `version` of `app` with `assets` ({arch: path}).
+
+    `gitlab_project` defaults to fastkiwi1/<name of repo>; an empty `gitlab`
+    leaves the GitLab fallback out."""
     if not APP_RE.match(app):
         raise ManifestError("bad app %r" % app)
     if not VERSION_RE.match(version):
         raise ManifestError("bad version %r (MAJOR.MINOR.PATCH, no pre-release)" % version)
     if not re.match(r"^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$", repo):
         raise ManifestError("bad repo %r (owner/name)" % repo)
+    project = gitlab_project or "%s/%s" % (GITLAB_GROUP, repo.split("/", 1)[1])
+    if not re.match(r"^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)+$", project):
+        raise ManifestError("bad GitLab project %r (group/name)" % project)
     tag = "v" + version
     out = {}
     for arch, path in assets.items():
@@ -200,17 +221,18 @@ def build(app, version, repo, assets, released=None, notes="", notes_url=None,
             raise ManifestError("unknown architecture %r (one of %s)" % (arch, ", ".join(ARCHES)))
         name = os.path.basename(path)
         size, sha256, sha512 = file_digests(path)
-        mirror_dir = "%s/%s/%s" % (mirror.rstrip("/"), app, tag) if layout == "tag" else "%s/%s" % (mirror.rstrip("/"), app)
+        # In order: the GitHub release first, then the GitLab release asset
+        # (a fallback, populated later; until then it answers 404 and the
+        # apps simply have no second copy).
+        urls = ["%s/%s/releases/download/%s/%s" % (github.rstrip("/"), repo, tag, name)]
+        if gitlab:
+            urls.append(gitlab_asset_url(gitlab, project, tag, name))
         out[arch] = {
             "name": name,
             "size": size,
             "sha256": sha256,
             "sha512": sha512,
-            # In order: the Cloudflare mirror first, then the GitHub release.
-            "urls": [
-                "%s/%s" % (mirror_dir, name),
-                "%s/%s/releases/download/%s/%s" % (github.rstrip("/"), repo, tag, name),
-            ],
+            "urls": urls,
         }
     if released is None:
         released = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -228,6 +250,26 @@ def build(app, version, repo, assets, released=None, notes="", notes_url=None,
     if errs:
         raise ManifestError("; ".join(errs))
     return m
+
+
+def stage(manifest_path, out_dir, sig_path=None):
+    """Copies the manifest (and its signature, when there is one) to
+    <out_dir>/updates/<app>/, the layout the website serves. Returns the folder."""
+    with open(manifest_path, "rb") as f:
+        m = parse(f.read())
+    sig = sig_path or manifest_path + ".minisig"
+    if sig_path and not os.path.isfile(sig_path):
+        raise ManifestError("%s: no such file" % sig_path)
+    dest = os.path.join(out_dir, "updates", m["app"])
+    os.makedirs(dest, exist_ok=True)
+    shutil.copyfile(manifest_path, os.path.join(dest, "latest.json"))
+    stale = os.path.join(dest, "latest.json.minisig")
+    if os.path.isfile(sig):
+        shutil.copyfile(sig, stale)
+    elif os.path.exists(stale):
+        # Never leave an older release's signature next to a new manifest.
+        os.unlink(stale)
+    return dest
 
 
 def dumps(m):
@@ -317,7 +359,8 @@ def _assets_arg(values):
 def cmd_build(a):
     notes = read_notes(a.notes_file) if a.notes_file and os.path.isfile(a.notes_file) else ""
     m = build(a.app, a.version.lstrip("v"), a.repo, _assets_arg(a.asset), released=a.released,
-              notes=notes, notes_url=a.notes_url, mirror=a.mirror, layout=a.layout, github=a.github)
+              notes=notes, notes_url=a.notes_url, github=a.github,
+              gitlab="" if a.no_gitlab else a.gitlab, gitlab_project=a.gitlab_project)
     with open(a.out, "wb") as f:
         f.write(dumps(m))
     print("wrote %s: %s %s, %s" % (a.out, m["app"], m["tag"], ", ".join(sorted(m["assets"]))))
@@ -388,6 +431,13 @@ def cmd_verify(a):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def cmd_stage(a):
+    dest = stage(a.manifest, a.out, a.sig)
+    signed = os.path.isfile(os.path.join(dest, "latest.json.minisig"))
+    print("staged %s%s" % (dest, "" if signed else " (NOT signed)"))
+    return 0
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(prog="make-update-manifest", description=__doc__.split("\n\n")[0])
     sub = p.add_subparsers(dest="cmd")
@@ -399,10 +449,10 @@ def main(argv=None):
     b.add_argument("--released", help="UTC time, 2026-11-13T06:00:00Z (default: now)")
     b.add_argument("--notes-file", help="release notes (Markdown); a missing file means no notes")
     b.add_argument("--notes-url", help="default: the GitHub release page")
-    b.add_argument("--mirror", default=MIRROR)
     b.add_argument("--github", default=GITHUB, help=argparse.SUPPRESS)
-    b.add_argument("--layout", choices=("tag", "flat"), default="tag",
-                   help="mirror path: <app>/<tag>/<name> (default) or <app>/<name>")
+    b.add_argument("--gitlab", default=GITLAB, help=argparse.SUPPRESS)
+    b.add_argument("--gitlab-project", help="GitLab group/name (default: %s/<repo name>)" % GITLAB_GROUP)
+    b.add_argument("--no-gitlab", action="store_true", help="list only the GitHub download")
     b.add_argument("--out", default="latest.json")
     s = sub.add_parser("sign", help="write latest.json.minisig; skips when the secret key is missing")
     s.add_argument("manifest")
@@ -419,12 +469,16 @@ def main(argv=None):
     v.add_argument("--download", action="store_true", help="download every URL and check its sha256")
     v.add_argument("--minisign", default="minisign")
     v.add_argument("--allow-local-http", action="store_true", help=argparse.SUPPRESS)
+    t = sub.add_parser("stage", help="copy latest.json(.minisig) to <out>/updates/<app>/ for the website")
+    t.add_argument("manifest")
+    t.add_argument("--sig", help="default: <manifest>.minisig, when it exists")
+    t.add_argument("--out", required=True, help="folder that CI uploads as an artifact")
     a = p.parse_args(argv)
     if not a.cmd:
         p.print_help()
         return 2
     try:
-        return {"build": cmd_build, "sign": cmd_sign, "verify": cmd_verify}[a.cmd](a)
+        return {"build": cmd_build, "sign": cmd_sign, "verify": cmd_verify, "stage": cmd_stage}[a.cmd](a)
     except ManifestError as e:
         print("::error::%s" % e, file=sys.stderr)
         return 1

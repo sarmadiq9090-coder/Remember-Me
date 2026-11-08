@@ -7,7 +7,7 @@ const { DriveBackup } = require('../data/drive-backup');
 const { safetyBackup } = require('../data/backups');
 const { createLogger } = require('../platform/logger');
 const { Updates, updateSource, createUpdater } = require('../platform/updates');
-const { chooseFeed: chooseUpdateFeed, fetcher } = require('../platform/update-feed');
+const { chooseFallback: chooseUpdateFallback, fetcher } = require('../platform/update-feed');
 const { migrateDataFolder, storeDataFolder } = require('../platform/data-folder');
 const { setLoginItem, refreshLoginItem, appUserModelId, STARTUP_SETTINGS } = require('../platform/login-item');
 const { createPause } = require('../core/pause');
@@ -107,12 +107,13 @@ function createUpdates() {
     if (updates && updates.state !== loggedState) { loggedState = updates.state; log.info('update', { state: updates.state, version: app.getVersion(), ...(updates.next ? { next: String(updates.next).slice(0, 40) } : {}) }); }
     windows.notifyMain();
   };
-  // The update mirror is asked only by an installed copy that updates itself; never in test runs.
-  const askMirror = source === 'github' && app.isPackaged && !testMode;
+  // The fallback (the signed manifest on fastkiwi.app, then the GitLab copy) is asked only by an
+  // installed copy that updates itself, and only after GitHub failed; never in test runs.
+  const askFallback = source === 'github' && app.isPackaged && !testMode;
   // Electron's network stack: the system proxy settings, as electron-updater uses.
   const fetch = fetcher((url, options) => net.fetch(url, options));
-  const chooseFeed = askMirror ? () => chooseUpdateFeed({ fetch, current: app.getVersion(), log: reason => log.info('update-feed', { reason }) }) : async () => null;
-  return new Updates({ updater, source, available: testMode || source === 'github', version: app.getVersion(), consent: () => ctx.store.state.settings.autoUpdate, onChange, chooseFeed,
+  const chooseFallback = askFallback ? () => chooseUpdateFallback({ fetch, current: app.getVersion(), log: reason => log.info('update-feed', { reason }) }) : async () => null;
+  return new Updates({ updater, source, available: testMode || source === 'github', version: app.getVersion(), consent: () => ctx.store.state.settings.autoUpdate, onChange, chooseFallback,
     backup: () => safetyBackup(app.getPath('userData'), ctx.store.state, 'RememberMe-before-update-'),
     prepareQuit: () => { ctx.quitting = true; }, quit: () => app.quit() });
 }

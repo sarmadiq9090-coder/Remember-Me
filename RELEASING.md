@@ -38,7 +38,7 @@ git push origin v1.5.0
 
 ## 4. Verify the release
 
-- [ ] The release lists the installer, its `.blockmap`, `latest.yml`, `SHA256SUMS.txt` and `latest.json`, plus `latest.json.minisig` once the `release` Environment has `MINISIGN_SECRET_KEY` (without it the publish job warns that the manifest is not signed).
+- [ ] The release lists the installer, its `.blockmap`, `latest.yml`, `SHA256SUMS.txt` and `latest.json`, plus `latest.json.minisig` once the `release` Environment has `MINISIGN_SECRET_KEY` (without it the publish job warns that the manifest is not signed). The run also has a `site-updates` artifact (`updates/remember-me/latest.json`, + `.minisig` when signed) for the website's deploy, which publishes it at `fastkiwi.app/updates/remember-me/`.
 - [ ] The release is marked **Latest** and is not a pre-release or draft. The app's updater only follows the latest full release.
 - [ ] `latest.yml` says `version: 1.5.0`, and its `path` and `url` are `Remember-Me-Setup-1.5.0-x64.exe`.
 - [ ] The checksum and attestation match. Download the installer and `SHA256SUMS.txt` into one folder, then:

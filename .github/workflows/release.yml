@@ -9,10 +9,12 @@ name: Release
 # the checkout. Only the publish job, which runs no repository code, can write releases and
 # attestations.
 #
-# The build job also writes latest.json, the update manifest the Cloudflare mirror serves next to
-# latest.yml (docs/specs/update-manifest.md). The publish job signs it (latest.json.minisig) when
-# the release Environment has MINISIGN_SECRET_KEY, skips that with a warning otherwise, and attaches
-# both to the release.
+# The build job also writes latest.json, the update manifest fastkiwi.app/updates/remember-me/
+# serves (docs/specs/update-manifest.md). The publish job signs it (latest.json.minisig) when the
+# release Environment has MINISIGN_SECRET_KEY, skips that with a warning otherwise, attaches both to
+# the release and, once the release is public, hands them over as the artifact `site-updates`
+# (updates/remember-me/...), which the website repo's deploy picks up. This workflow uploads
+# nothing to any other host.
 on:
   push:
     tags: ['v*']
@@ -70,9 +72,10 @@ jobs:
         run: |
           installer=$(ls Remember-Me-Setup-*.exe)
           version=$(node -p "require('../../package.json').version")
-          # --layout flat: the mirror is a generic electron-updater feed, the installer next to latest.yml.
+          # URLs: the GitHub release first, then the GitLab copy of it (a fallback, populated later),
+          # whose downloads/ folder is a generic electron-updater feed (installer next to latest.yml).
           python ../../tools/make-update-manifest build --app remember-me --version "$version" \
-            --repo "$GITHUB_REPOSITORY" --layout flat --notes-file "../../docs/release-notes/v$version.md" \
+            --repo "$GITHUB_REPOSITORY" --notes-file "../../docs/release-notes/v$version.md" \
             --asset x64="$installer" --out latest.json
           python ../../tools/make-update-manifest verify latest.json --app remember-me --assets .
           # latest.json and latest.yml must name the same installer with the same SHA-512.
@@ -140,7 +143,7 @@ jobs:
           if [ "$HAS_SECRET" = true ]; then
             echo "signed=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::latest.json is NOT signed (no MINISIGN_SECRET_KEY in the release Environment): the app uses the update mirror only when GitHub's latest.yml names the same installer. docs/specs/update-manifest.md"
+            echo "::warning::latest.json is NOT signed (no MINISIGN_SECRET_KEY in the release Environment): the app uses the manifest only when GitHub's latest.yml names the same installer. docs/specs/update-manifest.md"
             echo "signed=false" >> "$GITHUB_OUTPUT"
           fi
       - name: Install minisign (pinned, checksum-verified)
@@ -177,7 +180,25 @@ jobs:
         run: |
           installer=$(ls installer/Remember-Me-Setup-*.exe)
           # latest.yml and the .blockmap must stay next to the installer: the app's updater reads them.
-          # latest.json (+ .minisig when signed) is for the Cloudflare mirror.
+          # latest.json (+ .minisig when signed) rides along; the website serves its copy.
           manifest=(installer/latest.json)
           if [ -f installer/latest.json.minisig ]; then manifest+=(installer/latest.json.minisig); fi
           gh release create "$TAG" "$installer" "$installer.blockmap" installer/latest.yml installer/SHA256SUMS.txt "${manifest[@]}" --title "ذكرني | Remember Me $TAG" --generate-notes --verify-tag
+      # fastkiwi.app/updates/remember-me/ serves the manifest: this only hands the checked files over
+      # as an artifact, after the release is public (no repository code runs here). The website
+      # repo's deploy publishes them.
+      - name: Stage latest.json for the website
+        run: |
+          mkdir -p site-updates/updates/remember-me
+          cp installer/latest.json site-updates/updates/remember-me/latest.json
+          if [ -f installer/latest.json.minisig ]; then
+            cp installer/latest.json.minisig site-updates/updates/remember-me/latest.json.minisig
+          else
+            echo "::warning::latest.json is staged for the website NOT signed"
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site-updates
+          path: site-updates/
+          if-no-files-found: error
+          retention-days: 30

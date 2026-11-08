@@ -1,6 +1,7 @@
 #!/bin/sh
 # TEST-ONLY fixtures for tests/update-feed.test.js: a fake Remember Me v9.9.9
-# release as the update mirror would serve it (docs/specs/update-manifest.md).
+# release as fastkiwi.app/updates/remember-me/ would serve it, and the latest.yml
+# GitHub (and the GitLab copy) would serve (docs/specs/update-manifest.md).
 #
 # These keys are PUBLIC on purpose and protect nothing: they are used only by the
 # tests, which assert that none of them is ever in TRUSTED_PUBLIC_KEYS
@@ -17,7 +18,7 @@ done
 tmp=$(mktemp -d)
 printf 'Remember Me update-manifest test installer (not a real exe).\n' > "$tmp/Remember-Me-Setup-9.9.9-x64.exe"
 python3 ../../../tools/make-update-manifest build --app remember-me --version 9.9.9 \
-  --repo sarmadiq9090-coder/Remember-Me --released 2026-11-13T06:00:00Z --layout flat \
+  --repo sarmadiq9090-coder/Remember-Me --released 2026-11-13T06:00:00Z \
   --notes-url https://fastkiwi.app/Remember-Me/ --asset x64="$tmp/Remember-Me-Setup-9.9.9-x64.exe" \
   --out manifest.json >/dev/null
 rm -r "$tmp"

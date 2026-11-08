@@ -2,10 +2,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { matchesExpected } = require('./update-feed.js');
-// New versions come from the update mirror on Cloudflare when it is trusted (update-feed.js,
-// docs/specs/update-manifest.md), otherwise from this repository's GitHub Releases, over HTTPS only.
-// tools/package.mjs writes the GitHub feed into resources/app-update.yml, which electron-updater
-// also reads, and the installer's latest.yml is made for it.
+// New versions come from this repository's GitHub Releases, over HTTPS only. When GitHub fails, the
+// signed manifest on fastkiwi.app may name the same release on the GitLab copy (update-feed.js,
+// docs/specs/update-manifest.md). tools/package.mjs writes the GitHub feed into
+// resources/app-update.yml, which electron-updater also reads, and the installer's latest.yml is
+// made for it.
 const FEED = { provider: 'github', owner: 'sarmadiq9090-coder', repo: 'Remember-Me', protocol: 'https' };
 const UPDATER_CACHE = 'remember-me-updater';
 const PROGRESS_STEP = 10;
@@ -38,7 +39,7 @@ function createUpdater({ source, testMode = false, load = () => require('electro
 // Applies the app's update policy to electron-updater's autoUpdater.
 function configure(updater) {
   updater.setFeedURL(FEED);
-  // Updates.check starts the download itself, once it has checked what the mirror answered.
+  // Updates.check starts the download itself, so a fallback feed's answer can be checked first.
   updater.autoDownload = false;
   // Installing on quit is done by Updates.beforeQuit, after a safety backup.
   updater.autoInstallOnAppQuit = false;
@@ -58,13 +59,15 @@ class Updates {
   // available: false for a copy that gets its updates elsewhere; the window then doesn't ask for consent.
   // source 'store': Microsoft Store updates this copy, so nothing is ever checked, downloaded or
   // installed here, and the window says updates come from the Store.
-  // chooseFeed: resolves to { feed, expect } to read the update mirror (update-feed.js chooseFeed), or
-  // null for the GitHub feed. The default never asks the mirror.
-  constructor({ updater, consent, version, backup, prepareQuit, quit, available = true, source = 'github', onChange = () => {}, clock = () => Date.now(), timers = globalThis, chooseFeed = async () => null, githubFeed = FEED }) {
+  // chooseFallback: asked only after GitHub failed; resolves to { feed, expect } for the GitLab copy
+  // that the signed manifest names (update-feed.js chooseFallback), or null. The default never asks.
+  constructor({ updater, consent, version, backup, prepareQuit, quit, available = true, source = 'github', onChange = () => {}, clock = () => Date.now(), timers = globalThis, chooseFallback = async () => null, githubFeed = FEED }) {
     if (source === 'store') available = false;
-    Object.assign(this, { updater, consent, version, backup, prepareQuit, quit, available, source, onChange, clock, timers, chooseFeed, githubFeed });
+    Object.assign(this, { updater, consent, version, backup, prepareQuit, quit, available, source, onChange, clock, timers, chooseFallback, githubFeed });
     this.state = 'idle';
-    // True while a failure would only mean "try GitHub instead": no 'error' state for it.
+    // The feed electron-updater reads now: GitHub's (configure), unless a check fell back.
+    this.feed = githubFeed;
+    // True while a failure would only mean "try the fallback": no 'error' state for it.
     this.quiet = false;
     this.next = null; this.percent = 0; this.checkedAt = null; this.dismissed = false;
     this.running = null; this.timeout = null; this.interval = null;
@@ -107,14 +110,14 @@ class Updates {
     this.set({ state: 'checking' });
     this.running = (async () => {
       try {
-        const { result, mirror } = await this.find();
+        const { result, fallback } = await this.find();
         this.checkedAt = this.clock();
         // null: not an installed build, so electron-updater does nothing.
         if (!result) this.set({ state: 'unavailable' });
         else if (!result.isUpdateAvailable) this.set({ state: 'latest' });
         else {
           if (this.state === 'checking') this.set({ state: 'downloading', next: result.updateInfo.version });
-          this.download(mirror);
+          this.download(fallback);
         }
       } catch { this.checkedAt = this.clock(); this.set({ state: 'error' }); }
       finally { this.running = null; }
@@ -122,34 +125,46 @@ class Updates {
     })();
     return this.running;
   }
-  // electron-updater's answer: from the mirror when chooseFeed trusts it and electron-updater read
-  // exactly what was checked, otherwise from GitHub.
+  useFeed(feed) { if (this.feed !== feed) { this.updater.setFeedURL(feed); this.feed = feed; } }
+  // electron-updater's answer: from GitHub, as always; only when GitHub fails, from the fallback feed
+  // the signed manifest names, and only if electron-updater read exactly what was checked there.
   async find() {
-    let choice;
-    try { choice = await this.chooseFeed(); } catch { choice = null; }
-    if (choice) {
-      this.updater.setFeedURL(choice.feed);
-      this.quiet = true;
-      try {
-        const result = await this.updater.checkForUpdates();
-        if (!result?.isUpdateAvailable || matchesExpected(result.updateInfo, choice.expect)) return { result, mirror: true };
-      } catch { /* the mirror failed: GitHub below */ }
-      finally { this.quiet = false; }
-      this.updater.setFeedURL(this.githubFeed);
-    }
-    return { result: await this.updater.checkForUpdates(), mirror: false };
+    this.useFeed(this.githubFeed);
+    this.quiet = true;
+    let result;
+    try { result = await this.updater.checkForUpdates(); }
+    catch (error) {
+      this.quiet = false;
+      const fallback = await this.viaFallback();
+      if (fallback) return { result: fallback, fallback: true };
+      throw error;
+    } finally { this.quiet = false; }
+    return { result, fallback: false };
   }
-  // A download from the mirror that fails is tried once more from GitHub; electron-updater checks
+  // The fallback's answer when it offers exactly the checked release, else null (GitHub's feed again).
+  async viaFallback() {
+    let choice;
+    try { choice = await this.chooseFallback(); } catch { choice = null; }
+    if (!choice) return null;
+    this.useFeed(choice.feed);
+    this.quiet = true;
+    try {
+      const result = await this.updater.checkForUpdates();
+      if (result?.isUpdateAvailable && matchesExpected(result.updateInfo, choice.expect)) return result;
+    } catch { /* the fallback failed too */ }
+    finally { this.quiet = false; }
+    this.useFeed(this.githubFeed);
+    return null;
+  }
+  // A download from GitHub that fails is tried once more from the fallback; electron-updater checks
   // each download against the SHA-512 of the latest.yml it read.
-  download(mirror) {
-    this.quiet = mirror;
+  download(fallback) {
+    this.quiet = !fallback;
     Promise.resolve().then(() => this.updater.downloadUpdate()).then(() => { this.quiet = false; }, async () => {
       this.quiet = false;
-      if (!mirror) return; // the 'error' event already showed it
-      this.updater.setFeedURL(this.githubFeed);
+      if (fallback) { this.useFeed(this.githubFeed); return; } // the 'error' event already showed it
       try {
-        const result = await this.updater.checkForUpdates();
-        if (result?.isUpdateAvailable) this.download(false); else this.set({ state: 'error' });
+        if (await this.viaFallback()) this.download(true); else this.set({ state: 'error' });
       } catch { this.set({ state: 'error' }); }
     });
   }

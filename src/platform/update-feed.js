@@ -1,11 +1,14 @@
 'use strict';
 const crypto = require('node:crypto');
-// Which feed electron-updater reads (docs/specs/update-manifest.md): the update mirror on Cloudflare
-// first, so installed copies keep getting updates while GitHub is down, and GitHub Releases when the
-// mirror is unreachable or not trusted. The mirror serves electron-builder's latest.yml and installer
-// (a "generic" provider) next to latest.json, the signed manifest, and latest.json.minisig.
-const MIRROR_URL = 'https://updates.fastkiwi.app/remember-me/';
-const MIRROR_FEED = { provider: 'generic', url: MIRROR_URL };
+// The fallback feed for electron-updater (docs/specs/update-manifest.md). GitHub Releases come first,
+// as always. When GitHub cannot be read, or its download fails, the signed update manifest on the
+// website (Cloudflare Pages), https://fastkiwi.app/updates/remember-me/latest.json, may point
+// electron-updater at the same release on the project's GitLab copy: a "generic" provider at that
+// release's downloads/ folder, which holds latest.yml, the installer and its .blockmap. The GitLab
+// copy is populated later; until then that feed answers 404 and the update waits for GitHub.
+const MANIFEST_URL = 'https://fastkiwi.app/updates/remember-me/latest.json';
+// Only this project's GitLab releases are ever used as a feed.
+const GITLAB_RELEASES = 'https://gitlab.com/fastkiwi1/Remember-Me/-/releases/';
 // What the GitHub feed says the latest release is, for the check below while no key is set.
 const GITHUB_LATEST_YML = 'https://github.com/sarmadiq9090-coder/Remember-Me/releases/latest/download/latest.yml';
 const MANIFEST_APP = 'remember-me';
@@ -15,7 +18,7 @@ const MAX_BYTES = 64 * 1024, TIMEOUT = 15 * 1000;
 // base64 key that starts with "RW"; never a secret key), primary first, backup second. Made as in
 // arabic-file-search's docs/specs/signing.md, with Remember Me's own key pair; the release workflow
 // signs latest.json with MINISIGN_SECRET_KEY in the `release` Environment.
-// While this list is EMPTY the mirror is used only when GitHub's latest.yml names the same version
+// While this list is EMPTY the manifest is used only when GitHub's latest.yml names the same version
 // and installer with the same SHA-512. With keys, latest.json.minisig must verify instead.
 const TRUSTED_PUBLIC_KEYS = [];
 
@@ -48,8 +51,8 @@ function parseLatestYml(text) {
 }
 const sameRelease = (a, b) => a.version === b.version && a.path === b.path && a.sha512 === b.sha512;
 
-// What electron-updater read from the mirror must be what was checked: the same version, and only
-// the checked installer with the checked SHA-512.
+// What electron-updater read from the fallback feed must be what was checked: the same version, and
+// only the checked installer with the checked SHA-512.
 function matchesExpected(updateInfo, expect) {
   const files = Array.isArray(updateInfo?.files) ? updateInfo.files : [];
   return updateInfo?.version === expect.version && files.length > 0
@@ -130,14 +133,20 @@ function verifyMinisign(data, sigText, keys, expected) {
   throw new Error('it was not made by a trusted key');
 }
 
-// latest.json must be signed, for this app, and name exactly the installer latest.yml names.
-function checkManifest(data, sigText, keys, yml) {
+// The release latest.json describes ({ version, path, sha512, feed }); throws when it is not valid for
+// this app. `feed` is the GitLab downloads/ folder of that release, or null when the manifest lists no
+// GitLab copy of the installer (only exactly `<GITLAB_RELEASES>v<version>/downloads/<installer>`).
+function parseManifest(data, gitlab = GITLAB_RELEASES) {
+  if (data.length > MAX_BYTES) throw new Error('latest.json is too large');
   let manifest;
   try { manifest = JSON.parse(data.toString('utf8')); } catch { throw new Error('latest.json is not JSON'); }
-  if (manifest?.schema !== 1 || manifest.app !== MANIFEST_APP || manifest.version !== yml.version || manifest.tag !== `v${yml.version}`) throw new Error('latest.json is for another release');
-  verifyMinisign(data, sigText, keys, expectedComment(yml.version));
+  const version = manifest?.version;
+  if (manifest?.schema !== 1 || manifest.app !== MANIFEST_APP || !parseVersion(version) || manifest.tag !== `v${version}`) throw new Error('latest.json is not a Remember Me release');
   const asset = manifest.assets?.x64;
-  if (asset?.name !== yml.path || asset.sha512 !== yml.sha512) throw new Error('latest.json and latest.yml name different installers');
+  if (!/^[\w.-]+\.exe$/.test(asset?.name || '') || !/^[A-Za-z0-9+/]{86}==$/.test(asset?.sha512 || '')) throw new Error('latest.json names no installer');
+  const folder = `${gitlab}v${version}/downloads/`;
+  const urls = Array.isArray(asset.urls) ? asset.urls : [];
+  return { version, path: asset.name, sha512: asset.sha512, feed: urls.includes(folder + asset.name) ? folder : null };
 }
 
 // GETs a small file with `fetchImpl` (Electron's net.fetch, or fetch in the tests).
@@ -152,35 +161,30 @@ function fetcher(fetchImpl, { timeout = TIMEOUT, limit = MAX_BYTES } = {}) {
   };
 }
 
-// The mirror feed and what it must serve ({ feed, expect }), or null for the GitHub feed:
-// 1. The mirror's latest.yml; any failure means GitHub.
-// 2. With keys, latest.json and latest.json.minisig must verify and name the same installer. Without
-//    keys (today), GitHub's latest.yml must name the same version and installer with the same SHA-512.
-// 3. A mirror that is not newer than `current` defers to GitHub when GitHub has a newer release (a
-//    mirror that was not updated yet). electron-updater itself never downgrades (allowDowngrade).
-// `log(reason)` hears why the mirror was not used: short codes, never URLs.
-async function chooseFeed({ fetch, current, keys = TRUSTED_PUBLIC_KEYS, mirror = MIRROR_URL, githubYml = GITHUB_LATEST_YML, log = () => {} }) {
-  let yml;
-  try { yml = parseLatestYml(await fetch(`${mirror}latest.yml`)); } catch { log('mirror-unreachable'); return null; }
-  let github;
-  const fromGitHub = async () => {
-    if (github === undefined) { try { github = parseLatestYml(await fetch(githubYml)); } catch { github = null; } }
-    return github;
-  };
+// The fallback feed and what it must serve ({ feed, expect }), or null (then the update waits for
+// GitHub). Asked only after GitHub failed:
+// 1. The manifest on fastkiwi.app; any failure, or no GitLab copy listed, means null.
+// 2. With keys, latest.json.minisig must verify ("remember-me update-manifest v<version>"). Without
+//    keys (today), GitHub's latest.yml must name the same version and installer with the same SHA-512,
+//    so while GitHub is fully down nothing confirms the manifest (fail closed).
+// 3. Only a release strictly newer than `current` (never a downgrade; electron-updater's
+//    allowDowngrade stays off as well).
+// `log(reason)` hears why the fallback was not used: short codes, never URLs.
+async function chooseFallback({ fetch, current, keys = TRUSTED_PUBLIC_KEYS, manifest = MANIFEST_URL, gitlab = GITLAB_RELEASES, githubYml = GITHUB_LATEST_YML, log = () => {} }) {
+  let data, release;
+  try { data = await fetch(manifest); } catch { log('manifest-unreachable'); return null; }
+  try { release = parseManifest(data, gitlab); } catch { log('manifest-invalid'); return null; }
+  if (!release.feed) { log('manifest-no-fallback'); return null; }
+  const expect = { version: release.version, path: release.path, sha512: release.sha512 };
   if (keys.length) {
-    try {
-      const [data, sig] = await Promise.all([fetch(`${mirror}latest.json`), fetch(`${mirror}latest.json.minisig`)]);
-      checkManifest(data, sig.toString('utf8'), keys, yml);
-    } catch { log('mirror-signature'); return null; }
+    try { verifyMinisign(data, (await fetch(`${manifest}.minisig`)).toString('utf8'), keys, expectedComment(release.version)); } catch { log('manifest-signature'); return null; }
   } else {
-    const gh = await fromGitHub();
-    if (!gh || !sameRelease(gh, yml)) { log('mirror-unconfirmed'); return null; }
+    let github = null;
+    try { github = parseLatestYml(await fetch(githubYml)); } catch { /* GitHub is down: nothing confirms it */ }
+    if (!github || !sameRelease(github, expect)) { log('manifest-unconfirmed'); return null; }
   }
-  if (!isNewer(yml.version, current)) {
-    const gh = await fromGitHub();
-    if (gh && isNewer(gh.version, current) && !sameRelease(gh, yml)) { log('mirror-stale'); return null; }
-  }
-  return { feed: { ...MIRROR_FEED, url: mirror }, expect: yml };
+  if (!isNewer(release.version, current)) { log('manifest-not-newer'); return null; }
+  return { feed: { provider: 'generic', url: release.feed }, expect };
 }
 
-module.exports = { MIRROR_URL, MIRROR_FEED, GITHUB_LATEST_YML, MANIFEST_APP, TRUSTED_PUBLIC_KEYS, expectedComment, isNewer, parseLatestYml, matchesExpected, blake2b512, verifyMinisign, checkManifest, fetcher, chooseFeed };
+module.exports = { MANIFEST_URL, GITLAB_RELEASES, GITHUB_LATEST_YML, MANIFEST_APP, TRUSTED_PUBLIC_KEYS, expectedComment, isNewer, parseLatestYml, parseManifest, matchesExpected, blake2b512, verifyMinisign, fetcher, chooseFallback };

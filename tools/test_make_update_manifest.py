@@ -84,18 +84,23 @@ class BuildTest(Base):
         self.assertEqual(x["size"], len(body))
         self.assertEqual(x["sha256"], hashlib.sha256(body).hexdigest())
         self.assertEqual(base64.b64decode(x["sha512"]), hashlib.sha512(body).digest())
-        # Cloudflare first, then GitHub.
+        # GitHub first, then the GitLab release asset (the fallback).
         self.assertEqual(x["urls"], [
-            "https://updates.fastkiwi.app/example/v9.9.9/app.exe",
             "https://github.com/%s/releases/download/v9.9.9/app.exe" % REPO,
+            "https://gitlab.com/fastkiwi1/example/-/releases/v9.9.9/downloads/app.exe",
         ])
         self.assertEqual(sorted(m["assets"]), ["arm64", "x64"])
         self.assertEqual(mum.validate(m, "example"), [])
         self.assertEqual(mum.trusted_comment("example", "v9.9.9"), "example update-manifest v9.9.9")
 
-    def test_flat_layout(self):
-        m = self.build(layout="flat")
-        self.assertEqual(m["assets"]["x64"]["urls"][0], "https://updates.fastkiwi.app/example/app.exe")
+    def test_gitlab_project_and_github_only(self):
+        m = self.build(gitlab_project="fastkiwi1/Other")
+        self.assertEqual(m["assets"]["x64"]["urls"][1], "https://gitlab.com/fastkiwi1/Other/-/releases/v9.9.9/downloads/app.exe")
+        m = self.build(gitlab="")
+        self.assertEqual(m["assets"]["x64"]["urls"], ["https://github.com/%s/releases/download/v9.9.9/app.exe" % REPO])
+        with self.assertRaises(mum.ManifestError):
+            self.build(gitlab_project="no-group")
+        self.assertEqual(mum.SITE, "https://fastkiwi.app/updates")
 
     def test_bad_input_is_refused(self):
         assets = {"x64": self.files["x64"][0]}
@@ -133,8 +138,9 @@ class ValidateTest(Base):
     def test_tampering_is_caught(self):
         good = self.build()
         cases = {
-            "http mirror": lambda m: m["assets"]["x64"]["urls"].__setitem__(0, "http://updates.fastkiwi.app/example/v9.9.9/app.exe"),
-            "other file name": lambda m: m["assets"]["x64"]["urls"].__setitem__(0, "https://updates.fastkiwi.app/example/v9.9.9/evil.exe"),
+            "http url": lambda m: m["assets"]["x64"]["urls"].__setitem__(1, "http://gitlab.com/fastkiwi1/example/-/releases/v9.9.9/downloads/app.exe"),
+            "other file name": lambda m: m["assets"]["x64"]["urls"].__setitem__(1, "https://gitlab.com/fastkiwi1/example/-/releases/v9.9.9/downloads/evil.exe"),
+            "duplicate url": lambda m: m["assets"]["x64"]["urls"].__setitem__(1, m["assets"]["x64"]["urls"][0]),
             "no urls": lambda m: m["assets"]["x64"].__setitem__("urls", []),
             "bad sha256": lambda m: m["assets"]["x64"].__setitem__("sha256", "AB" * 32),
             "bad sha512": lambda m: m["assets"]["x64"].__setitem__("sha512", "abc"),
@@ -144,7 +150,7 @@ class ValidateTest(Base):
             "pre-release": lambda m: (m.__setitem__("version", "9.9.9-rc.1"), m.__setitem__("tag", "v9.9.9-rc.1")),
             "unknown arch": lambda m: m["assets"].__setitem__("mips", m["assets"]["x64"]),
             "schema": lambda m: m.__setitem__("schema", 2),
-            "user in url": lambda m: m["assets"]["x64"]["urls"].__setitem__(0, "https://u@updates.fastkiwi.app/example/v9.9.9/app.exe"),
+            "user in url": lambda m: m["assets"]["x64"]["urls"].__setitem__(0, "https://u@github.com/%s/releases/download/v9.9.9/app.exe" % REPO),
             "no assets": lambda m: m.__setitem__("assets", {}),
         }
         for what, change in cases.items():
@@ -156,7 +162,7 @@ class ValidateTest(Base):
             with self.assertRaises(mum.ManifestError):
                 mum.parse(bad)
         # Plain http to the loopback is for tests only.
-        m = self.build(mirror="http://127.0.0.1:9")
+        m = self.build(github="http://127.0.0.1:9")
         self.assertNotEqual(mum.validate(m), [])
         self.assertEqual(mum.validate(m, allow_local_http=True), [])
         self.assertFalse(mum.check_url("http://127.0.0.1.evil.example/x", True))
@@ -225,31 +231,71 @@ class SignTest(Base):
         self.assertIn("trusted comment", out)
 
 
+class StageTest(Base):
+    def test_stage_writes_the_site_layout(self):
+        manifest = os.path.join(self.dir, "latest.json")
+        with open(manifest, "wb") as f:
+            f.write(mum.dumps(self.build()))
+        out = os.path.join(self.dir, "site-updates")
+        # Unsigned: only latest.json, and an old signature is removed.
+        os.makedirs(os.path.join(out, "updates", "example"))
+        with open(os.path.join(out, "updates", "example", "latest.json.minisig"), "w") as f:
+            f.write("old")
+        code, log = run("stage", manifest, "--out", out)
+        self.assertEqual(code, 0, log)
+        self.assertIn("NOT signed", log)
+        dest = os.path.join(out, "updates", "example")
+        self.assertEqual(sorted(os.listdir(dest)), ["latest.json"])
+        with open(os.path.join(dest, "latest.json"), "rb") as f, open(manifest, "rb") as g:
+            self.assertEqual(f.read(), g.read())
+        # Signed: the signature rides along.
+        with open(manifest + ".minisig", "w") as f:
+            f.write("sig")
+        code, log = run("stage", manifest, "--out", out)
+        self.assertEqual(code, 0, log)
+        self.assertEqual(sorted(os.listdir(dest)), ["latest.json", "latest.json.minisig"])
+        # A missing --sig file, or an invalid manifest, is an error.
+        code, log = run("stage", manifest, "--out", out, "--sig", manifest + ".nope")
+        self.assertEqual(code, 1, log)
+        with open(manifest, "wb") as f:
+            f.write(b"{}")
+        code, log = run("stage", manifest, "--out", out)
+        self.assertEqual(code, 1, log)
+
+
 class LocalServerTest(Base):
     def test_verify_downloads_every_url_from_a_local_server(self):
         root = os.path.join(self.dir, "www")
-        os.makedirs(os.path.join(root, "example", "v9.9.9"))
-        os.makedirs(os.path.join(root, "gh", REPO, "releases", "download", "v9.9.9"))
+        gl = os.path.join(root, "gl", "fastkiwi1", "example", "-", "releases", "v9.9.9", "downloads")
+        gh = os.path.join(root, "gh", REPO, "releases", "download", "v9.9.9")
+        os.makedirs(gl)
+        os.makedirs(gh)
         srv = LocalServer(root)
         self.addCleanup(srv.close)
         m = mum.build("example", "9.9.9", REPO, {a: p for a, (p, _) in self.files.items()}, released=RELEASED,
-                      mirror=srv.base, github=srv.base + "/gh")
-        with open(os.path.join(root, "example", "latest.json"), "wb") as f:
+                      github=srv.base + "/gh", gitlab=srv.base + "/gl")
+        # The site layout, as `stage` writes it.
+        manifest = os.path.join(self.dir, "latest.json")
+        with open(manifest, "wb") as f:
             f.write(mum.dumps(m))
+        with self.assertRaises(mum.ManifestError):
+            mum.stage(manifest, root)  # plain http URLs: not a real manifest
+        os.makedirs(os.path.join(root, "updates", "example"))
+        shutil.copy(manifest, os.path.join(root, "updates", "example", "latest.json"))
         for arch, (path, _) in self.files.items():
-            shutil.copy(path, os.path.join(root, "example", "v9.9.9"))
-            shutil.copy(path, os.path.join(root, "gh", REPO, "releases", "download", "v9.9.9"))
-        url = srv.base + "/example/latest.json"
+            shutil.copy(path, gl)
+            shutil.copy(path, gh)
+        url = srv.base + "/updates/example/latest.json"
         code, out = run("verify", url, "--download", "--allow-local-http", "--app", "example")
         self.assertEqual(code, 0, out)
         self.assertEqual(out.count(" ok"), 4, out)
         # Without the test switch, plain http is refused.
         code, out = run("verify", url)
         self.assertEqual(code, 1, out)
-        # A mirror copy that was changed, and one that is missing, are both reported.
-        with open(os.path.join(root, "example", "v9.9.9", "app.exe"), "wb") as f:
+        # A fallback copy that was changed, and one that is missing, are both reported.
+        with open(os.path.join(gl, "app.exe"), "wb") as f:
             f.write(b"MZ evil x64 v9.9.9")
-        os.remove(os.path.join(root, "gh", REPO, "releases", "download", "v9.9.9", "app-arm64.exe"))
+        os.remove(os.path.join(gh, "app-arm64.exe"))
         code, out = run("verify", url, "--download", "--allow-local-http")
         self.assertEqual(code, 1, out)
         self.assertIn("does not match", out)

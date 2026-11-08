@@ -44,7 +44,7 @@ true (see "Keeping this document current").
 | Moving the data folder from `Waqt` to `Remember Me`; the Microsoft Store version's data folder | `src/platform/data-folder.js` |
 | Start with Windows entry, and the Store package's startup task | `src/platform/login-item.js` |
 | Update checks, download and install policy | `src/platform/updates.js` |
-| Which update feed to read: the Cloudflare mirror or GitHub, with its checks | `src/platform/update-feed.js` |
+| The fallback update feed when GitHub fails: the signed manifest on fastkiwi.app and the GitLab copy it names, with its checks | `src/platform/update-feed.js` |
 | About card: link allowlist and diagnostic info | `src/platform/about.js` |
 | Pre-filled GitHub issue for a problem report, with redacted log lines | `src/platform/problem-report.js` |
 | Palette colors for window backgrounds, read from `ui/styles/theme.css` | `src/platform/themes.js` |

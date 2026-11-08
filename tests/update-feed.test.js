@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
 const feed = require('../src/platform/update-feed');
-const { chooseFeed, fetcher, verifyMinisign, blake2b512, parseLatestYml, matchesExpected, isNewer, expectedComment, TRUSTED_PUBLIC_KEYS, MIRROR_URL } = feed;
+const { chooseFallback, fetcher, verifyMinisign, blake2b512, parseLatestYml, parseManifest, matchesExpected, isNewer, expectedComment, TRUSTED_PUBLIC_KEYS, MANIFEST_URL, GITLAB_RELEASES } = feed;
 
 // TEST-ONLY fixtures: a fake v9.9.9 release (tests/fixtures/update-manifest/regen.sh).
 const dir = path.join(__dirname, 'fixtures', 'update-manifest');
@@ -15,8 +15,10 @@ const sig = name => fixture(`manifest.json${name}.minisig`).toString('utf8');
 const keyLine = name => fixture(`${name}.pub`).toString('utf8').split(/\r?\n/)[1].trim();
 const KEYS = [keyLine('test-primary'), keyLine('test-backup')];
 const EXPECT = parseLatestYml(LATEST_YML);
+// The GitLab copy of v9.9.9 that the fixture manifest names (the fallback feed).
+const GITLAB_FEED = { provider: 'generic', url: 'https://gitlab.com/fastkiwi1/Remember-Me/-/releases/v9.9.9/downloads/' };
 
-// A local stand-in for the mirror and GitHub: path -> body, or a number for an HTTP error status.
+// A local stand-in for fastkiwi.app and GitHub: path -> body, or a number for an HTTP error status.
 async function server(routes) {
   const srv = http.createServer((req, res) => {
     const body = routes[req.url];
@@ -60,7 +62,8 @@ test('the manifest signature: right key and comment only, never legacy or altere
 test('the production key list holds no test key, and every entry is a minisign key', () => {
   for (const name of ['test-primary', 'test-backup', 'test-other']) assert.ok(!TRUSTED_PUBLIC_KEYS.includes(keyLine(name)), name);
   for (const key of TRUSTED_PUBLIC_KEYS) assert.match(key, /^RW[A-Za-z0-9+/]{54}$/);
-  assert.equal(MIRROR_URL, 'https://updates.fastkiwi.app/remember-me/');
+  assert.equal(MANIFEST_URL, 'https://fastkiwi.app/updates/remember-me/latest.json');
+  assert.equal(GITLAB_RELEASES, 'https://gitlab.com/fastkiwi1/Remember-Me/-/releases/');
 });
 
 test('latest.yml, versions and what electron-updater read', () => {
@@ -72,67 +75,95 @@ test('latest.yml, versions and what electron-updater read', () => {
   for (const bad of [{ ...info, version: '9.9.10' }, { ...info, files: [] }, { version: '9.9.9' }, { ...info, files: [{ ...info.files[0], sha512: 'x' }] }, { ...info, files: [...info.files, { url: 'evil.exe', sha512: EXPECT.sha512 }] }]) assert.ok(!matchesExpected(bad, EXPECT));
 });
 
-test('with keys, a signed mirror is used even while GitHub is down', async () => {
-  const s = await server({ '/m/latest.yml': LATEST_YML, '/m/latest.json': MANIFEST, '/m/latest.json.minisig': sig(''), '/b/latest.yml': LATEST_YML, '/b/latest.json': MANIFEST, '/b/latest.json.minisig': sig('.backup'), '/gh/latest.yml': 404 });
+test('latest.json: this app, a release version, an installer, and only its own GitLab copy as the feed', () => {
+  assert.deepEqual(parseManifest(MANIFEST), { ...EXPECT, feed: GITLAB_FEED.url });
+  const m = JSON.parse(MANIFEST);
+  const edit = change => { const c = JSON.parse(JSON.stringify(m)); change(c); return Buffer.from(JSON.stringify(c)); };
+  for (const [what, bad] of [
+    ['other app', edit(c => { c.app = 'instafind'; })],
+    ['schema', edit(c => { c.schema = 2; })],
+    ['pre-release', edit(c => { c.version = '9.9.9-rc.1'; c.tag = 'v9.9.9-rc.1'; })],
+    ['tag', edit(c => { c.tag = 'v9.9.8'; })],
+    ['no installer', edit(c => { delete c.assets.x64; })],
+    ['bad name', edit(c => { c.assets.x64.name = '../evil.exe'; })],
+    ['bad sha512', edit(c => { c.assets.x64.sha512 = 'short'; })],
+    ['not json', Buffer.from('<html>')],
+    ['too big', Buffer.alloc(70 * 1024, 32)],
+  ]) assert.throws(() => parseManifest(bad), undefined, what);
+  // Only exactly <GITLAB_RELEASES>v<version>/downloads/<installer> gives a feed.
+  const gl = m.assets.x64.urls[1];
+  for (const other of [
+    'https://gitlab.com/evil/Remember-Me/-/releases/v9.9.9/downloads/Remember-Me-Setup-9.9.9-x64.exe',
+    'https://gitlab.com/fastkiwi1/Remember-Me/-/releases/v9.9.8/downloads/Remember-Me-Setup-9.9.9-x64.exe',
+    'https://gitlab.com/fastkiwi1/Remember-Me/-/releases/v9.9.9/downloads/other.exe',
+    'http://gitlab.com/fastkiwi1/Remember-Me/-/releases/v9.9.9/downloads/Remember-Me-Setup-9.9.9-x64.exe',
+    'https://updates.fastkiwi.app/remember-me/Remember-Me-Setup-9.9.9-x64.exe',
+  ]) assert.equal(parseManifest(edit(c => { c.assets.x64.urls = [c.assets.x64.urls[0], other]; })).feed, null, other);
+  assert.equal(parseManifest(edit(c => { c.assets.x64.urls = [c.assets.x64.urls[0]]; })).feed, null, 'GitHub only');
+  assert.equal(parseManifest(edit(c => { c.assets.x64.urls = [gl]; })).feed, GITLAB_FEED.url);
+});
+
+test('with keys, the signed manifest names the GitLab copy even while GitHub is down', async () => {
+  const s = await server({ '/m/latest.json': MANIFEST, '/m/latest.json.minisig': sig(''), '/b/latest.json': MANIFEST, '/b/latest.json.minisig': sig('.backup'), '/gh/latest.yml': 404 });
   try {
     for (const m of ['/m/', '/b/']) {
-      const choice = await chooseFeed({ fetch, current: '9.9.8', keys: KEYS, mirror: `${s.base}${m}`, githubYml: `${s.base}/gh/latest.yml` });
-      assert.deepEqual(choice, { feed: { provider: 'generic', url: `${s.base}${m}` }, expect: EXPECT }, m);
+      const choice = await chooseFallback({ fetch, current: '9.9.8', keys: KEYS, manifest: `${s.base}${m}latest.json`, githubYml: `${s.base}/gh/latest.yml` });
+      assert.deepEqual(choice, { feed: GITLAB_FEED, expect: EXPECT }, m);
     }
   } finally { await s.close(); }
 });
 
-test('with keys, an unsigned, foreign, replayed or mismatched mirror is not used', async () => {
-  const yml910 = otherYml('9.9.10');
+test('with keys, an unsigned, foreign, replayed, invalid or GitLab-less manifest is not used', async () => {
+  const noGitLab = JSON.parse(MANIFEST);
+  noGitLab.assets.x64.urls = noGitLab.assets.x64.urls.slice(0, 1);
   const s = await server({
-    '/nosig/latest.yml': LATEST_YML, '/nosig/latest.json': MANIFEST,
-    '/other/latest.yml': LATEST_YML, '/other/latest.json': MANIFEST, '/other/latest.json.minisig': sig('.other-key'),
-    '/replay/latest.yml': LATEST_YML, '/replay/latest.json': MANIFEST, '/replay/latest.json.minisig': sig('.wrong-version'),
-    '/newer-yml/latest.yml': yml910, '/newer-yml/latest.json': MANIFEST, '/newer-yml/latest.json.minisig': sig(''),
-    '/sha/latest.yml': otherYml('9.9.9', 'A'.repeat(86) + '=='), '/sha/latest.json': MANIFEST, '/sha/latest.json.minisig': sig(''),
-    '/down/latest.yml': 503, '/html/latest.yml': '<html>',
+    '/nosig/latest.json': MANIFEST,
+    '/other/latest.json': MANIFEST, '/other/latest.json.minisig': sig('.other-key'),
+    '/replay/latest.json': MANIFEST, '/replay/latest.json.minisig': sig('.wrong-version'),
+    '/app/latest.json': MANIFEST, '/app/latest.json.minisig': sig('.wrong-app'),
+    '/legacy/latest.json': MANIFEST, '/legacy/latest.json.minisig': sig('.legacy'),
+    '/changed/latest.json': MANIFEST.toString('utf8').replace('"notes": ""', '"notes": "x"'), '/changed/latest.json.minisig': sig(''),
+    '/nogitlab/latest.json': JSON.stringify(noGitLab), '/nogitlab/latest.json.minisig': sig(''),
+    '/down/latest.json': 503, '/html/latest.json': '<html>',
   });
   try {
-    for (const m of ['/nosig/', '/other/', '/replay/', '/newer-yml/', '/sha/', '/down/', '/html/', '/missing/']) {
+    for (const m of ['/nosig/', '/other/', '/replay/', '/app/', '/legacy/', '/changed/', '/nogitlab/', '/down/', '/html/', '/missing/']) {
       const reasons = [];
-      const choice = await chooseFeed({ fetch, current: '9.9.8', keys: KEYS, mirror: `${s.base}${m}`, githubYml: `${s.base}/gh`, log: r => reasons.push(r) });
+      const choice = await chooseFallback({ fetch, current: '9.9.8', keys: KEYS, manifest: `${s.base}${m}latest.json`, githubYml: `${s.base}/gh`, log: r => reasons.push(r) });
       assert.equal(choice, null, m);
       assert.equal(reasons.length, 1, m);
       assert.ok(!reasons[0].includes('http'), 'reasons hold no URLs');
     }
     // Nothing listening at all.
-    assert.equal(await chooseFeed({ fetch, current: '9.9.8', keys: KEYS, mirror: 'http://127.0.0.1:1/', githubYml: 'http://127.0.0.1:1/x' }), null);
+    assert.equal(await chooseFallback({ fetch, current: '9.9.8', keys: KEYS, manifest: 'http://127.0.0.1:1/latest.json', githubYml: 'http://127.0.0.1:1/x' }), null);
   } finally { await s.close(); }
 });
 
-test('without keys (today) the mirror is used only when GitHub names the same installer', async () => {
+test('without keys (today) the manifest is used only when GitHub names the same installer', async () => {
   const s = await server({
-    '/m/latest.yml': LATEST_YML,
+    '/m/latest.json': MANIFEST,
     '/gh-same/latest.yml': LATEST_YML,
     '/gh-sha/latest.yml': otherYml('9.9.9', 'B'.repeat(86) + '=='),
     '/gh-newer/latest.yml': otherYml('9.9.10'),
     '/gh-down/latest.yml': 403,
   });
-  const mirror = `${s.base}/m/`;
-  const run = (gh, current = '9.9.8') => chooseFeed({ fetch, current, keys: [], mirror, githubYml: `${s.base}${gh}/latest.yml` });
+  const run = (gh, current = '9.9.8') => chooseFallback({ fetch, current, keys: [], manifest: `${s.base}/m/latest.json`, githubYml: `${s.base}${gh}/latest.yml` });
   try {
-    assert.deepEqual(await run('/gh-same'), { feed: { provider: 'generic', url: mirror }, expect: EXPECT });
+    assert.deepEqual(await run('/gh-same'), { feed: GITLAB_FEED, expect: EXPECT });
+    // GitHub fully down: nothing confirms the manifest (fail closed).
     for (const gh of ['/gh-sha', '/gh-newer', '/gh-down']) assert.equal(await run(gh), null, gh);
-    // Up to date on a confirmed mirror: the mirror (electron-updater then says "latest").
-    assert.ok(await run('/gh-same', '9.9.9'));
   } finally { await s.close(); }
 });
 
-test('a mirror that is not newer defers to a newer GitHub release (a stale mirror)', async () => {
-  const s = await server({ '/m/latest.yml': LATEST_YML, '/m/latest.json': MANIFEST, '/m/latest.json.minisig': sig(''), '/gh-newer/latest.yml': otherYml('9.9.10'), '/gh-same/latest.yml': LATEST_YML });
-  const run = (gh, current) => chooseFeed({ fetch, current, keys: KEYS, mirror: `${s.base}/m/`, githubYml: `${s.base}${gh}` });
+test('only a strictly newer release is ever offered (never a downgrade)', async () => {
+  const s = await server({ '/m/latest.json': MANIFEST, '/m/latest.json.minisig': sig(''), '/gh/latest.yml': LATEST_YML });
+  const run = current => {
+    const reasons = [];
+    return chooseFallback({ fetch, current, keys: KEYS, manifest: `${s.base}/m/latest.json`, githubYml: `${s.base}/gh/latest.yml`, log: r => reasons.push(r) }).then(choice => ({ choice, reasons }));
+  };
   try {
-    assert.equal(await run('/gh-newer/latest.yml', '9.9.9'), null);
-    assert.ok(await run('/gh-same/latest.yml', '9.9.9'));
-    assert.ok(await run('/gh-down', '9.9.9'), 'GitHub down: the signed mirror says up to date');
-    // A newer running version is never offered the mirror's older one: electron-updater has
-    // allowDowngrade off, and chooseFeed does not look for anything older either.
-    assert.ok(await run('/gh-down', '10.0.0'));
+    assert.ok((await run('9.9.8')).choice);
+    for (const current of ['9.9.9', '10.0.0']) assert.deepEqual(await run(current), { choice: null, reasons: ['manifest-not-newer'] }, current);
   } finally { await s.close(); }
 });
 
