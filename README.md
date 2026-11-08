@@ -13,7 +13,7 @@
 
 <p align="center"><strong>A task, note and reminder app for Windows whose alerts stay on screen until you deal with them.</strong></p>
 
-<p align="center"><a href="https://sarmadiq9090-coder.github.io/Remember-Me/"><strong>Website</strong></a> · <a href="https://sarmadiq9090-coder.github.io/Remember-Me/ar/">الموقع بالعربية</a> · <a href="https://github.com/sarmadiq9090-coder/Remember-Me/releases/latest">Download for Windows</a></p>
+<p align="center"><a href="https://sarmadiq9090-coder.github.io/Remember-Me/"><strong>Website</strong></a> · <a href="https://sarmadiq9090-coder.github.io/Remember-Me/ar/">الموقع بالعربية</a> · <a href="https://apps.microsoft.com/detail/9NGB1F7T7JGN">Microsoft Store</a> · <a href="https://github.com/sarmadiq9090-coder/Remember-Me/releases/latest">Download the installer</a></p>
 
 Remember Me is an open-source desktop app for 64-bit Windows. It runs without an account or a permanent internet connection, keeps your data on your own device, and shows each reminder in a sticky window above the taskbar until you mark it done or snooze it. Missed reminders don't get lost in the notification center.
 
@@ -57,6 +57,13 @@ Remember Me is an open-source desktop app for 64-bit Windows. It runs without an
 - **Optional automatic updates:** with your permission, new versions are downloaded from GitHub Releases and installed when you restart.
 - **Report a problem:** from Settings > About, the flag button in the top bar or the tray menu, and offered after a crash. It opens a pre-filled GitHub issue in your browser with the app and Windows versions and a cleaned-up log, never your tasks, notes, file names or paths. Nothing is sent until you submit it yourself.
 - **About and support:** the version, links to the source code and release notes, a local log, and diagnostic info to copy into a report.
+
+## Download
+
+1. **Microsoft Store (recommended):** [Get Remember Me from Microsoft Store](https://apps.microsoft.com/detail/9NGB1F7T7JGN) (Store ID `9NGB1F7T7JGN`). Windows installs it and keeps it up to date.
+2. **Installer:** `Remember-Me-Setup-<version>-x64.exe` from the [latest release](https://github.com/sarmadiq9090-coder/Remember-Me/releases/latest), for Windows 10 or 11 (64-bit). See [Install](#install) below.
+
+<a href="https://apps.microsoft.com/detail/9NGB1F7T7JGN"><img src="site/images/ms-store-badge-en.svg" width="161" height="44" alt="Get it from Microsoft Store"></a>
 
 ## Install
 
