@@ -12,7 +12,7 @@ const vendored = JSON.parse(fs.readFileSync(path.join(root, 'assets/apps.json'),
 test('the vendored apps.json is schema 1, names its source commit, and lists the other apps without Remember Me', () => {
   assert.equal(vendored.schema, 1);
   assert.ok(vendored.apps.some(app => app.id === SELF), 'The site list includes Remember Me itself');
-  assert.match(fs.readFileSync(path.join(root, 'assets/apps.source.txt'), 'utf8'), /^sarmadiq9090-coder\.github\.io [0-9a-f]{40} data\/apps\.json\n$/);
+  assert.match(fs.readFileSync(path.join(root, 'assets/apps.source.txt'), 'utf8'), /^sarmadiq9090-coder\.github\.io [0-9a-f]{40} data\/apps\.json\r?\n$/);
   assert.ok(APPS.length >= 1);
   assert.ok(APPS.every(app => app.id !== SELF), 'Self is left out');
   assert.deepEqual(APPS.map(app => app.id), vendored.apps.filter(app => app.id !== SELF).map(app => app.id), 'Every other app, in the file\'s order');
