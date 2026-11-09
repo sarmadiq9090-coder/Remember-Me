@@ -45,6 +45,7 @@ true (see "Keeping this document current").
 | Start with Windows entry, and the Store package's startup task | `src/platform/login-item.js` |
 | Update checks, download and install policy | `src/platform/updates.js` |
 | About card: link allowlist and diagnostic info | `src/platform/about.js` |
+| More from FastKiwi: the other apps from the embedded `assets/apps.json` (refreshed by `tools/sync-apps.cjs`), their link IDs and address checks | `src/platform/more-apps.js` |
 | Pre-filled GitHub issue for a problem report, with redacted log lines | `src/platform/problem-report.js` |
 | Palette colors for window backgrounds, read from `ui/styles/theme.css` | `src/platform/themes.js` |
 | The three pages (main window, sticky alert, quick add) | `ui/index.html`, `ui/alert.html`, `ui/quickadd.html` |
@@ -123,7 +124,7 @@ registry throws if an allowed action has no handler, has two, or a handler is no
 | Attachments | `attachFiles`, `openAttachment`, `imagePreview`, `cleanOrphans` |
 | Backups | `export`, `restore`, `chooseDriveFolder`, `driveBackupNow`, `driveAutomatic`, `driveKeep`, `driveHelp`, `openDriveFolder` |
 | Updates | `updateConsent`, `checkUpdates`, `installUpdate`, `dismissUpdate` |
-| About | `openLink`, `copyDiagnostics`, `reportProblem`, `openLogs` |
+| About | `openLink`, `otherApps` (read only), `copyDiagnostics`, `reportProblem`, `openLogs` |
 | App | `settings`, `relaunch`, `preview`, `dataFolder`, `open`, `openStartupSettings`, `ratingPrompt` (both Microsoft Store version only) |
 
 The alert window may only use `alerts`, `language`, `locale`, `complete`, `skip`, `undoComplete`,
@@ -376,8 +377,19 @@ Updates card), "Copy diagnostic info" and "Open log folder".
   Arabic interface, `/ar/support/`) and main passes only that to `shell.openExternal`, which opens
   https only, plus the one address `mailto:support@fastkiwi.app`. An unknown ID is rejected in
   `checkRequest`. `moreApps` (More from FastKiwi) opens the publisher page in the Microsoft Store through
-  `ctx.openStoreLink`, which accepts only `ms-windows-store://publisher|review/?…` addresses; the card cannot
-  send the review page, which only the rating request opens.
+  `ctx.openStoreLink`, which accepts only `ms-windows-store://publisher|review/?…` and
+  `ms-windows-store://pdp/?productid=<12-character ID>` addresses; the card cannot send the review page,
+  which only the rating request opens.
+- More from FastKiwi: a section of the card lists the other FastKiwi apps from `assets/apps.json`, a copy
+  of the website's `data/apps.json` (`tools/sync-apps.cjs` refreshes it; `assets/apps.source.txt` names
+  the site commit). It is embedded: the app never fetches the list or icons. `src/platform/more-apps.js`
+  leaves out Remember Me, keeps only `https://fastkiwi.app/` pages, and gives a Store page
+  (`ms-windows-store://pdp/?productid=…`) only to a released app whose `store.live` is true; a
+  coming-soon app gets its page and a «قريباً» / "Coming soon" label, never a Store or download action.
+  The page reads the list once with `otherApps` (names and texts in Arabic and English: the Arabic
+  interface shows Arabic, every other language English) and sends `openLink` with `app:<id>` or
+  `store:<id>`; main opens the Arabic page in the Arabic interface and the English page otherwise.
+  The section ends with the publisher page (`moreApps`).
 - `copyDiagnostics` builds the text in main and writes it with Electron's `clipboard` (the pages
   have no clipboard permission): the app, Electron, Chromium and Node versions, the Windows version
   and architecture, the UI language and the theme. Never tasks, notes, file names or paths.

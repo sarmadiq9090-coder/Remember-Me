@@ -131,6 +131,10 @@ html:not([data-ready]) body{visibility:hidden}
 .about-update-status{font-size:calc(12px*var(--text-scale));line-height:2;color:var(--muted);margin:0}
 .about-footnote{font-size:calc(12px*var(--text-scale));color:var(--muted);margin-top:14px}
 .about-card .soft-button{white-space:nowrap;flex-shrink:0}
+.more-apps h3{font-size:calc(13px*var(--text-scale));font-weight:600;margin:14px 0 10px}
+.more-app{display:flex;flex-direction:column;gap:2px;min-width:0}
+.more-app-soon{font-size:calc(12px*var(--text-scale));font-weight:500;color:var(--warning-ink);background:var(--warning-soft);border-radius:5px;padding:1px 6px;margin-inline-start:4px}
+.more-app-store{align-self:flex-start;padding:4px 14px;color:var(--accent-ink)}.more-app-store svg{width:14px;height:14px}
 
 /* Settings → Appearance: mode switch and palette preview cards. The radio inputs stay in the page for the keyboard and screen readers. */
 :is(.segmented,.palette-card,.swatch,.style-tile) input{position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
