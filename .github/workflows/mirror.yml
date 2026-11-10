@@ -1,0 +1,57 @@
+# Passive daily mirror to GitLab (core/HOSTING.md rollout 2, D-041/D-044).
+# Pushes main, tags and claude/* to git@gitlab.com:fastkiwi1/<REPO>.git with --no-force and no prune.
+# Skips cleanly when the GITLAB_DEPLOY_KEY secret is not set, so the workflow can be merged before the key exists.
+name: Mirror to GitLab
+
+on:
+  schedule:
+    - cron: '17 4 * * *' # daily 04:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check the deploy key is configured
+        id: key
+        env:
+          KEY: ${{ secrets.GITLAB_DEPLOY_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then echo "GITLAB_DEPLOY_KEY is not set; nothing to do."; echo "ready=false" >> "$GITHUB_OUTPUT"; else echo "ready=true" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        if: steps.key.outputs.ready == 'true'
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Push to GitLab (no force, no prune)
+        if: steps.key.outputs.ready == 'true'
+        env:
+          KEY: ${{ secrets.GITLAB_DEPLOY_KEY }}
+          TARGET: git@gitlab.com:fastkiwi1/remember-me.git
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/mirror_key && chmod 600 ~/.ssh/mirror_key
+          # GitLab.com host keys (https://docs.gitlab.com/user/gitlab_com/#ssh-host-keys-fingerprints)
+          cat > ~/.ssh/known_hosts <<'HOSTS'
+          gitlab.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAfuCHKVTjquxvt6CM6tdG4SLp1Btn/nOeHHE5UOzRdf
+          gitlab.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBFSMqzJeV9rUzU4kWitGjeR4PWSa29SPqJ1fVkhtj3Hw9xjLVXVYrU9QlYWrOLXBpQ6KWjbjTDTdDkoohFzgbEY=
+          HOSTS
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/mirror_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/known_hosts"
+          git remote add gitlab "$TARGET"
+          refs="refs/heads/main:refs/heads/main refs/tags/*:refs/tags/*"
+          for b in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin/claude/ | sed 's#^origin/##'); do
+            refs="$refs refs/remotes/origin/$b:refs/heads/$b"
+          done
+          # --no-force: a diverged GitLab branch fails loudly instead of being overwritten.
+          git push --no-force gitlab $refs
