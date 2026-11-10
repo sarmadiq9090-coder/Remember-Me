@@ -50,7 +50,12 @@ jobs:
             { cat ~/.ssh/mirror_key.raw; echo; } | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' > ~/.ssh/mirror_key; echo >> ~/.ssh/mirror_key
           fi
           rm -f ~/.ssh/mirror_key.raw; chmod 600 ~/.ssh/mirror_key
-          ssh-keygen -y -f ~/.ssh/mirror_key > /dev/null
+          # A secret pasted as ONE base64 line (no dashes) is also accepted: decode it.
+          if ! grep -q 'BEGIN OPENSSH PRIVATE KEY' ~/.ssh/mirror_key; then
+            tr -d ' \n\t' < ~/.ssh/mirror_key | base64 -d > ~/.ssh/mirror_key.dec 2>/dev/null && mv ~/.ssh/mirror_key.dec ~/.ssh/mirror_key && chmod 600 ~/.ssh/mirror_key
+          fi
+          echo "key bytes: $(wc -c < ~/.ssh/mirror_key); sha256: $(sha256sum < ~/.ssh/mirror_key | cut -c1-16)"
+          ssh-keygen -y -f ~/.ssh/mirror_key > /dev/null || { echo "::error::GITLAB_DEPLOY_KEY is not a valid private key (paste damaged). Re-add the secret."; exit 1; }
           # GitLab.com host keys (https://docs.gitlab.com/user/gitlab_com/#ssh-host-keys-fingerprints)
           cat > ~/.ssh/known_hosts <<'HOSTS'
           gitlab.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAfuCHKVTjquxvt6CM6tdG4SLp1Btn/nOeHHE5UOzRdf
