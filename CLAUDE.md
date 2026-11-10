@@ -14,27 +14,29 @@ through Claude sessions, with no fixed computer.
   same files.
 - The owner has no fixed computer: never ask them to keep files, keys or tools on a PC. Use GitHub
   (Environments/secrets, Codespaces) or their password manager.
-- **Weekly release train.**
-  - All improvements, additions and changes to a published app ship to users ONCE a week, together.
-    This covers new versions and tags, website (fastkiwi.app) updates, and package-manager
-    (winget/Scoop/Chocolatey) manifest updates.
-  - Release day is Friday 09:00 (Asia/Baghdad). The weekly health check in the owner's manager
-    session runs just before it and prepares the train; the owner approves it.
-  - A release goes out only after CI is green on Linux and Windows.
-  - During the week, work goes to `claude/*` branches or PRs, or is merged to the default branch
-    WITHOUT bumping the version or pushing a tag.
-  - arabic-file-search's build.yml publishes a release automatically when the Cargo.toml version
-    changes on main, so bump the version only on release day.
-  - github.io deploys on every push to main, so merge site PRs only on release day.
-  - Exceptions: mawared-desktop, and new apps that have never been published. These may release
-    whenever needed.
-  - A critical security fix may go out early, only with the owner's explicit approval.
+- **Daily release train (D-035, D-047).** Each app ships once a week on its day at 09:00 Asia/Baghdad:
+  Sat InstaFind, Sun Remember Me, Mon Lemon, Tue InstaWords, Wed InstaConvert (only when complete),
+  Thu QA, Fri rest. ALL of an app's finished, green features merge together on its day (D-032/D-034);
+  nothing is merged on other days. An app not ready on its day rolls to the same day next week; its
+  Store update ships the same day as the release. The site (fastkiwi.app) is exempt: it publishes
+  when green (D-046). A critical security fix may go early with the owner's explicit approval.
+- **One GitHub writer (D-040, core/GITHUB-SAFETY.md in the brain).** Only the manager session pushes,
+  opens PRs, comments, merges or dispatches workflows; other sessions work locally and report to the
+  manager. Serial writes >=2 s apart, <=15 per hour, <=150 per day, <=3 new PRs per repo per day, <=2
+  workflow_dispatch per repo per day, 1 rerun max. On any 403/429/abuse/CAPTCHA signal: stop all
+  writes and tell the owner.
+- **Closed source (D-051, 2026-11-09).** FastKiwi apps are proprietary (free to use; pricing
+  undecided). Don't add "open source"/MIT wording; keep third-party notices. Code published before
+  2026-11-09 stays under its MIT licence.
+- **Mirror.** `.github/workflows/mirror.yml` pushes main, tags and claude/* daily to GitLab
+  (`fastkiwi1/remember-me`), no force, no prune; it skips until the owner adds the `GITLAB_DEPLOY_KEY` secret.
 - Things only the owner can do: repo settings, deleting branches or repos, money decisions, secrets,
   merging. Ask, and give exact click-by-click steps in Arabic.
 - Don't enable features that write to third-party systems, or anything security-sensitive, without
   the owner's explicit approval.
 - Commit only your own files (`git add <paths>`).
-- Commit trailer: `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- Commit trailer: `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`
+  and `Claude-Session: https://claude.ai/code/session_01H59LCK6b45r38j6yGz7oef`.
 
 ## What this is
 
@@ -70,7 +72,7 @@ There is no Linux job: "green" here means the Windows workflows.
   `tests/desktop-smoke.cjs`; screenshots as an artifact.
 - `release.yml` (`v*` tag, or manual = build only): see below.
 - `pages.yml`: deploys `site/` to GitHub Pages (sarmadiq9090-coder.github.io/Remember-Me/) on push
-  to main touching `site/**`. Merge `site/` changes only on release day.
+  to main touching `site/**`. Merge `site/` changes only on the app's train day.
 
 ## Release (tag push)
 
