@@ -41,26 +41,19 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          # Normalise the pasted key: strip CR, and rebuild line breaks if a phone paste flattened it.
+          # Normalise the pasted key: strip CR; accept ONE base64 line (no dashes); rebuild line breaks if a phone paste flattened a PEM.
           printf '%s' "$KEY" | tr -d '\r' > ~/.ssh/mirror_key.raw
-          if [ "$(grep -c . ~/.ssh/mirror_key.raw)" -lt 3 ]; then
+          if ! grep -q 'BEGIN OPENSSH PRIVATE KEY' ~/.ssh/mirror_key.raw; then
+            tr -d ' \n\t' < ~/.ssh/mirror_key.raw | base64 -d > ~/.ssh/mirror_key
+          elif [ "$(grep -c . ~/.ssh/mirror_key.raw)" -lt 3 ]; then
             body=$(sed -e 's/-----BEGIN OPENSSH PRIVATE KEY-----//' -e 's/-----END OPENSSH PRIVATE KEY-----//' ~/.ssh/mirror_key.raw | tr -d ' \n\t')
             { echo '-----BEGIN OPENSSH PRIVATE KEY-----'; echo "$body" | fold -w 70; echo '-----END OPENSSH PRIVATE KEY-----'; } > ~/.ssh/mirror_key
           else
             { cat ~/.ssh/mirror_key.raw; echo; } | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' > ~/.ssh/mirror_key; echo >> ~/.ssh/mirror_key
           fi
           rm -f ~/.ssh/mirror_key.raw; chmod 600 ~/.ssh/mirror_key
-          # A secret pasted as ONE base64 line (no dashes) is also accepted: decode it.
-          if ! grep -q 'BEGIN OPENSSH PRIVATE KEY' ~/.ssh/mirror_key; then
-            tr -d ' \n\t' < ~/.ssh/mirror_key | base64 -d > ~/.ssh/mirror_key.dec 2>/dev/null && mv ~/.ssh/mirror_key.dec ~/.ssh/mirror_key && chmod 600 ~/.ssh/mirror_key
-          fi
           echo "key bytes: $(wc -c < ~/.ssh/mirror_key); sha256: $(sha256sum < ~/.ssh/mirror_key | cut -c1-16)"
           ssh-keygen -y -f ~/.ssh/mirror_key > /dev/null || { echo "::error::GITLAB_DEPLOY_KEY is not a valid private key (paste damaged). Re-add the secret."; exit 1; }
-          # GitLab.com host keys (https://docs.gitlab.com/user/gitlab_com/#ssh-host-keys-fingerprints)
-          cat > ~/.ssh/known_hosts <<'HOSTS'
-          gitlab.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAfuCHKVTjquxvt6CM6tdG4SLp1Btn/nOeHHE5UOzRdf
-          gitlab.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBFSMqzJeV9rUzU4kWitGjeR4PWSa29SPqJ1fVkhtj3Hw9xjLVXVYrU9QlYWrOLXBpQ6KWjbjTDTdDkoohFzgbEY=
-          HOSTS
           export GIT_SSH_COMMAND="ssh -i ~/.ssh/mirror_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/known_hosts"
           git remote add gitlab "$TARGET"
           refs="refs/heads/main:refs/heads/main refs/tags/*:refs/tags/*"
