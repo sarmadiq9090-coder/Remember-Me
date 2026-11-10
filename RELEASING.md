@@ -60,7 +60,7 @@ gh attestation verify .\Remember-Me-Setup-1.5.0-x64.exe --repo sarmadiq9090-code
 Use a Windows 10 or 11 PC or VM where you can install and uninstall freely, ideally with a separate Windows user.
 
 - [ ] **Fresh install:** run the installer, choosing **More info → Run anyway** at the SmartScreen prompt (the installer isn't signed yet).
-  - After the language choice, the license page shows the privacy notice in that language, then the MIT license.
+  - After the language choice, the license page shows the privacy notice in that language, then the license.
   - The Start menu and desktop shortcuts are called **Remember Me**.
   - Apps & features shows **Remember Me** version 1.5.0.
   - The process is `Remember Me.exe`, and data is in `%APPDATA%\Remember Me`.

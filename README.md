@@ -7,7 +7,6 @@
 <p align="center">
   <a href="https://github.com/sarmadiq9090-coder/Remember-Me/actions"><img src="https://img.shields.io/github/actions/workflow/status/sarmadiq9090-coder/Remember-Me/test.yml?branch=main&label=tests" alt="Tests"></a>
   <a href="https://github.com/sarmadiq9090-coder/Remember-Me/releases/latest"><img src="https://img.shields.io/github/v/release/sarmadiq9090-coder/Remember-Me" alt="Latest release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/sarmadiq9090-coder/Remember-Me" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4" alt="Windows 10 and 11">
 </p>
 
@@ -15,7 +14,7 @@
 
 <p align="center"><a href="https://sarmadiq9090-coder.github.io/Remember-Me/"><strong>Website</strong></a> · <a href="https://sarmadiq9090-coder.github.io/Remember-Me/ar/">الموقع بالعربية</a> · <a href="https://github.com/sarmadiq9090-coder/Remember-Me/releases/latest">Download for Windows</a></p>
 
-Remember Me is an open-source desktop app for 64-bit Windows. It runs without an account or a permanent internet connection, keeps your data on your own device, and shows each reminder in a sticky window above the taskbar until you mark it done or snooze it. Missed reminders don't get lost in the notification center.
+Remember Me is a free desktop app for 64-bit Windows. It runs without an account or a permanent internet connection, keeps your data on your own device, and shows each reminder in a sticky window above the taskbar until you mark it done or snooze it. Missed reminders don't get lost in the notification center.
 
 <p align="center">
   <img src="docs/screenshots/main-en.png" width="68%" alt="Remember Me main window: today's tasks with tag filters and a checklist, and the next reminder">
@@ -114,7 +113,7 @@ v1.4.0 can't update itself: install the next version from Releases once by hand,
   - *Calendar:* the first day of the week; in Arabic also the month names.
   - *Your data:* export, restore, storage use and cleanup, the data folder, and Google Drive backups with how many automatic copies to keep.
   - *Updates:* automatic checks and **Check now**.
-- **About:** at the end of Settings, or **About Remember Me** in the tray menu. It shows the version, links to the source code, release notes, ideas and feedback, the privacy notice and the MIT license, and has **Report a problem**, **Check for updates** and **Open log folder**. **Copy diagnostic info** copies the app, Electron, Chromium and Windows versions plus the interface language and theme, to paste into a problem report. It never includes your tasks, notes, files or folder paths.
+- **About:** at the end of Settings, or **About Remember Me** in the tray menu. It shows the version, links to the source code, release notes, ideas and feedback, the privacy notice and the license, and has **Report a problem**, **Check for updates** and **Open log folder**. **Copy diagnostic info** copies the app, Electron, Chromium and Windows versions plus the interface language and theme, to paste into a problem report. It never includes your tasks, notes, files or folder paths.
 - **Shortcuts:** Ctrl+N creates a task or note, Ctrl+K focuses search. Ctrl+= and Ctrl+- make the text larger or smaller in every window, and Ctrl+0 brings it back to 100%. With Quick add from anywhere on, Ctrl+Alt+R (or your own shortcut) opens the quick-add window from any app; a time already past today means tomorrow.
 
 The bell button at the top shows a **preview alert**. Snoozing a preview only closes it, while reminders you set on tasks are real.
@@ -279,4 +278,4 @@ Ideas are welcome in [Discussions](https://github.com/sarmadiq9090-coder/Remembe
 
 ## Contributing and license
 
-Contributions are welcome through Issues and Pull Requests. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md) first. To review or improve a translation, see [TRANSLATING.md](TRANSLATING.md); for questions and ideas, use [Discussions](https://github.com/sarmadiq9090-coder/Remember-Me/discussions). Remember Me is licensed under the [MIT License](LICENSE).
+Contributions are welcome through Issues and Pull Requests. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md) first. To review or improve a translation, see [TRANSLATING.md](TRANSLATING.md); for questions and ideas, use [Discussions](https://github.com/sarmadiq9090-coder/Remember-Me/discussions). Remember Me is free to use on your own devices and is proprietary software, see [LICENSE](LICENSE). Versions up to 1.7.0 (released before 2026-11-09) remain available under the MIT license they were published with.

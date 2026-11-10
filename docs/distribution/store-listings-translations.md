@@ -28,7 +28,7 @@ Remember Me Reminders
 
 #### الوصف المختصر (Short description)
 ```
-Aufgaben, Notizen und Erinnerungen für Windows – mit Hinweisen, die auf dem Bildschirm bleiben, bis du dich darum kümmerst. Kostenlos, Open Source und offline: kein Konto, kein Tracking.
+Aufgaben, Notizen und Erinnerungen für Windows – mit Hinweisen, die auf dem Bildschirm bleiben, bis du dich darum kümmerst. Kostenlos und offline: kein Konto, kein Tracking.
 ```
 
 #### الوصف (Description)
@@ -39,7 +39,7 @@ Verschiebe mit einer einzigen Taste um 10 Minuten, eine Stunde, auf heute Abend,
 
 Deine Daten bleiben auf deinem PC. Es gibt kein Konto, keine Analyse und kein Tracking. Du kannst eine vollständige Sicherung mit Prüfsummen exportieren, sie nach erfolgreicher Prüfung wiederherstellen oder tägliche Sicherungen in einen Ordner kopieren, den Google Drive für Desktop synchronisiert. Remember Me meldet sich nie bei Google an und hat keinen Zugriff auf dein Google-Konto.
 
-Remember Me spricht 12 Sprachen, darunter eine vollständige arabische Oberfläche von rechts nach links, und bietet ein helles und ein dunkles Design mit sechs Farbpaletten. Die App ist kostenlos und Open Source unter der MIT-Lizenz.
+Remember Me spricht 12 Sprachen, darunter eine vollständige arabische Oberfläche von rechts nach links, und bietet ein helles und ein dunkles Design mit sechs Farbpaletten. Die App ist kostenlos.
 
 Erinnerungen erscheinen, solange Remember Me läuft: Wenn du das Fenster schließt, bleibt die App im Infobereich, und unter Windows-Einstellungen > Apps > Autostart kannst du den Start mit Windows einschalten.
 
@@ -100,7 +100,7 @@ Kein Konto, keine Analyse, kein Tracking. Deine Daten bleiben auf deinem PC.
 ```
 #### الميزة 14 (Feature 14)
 ```
-Kostenlos und Open Source (MIT).
+Kostenlos nutzbar.
 ```
 #### الميزة 15 (Feature 15)
 ```
@@ -147,7 +147,7 @@ Erste Veröffentlichung im Microsoft Store. Updates kommen jetzt über den Micro
 
 #### حقوق النشر (Copyright and trademark info)
 ```
-© FastKiwi. Open Source unter der MIT-Lizenz.
+© FastKiwi. Alle Rechte vorbehalten.
 ```
 
 #### تعليق اللقطة alert-en.png (Screenshot caption 1)
@@ -178,7 +178,7 @@ Remember Me Reminders
 
 #### الوصف المختصر (Short description)
 ```
-Tareas, notas y recordatorios para Windows, con avisos que se quedan en pantalla hasta que te ocupas de ellos. Gratis, de código abierto y sin conexión: sin cuenta y sin rastreo.
+Tareas, notas y recordatorios para Windows, con avisos que se quedan en pantalla hasta que te ocupas de ellos. Gratis y sin conexión: sin cuenta y sin rastreo.
 ```
 
 #### الوصف (Description)
@@ -189,7 +189,7 @@ Pospón 10 minutos, una hora, hasta esta tarde, hasta mañana por la mañana, ha
 
 Tus datos se quedan en tu PC. No hay cuenta, ni analíticas, ni rastreo. Puedes exportar una copia de seguridad completa con sumas de comprobación, restaurarla una vez verificada o copiar a diario las copias de seguridad en una carpeta que sincroniza Google Drive para ordenadores. Remember Me nunca inicia sesión en Google y no tiene acceso a tu cuenta de Google.
 
-Remember Me habla 12 idiomas, incluida una interfaz completa en árabe de derecha a izquierda, y ofrece temas claro y oscuro con seis paletas de colores. Es gratuita y de código abierto con licencia MIT.
+Remember Me habla 12 idiomas, incluida una interfaz completa en árabe de derecha a izquierda, y ofrece temas claro y oscuro con seis paletas de colores. Es gratuita.
 
 Los recordatorios aparecen mientras Remember Me está en ejecución: al cerrar la ventana, la aplicación sigue en el área de notificación, y puedes activar el inicio con Windows en Configuración de Windows > Aplicaciones > Inicio.
 
@@ -250,7 +250,7 @@ Sin cuenta, sin analíticas, sin rastreo. Tus datos se quedan en tu PC.
 ```
 #### الميزة 14 (Feature 14)
 ```
-Gratis y de código abierto (MIT).
+Gratis.
 ```
 #### الميزة 15 (Feature 15)
 ```
@@ -297,7 +297,7 @@ Primera versión en Microsoft Store. Las actualizaciones llegan ahora a través 
 
 #### حقوق النشر (Copyright and trademark info)
 ```
-© FastKiwi. Código abierto con licencia MIT.
+© FastKiwi. Todos los derechos reservados.
 ```
 
 #### تعليق اللقطة alert-en.png (Screenshot caption 1)
@@ -328,7 +328,7 @@ Remember Me Reminders
 
 #### الوصف المختصر (Short description)
 ```
-Tâches, notes et rappels pour Windows, avec des alertes qui restent à l’écran jusqu’à ce que vous vous en occupiez. Gratuit, open source et hors ligne : sans compte ni pistage.
+Tâches, notes et rappels pour Windows, avec des alertes qui restent à l’écran jusqu’à ce que vous vous en occupiez. Gratuit et hors ligne : sans compte ni pistage.
 ```
 
 #### الوصف (Description)
@@ -339,7 +339,7 @@ Reportez de 10 minutes, d’une heure, à ce soir, à demain matin, à la semain
 
 Vos données restent sur votre PC. Aucun compte, aucune mesure d’audience, aucun pistage. Vous pouvez exporter une sauvegarde complète avec sommes de contrôle, la restaurer après vérification, ou copier chaque jour vos sauvegardes dans un dossier synchronisé par Google Drive pour ordinateur. Remember Me ne se connecte jamais à Google et n’a aucun accès à votre compte Google.
 
-Remember Me parle 12 langues, dont une interface arabe complète de droite à gauche, et propose des thèmes clair et sombre avec six palettes de couleurs. L’application est gratuite et open source, sous licence MIT.
+Remember Me parle 12 langues, dont une interface arabe complète de droite à gauche, et propose des thèmes clair et sombre avec six palettes de couleurs. L’application est gratuite.
 
 Les rappels s’affichent tant que Remember Me est en cours d’exécution : fermer la fenêtre la laisse dans la zone de notification, et vous pouvez activer le démarrage avec Windows dans Paramètres Windows > Applications > Démarrage.
 
@@ -400,7 +400,7 @@ Aucun compte, aucune mesure d’audience, aucun pistage. Vos données restent su
 ```
 #### الميزة 14 (Feature 14)
 ```
-Gratuit et open source (MIT).
+Gratuit.
 ```
 #### الميزة 15 (Feature 15)
 ```
@@ -447,7 +447,7 @@ Première version sur le Microsoft Store. Les mises à jour arrivent désormais 
 
 #### حقوق النشر (Copyright and trademark info)
 ```
-© FastKiwi. Open source sous licence MIT.
+© FastKiwi. Tous droits réservés.
 ```
 
 #### تعليق اللقطة alert-en.png (Screenshot caption 1)
@@ -478,7 +478,7 @@ Remember Me Reminders
 
 #### الوصف المختصر (Short description)
 ```
-Tugas, catatan, dan pengingat untuk Windows, dengan peringatan yang tetap tampil di layar sampai Anda menanganinya. Gratis, sumber terbuka, dan bisa dipakai tanpa internet: tanpa akun, tanpa pelacakan.
+Tugas, catatan, dan pengingat untuk Windows, dengan peringatan yang tetap tampil di layar sampai Anda menanganinya. Gratis dan bisa dipakai tanpa internet: tanpa akun, tanpa pelacakan.
 ```
 
 #### الوصف (Description)
@@ -489,7 +489,7 @@ Tunda 10 menit, satu jam, sampai nanti malam, besok pagi, minggu depan, atau kap
 
 Data Anda tetap di PC Anda. Tidak ada akun, tidak ada analitik, dan tidak ada pelacakan. Anda bisa mengekspor cadangan lengkap dengan checksum, memulihkannya setelah diverifikasi, atau menyalin cadangan harian ke folder yang disinkronkan oleh Google Drive untuk desktop. Remember Me tidak pernah masuk ke Google dan tidak punya akses ke akun Google Anda.
 
-Remember Me tersedia dalam 12 bahasa, termasuk antarmuka bahasa Arab lengkap dari kanan ke kiri, serta menawarkan tema terang dan gelap dengan enam palet warna. Aplikasi ini gratis dan bersumber terbuka dengan lisensi MIT.
+Remember Me tersedia dalam 12 bahasa, termasuk antarmuka bahasa Arab lengkap dari kanan ke kiri, serta menawarkan tema terang dan gelap dengan enam palet warna. Aplikasi ini gratis.
 
 Pengingat muncul selama Remember Me berjalan: menutup jendela tetap membiarkan aplikasi di area notifikasi, dan Anda bisa menyalakan mulai bersama Windows di Pengaturan Windows > Aplikasi > Startup.
 
@@ -550,7 +550,7 @@ Tanpa akun, tanpa analitik, tanpa pelacakan. Data Anda tetap di PC Anda.
 ```
 #### الميزة 14 (Feature 14)
 ```
-Gratis dan sumber terbuka (MIT).
+Gratis.
 ```
 #### الميزة 15 (Feature 15)
 ```
@@ -597,7 +597,7 @@ Rilis pertama di Microsoft Store. Pembaruan kini datang melalui Microsoft Store.
 
 #### حقوق النشر (Copyright and trademark info)
 ```
-© FastKiwi. Sumber terbuka dengan lisensi MIT.
+© FastKiwi. Seluruh hak cipta dilindungi.
 ```
 
 #### تعليق اللقطة alert-en.png (Screenshot caption 1)
@@ -628,7 +628,7 @@ Remember Me Reminders
 
 #### الوصف المختصر (Short description)
 ```
-Windows 向けのタスク・メモ・リマインダーアプリ。通知は、対応するまで画面に表示され続けます。無料のオープンソースで、オフラインで動作。アカウント不要、追跡なし。
+Windows 向けのタスク・メモ・リマインダーアプリ。通知は、対応するまで画面に表示され続けます。無料で、オフラインで動作。アカウント不要、追跡なし。
 ```
 
 #### الوصف (Description)
@@ -639,7 +639,7 @@ Remember Me は、大切なことを見逃さないための Windows 向けタ�
 
 データはお使いの PC の中に保存されます。アカウントも、利用状況の分析も、追跡もありません。チェックサム付きの完全なバックアップを書き出して検証後に復元できるほか、パソコン版 Google ドライブが同期するフォルダーに毎日のバックアップをコピーすることもできます。Remember Me が Google にサインインすることはなく、Google アカウントにアクセスすることもありません。
 
-Remember Me は、右から左に表示される完全なアラビア語インターフェースを含む 12 の言語に対応し、ライトとダークのテーマと 6 つのカラーパレットを選べます。MIT ライセンスで公開されている無料のオープンソースソフトウェアです。
+Remember Me は、右から左に表示される完全なアラビア語インターフェースを含む 12 の言語に対応し、ライトとダークのテーマと 6 つのカラーパレットを選べます。無料でご利用いただけます。
 
 リマインダーは Remember Me の実行中に表示されます。ウィンドウを閉じても通知領域に残り、Windows の [設定] > [アプリ] > [スタートアップ] で、Windows と一緒に起動するよう設定できます。
 
@@ -700,7 +700,7 @@ Windows 専用です。スマートフォンアプリやクラウド同期はあ
 ```
 #### الميزة 14 (Feature 14)
 ```
-無料のオープンソース（MIT）。
+無料。
 ```
 #### الميزة 15 (Feature 15)
 ```
@@ -747,7 +747,7 @@ Microsoft Store での最初のリリースです。今後のアップデート�
 
 #### حقوق النشر (Copyright and trademark info)
 ```
-© FastKiwi。MIT ライセンスで公開されているオープンソースです。
+© FastKiwi。All rights reserved.
 ```
 
 #### تعليق اللقطة alert-en.png (Screenshot caption 1)
@@ -778,7 +778,7 @@ Remember Me Reminders
 
 #### الوصف المختصر (Short description)
 ```
-Tarefas, notas e lembretes para Windows, com alertas que ficam na tela até você resolver. Gratuito, de código aberto e offline: sem conta e sem rastreamento.
+Tarefas, notas e lembretes para Windows, com alertas que ficam na tela até você resolver. Gratuito e offline: sem conta e sem rastreamento.
 ```
 
 #### الوصف (Description)
@@ -789,7 +789,7 @@ Adie por 10 minutos, uma hora, para hoje à noite, amanhã de manhã, a próxima
 
 Seus dados ficam no seu PC. Não há conta, nem análises de uso, nem rastreamento. Você pode exportar um backup completo com somas de verificação, restaurá-lo depois que ele for verificado ou copiar backups diários para uma pasta sincronizada pelo Google Drive para computador. O Remember Me nunca faz login no Google e não tem acesso à sua Conta do Google.
 
-O Remember Me fala 12 idiomas, incluindo uma interface completa em árabe, da direita para a esquerda, e oferece temas claro e escuro com seis paletas de cores. É gratuito e de código aberto, sob a licença MIT.
+O Remember Me fala 12 idiomas, incluindo uma interface completa em árabe, da direita para a esquerda, e oferece temas claro e escuro com seis paletas de cores. É gratuito.
 
 Os lembretes aparecem enquanto o Remember Me está em execução: ao fechar a janela, ele continua na área de notificação, e você pode ativar a inicialização com o Windows em Configurações do Windows > Aplicativos > Inicialização.
 
@@ -850,7 +850,7 @@ Sem conta, sem análises de uso, sem rastreamento. Seus dados ficam no seu PC.
 ```
 #### الميزة 14 (Feature 14)
 ```
-Gratuito e de código aberto (MIT).
+Gratuito.
 ```
 #### الميزة 15 (Feature 15)
 ```
@@ -897,7 +897,7 @@ Primeira versão na Microsoft Store. Agora as atualizações chegam pela Microso
 
 #### حقوق النشر (Copyright and trademark info)
 ```
-© FastKiwi. Código aberto sob a licença MIT.
+© FastKiwi. Todos os direitos reservados.
 ```
 
 #### تعليق اللقطة alert-en.png (Screenshot caption 1)
@@ -928,7 +928,7 @@ Remember Me Reminders
 
 #### الوصف المختصر (Short description)
 ```
-Задачи, заметки и напоминания для Windows с оповещениями, которые остаются на экране, пока вы на них не отреагируете. Бесплатно, с открытым кодом и без интернета: без аккаунта и без слежки.
+Задачи, заметки и напоминания для Windows с оповещениями, которые остаются на экране, пока вы на них не отреагируете. Бесплатно и без интернета: без аккаунта и без слежки.
 ```
 
 #### الوصف (Description)
@@ -939,7 +939,7 @@ Remember Me — приложение для задач, заметок и нап
 
 Ваши данные остаются на вашем ПК. Нет ни аккаунта, ни аналитики, ни слежки. Можно экспортировать полную резервную копию с контрольными суммами, восстановить её после проверки или ежедневно копировать резервные копии в папку, которую синхронизирует Google Диск для компьютера. Remember Me никогда не входит в Google и не имеет доступа к вашему аккаунту Google.
 
-Remember Me поддерживает 12 языков, включая полноценный арабский интерфейс справа налево, и предлагает светлую и тёмную темы с шестью цветовыми палитрами. Приложение бесплатное, с открытым исходным кодом, и распространяется по лицензии MIT.
+Remember Me поддерживает 12 языков, включая полноценный арабский интерфейс справа налево, и предлагает светлую и тёмную темы с шестью цветовыми палитрами. Приложение бесплатное.
 
 Напоминания появляются, пока Remember Me запущено: если закрыть окно, приложение остаётся в области уведомлений, а автозапуск вместе с Windows включается в разделе «Параметры Windows > Приложения > Автозагрузка».
 
@@ -1000,7 +1000,7 @@ Remember Me поддерживает 12 языков, включая полно�
 ```
 #### الميزة 14 (Feature 14)
 ```
-Бесплатно и с открытым кодом (MIT).
+Бесплатно.
 ```
 #### الميزة 15 (Feature 15)
 ```
@@ -1047,7 +1047,7 @@ Remember Me поддерживает 12 языков, включая полно�
 
 #### حقوق النشر (Copyright and trademark info)
 ```
-© FastKiwi. Открытый исходный код по лицензии MIT.
+© FastKiwi. Все права защищены.
 ```
 
 #### تعليق اللقطة alert-en.png (Screenshot caption 1)
@@ -1078,7 +1078,7 @@ Remember Me Reminders
 
 #### الوصف المختصر (Short description)
 ```
-Windows için görevler, notlar ve hatırlatmalar; siz ilgilenene kadar ekranda kalan uyarılarla. Ücretsiz, açık kaynak ve çevrimdışı: hesap yok, izleme yok.
+Windows için görevler, notlar ve hatırlatmalar; siz ilgilenene kadar ekranda kalan uyarılarla. Ücretsiz ve çevrimdışı: hesap yok, izleme yok.
 ```
 
 #### الوصف (Description)
@@ -1089,7 +1089,7 @@ Tek tuşla 10 dakika, bir saat, bu akşam, yarın sabah, gelecek hafta ya da dil
 
 Verileriniz bilgisayarınızda kalır. Hesap, analiz ya da izleme yoktur. Sağlama toplamlarıyla tam bir yedeği dışa aktarabilir, doğrulandıktan sonra geri yükleyebilir veya günlük yedekleri Masaüstü için Google Drive'ın eşitlediği bir klasöre kopyalayabilirsiniz. Remember Me hiçbir zaman Google'da oturum açmaz ve Google hesabınıza erişimi yoktur.
 
-Remember Me, sağdan sola eksiksiz bir Arapça arayüz dahil 12 dili destekler; açık ve koyu temaları altı renk paletiyle sunar. MIT lisansıyla ücretsiz ve açık kaynaklıdır.
+Remember Me, sağdan sola eksiksiz bir Arapça arayüz dahil 12 dili destekler; açık ve koyu temaları altı renk paletiyle sunar. Ücretsizdir.
 
 Hatırlatmalar Remember Me çalışırken görünür: pencereyi kapattığınızda uygulama bildirim alanında kalır. Windows ile başlatmayı Windows Ayarlar > Uygulamalar > Başlangıç bölümünden açabilirsiniz.
 
@@ -1150,7 +1150,7 @@ Hesap yok, analiz yok, izleme yok. Verileriniz bilgisayarınızda kalır.
 ```
 #### الميزة 14 (Feature 14)
 ```
-Ücretsiz ve açık kaynak (MIT).
+Ücretsiz.
 ```
 #### الميزة 15 (Feature 15)
 ```
@@ -1197,7 +1197,7 @@ Microsoft Store'daki ilk sürüm. Güncellemeler artık Microsoft Store üzerind
 
 #### حقوق النشر (Copyright and trademark info)
 ```
-© FastKiwi. MIT lisansı altında açık kaynak.
+© FastKiwi. Tüm hakları saklıdır.
 ```
 
 #### تعليق اللقطة alert-en.png (Screenshot caption 1)
@@ -1230,7 +1230,7 @@ Remember Me Reminders
 
 #### الوصف المختصر (Short description)
 ```
-适用于 Windows 的任务、笔记和提醒应用，提醒窗口会一直留在屏幕上，直到你处理为止。免费开源，离线可用：无需账号，没有跟踪。
+适用于 Windows 的任务、笔记和提醒应用，提醒窗口会一直留在屏幕上，直到你处理为止。免费，离线可用：无需账号，没有跟踪。
 ```
 
 #### الوصف (Description)
@@ -1241,7 +1241,7 @@ Remember Me 是一款适用于 Windows 的任务、笔记和提醒应用，帮�
 
 你的数据只保存在你的电脑上。无需账号，没有统计分析，也没有跟踪。你可以导出带校验和的完整备份，在校验通过后恢复；也可以每天把备份复制到由桌面版 Google Drive 同步的文件夹中。Remember Me 从不登录 Google，也无法访问你的 Google 账号。
 
-Remember Me 支持 12 种语言，包括完整的从右到左阿拉伯语界面，并提供浅色和深色主题以及六种配色方案。它基于 MIT 许可证免费开源。
+Remember Me 支持 12 种语言，包括完整的从右到左阿拉伯语界面，并提供浅色和深色主题以及六种配色方案。它可免费使用。
 
 Remember Me 运行时才会显示提醒：关闭窗口后，它会继续留在通知区域；你还可以在 Windows 的“设置 > 应用 > 启动”中开启开机自启。
 
@@ -1302,7 +1302,7 @@ Remember Me 运行时才会显示提醒：关闭窗口后，它会继续留在�
 ```
 #### الميزة 14 (Feature 14)
 ```
-免费开源（MIT 许可证）。
+免费。
 ```
 #### الميزة 15 (Feature 15)
 ```
@@ -1349,7 +1349,7 @@ Remember Me 运行时才会显示提醒：关闭窗口后，它会继续留在�
 
 #### حقوق النشر (Copyright and trademark info)
 ```
-© FastKiwi。基于 MIT 许可证开源。
+© FastKiwi。保留所有权利。
 ```
 
 #### تعليق اللقطة alert-en.png (Screenshot caption 1)
