@@ -41,7 +41,16 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "$KEY" > ~/.ssh/mirror_key && chmod 600 ~/.ssh/mirror_key
+          # Normalise the pasted key: strip CR, and rebuild line breaks if a phone paste flattened it.
+          printf '%s' "$KEY" | tr -d '\r' > ~/.ssh/mirror_key.raw
+          if [ "$(grep -c . ~/.ssh/mirror_key.raw)" -lt 3 ]; then
+            body=$(sed -e 's/-----BEGIN OPENSSH PRIVATE KEY-----//' -e 's/-----END OPENSSH PRIVATE KEY-----//' ~/.ssh/mirror_key.raw | tr -d ' \n\t')
+            { echo '-----BEGIN OPENSSH PRIVATE KEY-----'; echo "$body" | fold -w 70; echo '-----END OPENSSH PRIVATE KEY-----'; } > ~/.ssh/mirror_key
+          else
+            { cat ~/.ssh/mirror_key.raw; echo; } | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' > ~/.ssh/mirror_key; echo >> ~/.ssh/mirror_key
+          fi
+          rm -f ~/.ssh/mirror_key.raw; chmod 600 ~/.ssh/mirror_key
+          ssh-keygen -y -f ~/.ssh/mirror_key > /dev/null
           # GitLab.com host keys (https://docs.gitlab.com/user/gitlab_com/#ssh-host-keys-fingerprints)
           cat > ~/.ssh/known_hosts <<'HOSTS'
           gitlab.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAfuCHKVTjquxvt6CM6tdG4SLp1Btn/nOeHHE5UOzRdf
