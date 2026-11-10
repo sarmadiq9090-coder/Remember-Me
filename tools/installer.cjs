@@ -29,7 +29,7 @@ function report(promise) {
 module.exports = { root, version, prepackaged, common, report };
 
 function buildInstaller() {
-  // The license page shows the privacy notice (installer/privacy-<lang>.txt) above the MIT license,
+  // The license page shows the privacy notice (installer/privacy-<lang>.txt) above the license,
   // in the language chosen for the installer. electron-builder finds license_<lang>.txt in the build
   // resources folder; NSIS needs CRLF line endings and a UTF-8 byte order mark for Arabic.
   const resources = path.join(root, 'release', 'installer-resources');

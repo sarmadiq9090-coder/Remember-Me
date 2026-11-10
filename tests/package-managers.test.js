@@ -14,7 +14,8 @@ test('the Scoop manifest unpacks the release installer and lets Scoop update it'
   assert.match(m.architecture['64bit'].pre_install, /\$PLUGINSDIR\\app-64\.7z/);
   assert.match(m.post_install, /Uninstall\*\.exe/, 'Without the uninstaller the app leaves updating to Scoop');
   assert.deepEqual(m.shortcuts, [['Remember Me.exe', 'Remember Me']]);
-  assert.equal(m.license, 'MIT');
+  assert.equal(m.license, 'MIT', 'Versions up to 1.7.0 were published under MIT');
+  assert.deepEqual(scoopManifest({ version: '1.8.0', sha256: hash.toUpperCase() }).license, { identifier: 'Proprietary (free)', url: 'https://github.com/sarmadiq9090-coder/Remember-Me/blob/main/LICENSE' });
   assert.ok(!('persist' in m), 'Data lives in %APPDATA%, outside the Scoop folder');
   assert.deepEqual(m.autoupdate.hash, { url: '$baseurl/SHA256SUMS.txt', regex: '$sha256\\s+$basename' });
   assert.deepEqual(Object.keys(m), ['version', 'description', 'homepage', 'license', 'notes', 'architecture', 'post_install', 'shortcuts', 'checkver', 'autoupdate'], "Extras' field order");

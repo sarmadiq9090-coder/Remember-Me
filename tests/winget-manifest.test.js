@@ -24,6 +24,7 @@ test('the manifests point at the release installer as a per-user NSIS package', 
     `ProductCode: ${PRODUCT_CODE}`, "DefaultInstallLocation: '%LocalAppData%\\Programs\\Remember Me'"]) assert.ok(installer.includes(line), line);
   assert.match(files[`${IDENTIFIER}.yaml`], /DefaultLocale: en-US\nManifestType: version\n/);
   assert.match(files[`${IDENTIFIER}.locale.en-US.yaml`], /License: MIT\n/);
+  assert.match(manifests({ version: '1.8.0', sha256: 'AB'.repeat(32), releaseDate: '2026-11-13' })[`${IDENTIFIER}.locale.en-US.yaml`], /License: Proprietary \(free\)\n/);
   for (const text of Object.values(files)) assert.match(text, /^PackageVersion: 1\.5\.0$/m);
 });
 
