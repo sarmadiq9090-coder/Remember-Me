@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "apps": [
+    {
+      "id": "instafind",
+      "status": "released",
+      "name": { "ar": "InstaFind", "en": "InstaFind" },
+      "tagline": { "ar": "بحث سريع", "en": "Instant file search" },
+      "description": {
+        "ar": "ابحث عن أي ملف على جهازك أثناء الكتابة، بالعربية أو الإنكليزية، وحتى داخل ملفات PDF وWord.",
+        "en": "Find any file on your PC as you type, in English or Arabic, even inside PDF and Word documents."
+      },
+      "url": { "ar": "https://fastkiwi.app/arabic-file-search/", "en": "https://fastkiwi.app/arabic-file-search/en/" },
+      "store": { "id": "9MTK4KMFQ657", "live": false },
+      "winget": { "id": "Sarmad.InstaFind", "live": false },
+      "icon": "img/instafind.svg"
+    },
+    {
+      "id": "remember-me",
+      "status": "released",
+      "name": { "ar": "ذكرني", "en": "Remember Me" },
+      "tagline": { "ar": "المهام والتذكيرات", "en": "Tasks & reminders" },
+      "description": {
+        "ar": "تذكيرات تبقى ظاهرة على الشاشة حتى تتعامل معها، مع تكرار مرن ونسخ احتياطي موثوق.",
+        "en": "Reminders that stay on screen until you deal with them, with flexible repeats and verified backups."
+      },
+      "url": { "ar": "https://fastkiwi.app/Remember-Me/ar/", "en": "https://fastkiwi.app/Remember-Me/" },
+      "store": { "id": "9NGB1F7T7JGN", "live": true },
+      "winget": { "id": "Sarmad.RememberMe", "live": false },
+      "icon": "img/remember-me.png"
+    },
+    {
+      "id": "lemon",
+      "status": "released",
+      "name": { "ar": "Lemon", "en": "Lemon" },
+      "tagline": { "ar": "الذكاء الاصطناعي المحلي", "en": "Local AI chat" },
+      "description": {
+        "ar": "محادثة وبرمجة مع نماذج الذكاء الاصطناعي على جهازك عبر Ollama، بلا إنترنت، مع مساعدين يجيبون من ملفاتك فقط.",
+        "en": "Chat and code with AI models on your own PC through Ollama, fully offline, with assistants that answer only from your files."
+      },
+      "url": { "ar": "https://fastkiwi.app/ar/lemon/", "en": "https://fastkiwi.app/lemon/" },
+      "store": null,
+      "winget": { "id": "Sarmad.Lemon", "live": false },
+      "icon": "img/lemon.png"
+    },
+    {
+      "id": "instawords",
+      "status": "released",
+      "name": { "ar": "InstaWords", "en": "InstaWords" },
+      "tagline": { "ar": "تفقيط المبالغ", "en": "Amounts in words" },
+      "description": {
+        "ar": "اكتب أي مبلغ بالحروف للشيكات والفواتير، بالعربية أو الإنجليزية أو الفرنسية. في المتصفح أو كبرنامج ويندوز، وحتى بلا إنترنت.",
+        "en": "Write any amount in words for cheques and invoices, in Arabic, English or French. In your browser or as a Windows app, even offline."
+      },
+      "url": { "ar": "https://fastkiwi.app/instawords/", "en": "https://fastkiwi.app/instawords/en/" },
+      "store": { "id": "9P62P4WQSQNK", "live": false },
+      "winget": { "id": "Sarmad.InstaWords", "live": false },
+      "icon": "img/instawords.svg"
+    },
+    {
+      "id": "instaconvert",
+      "status": "coming-soon",
+      "name": { "ar": "InstaConvert", "en": "InstaConvert" },
+      "tagline": { "ar": "من PDF والصور إلى Excel", "en": "PDFs and images to Excel" },
+      "description": {
+        "ar": "يحوّل ملفات PDF والصور، مثل كشوف الحسابات والجداول الممسوحة، إلى Excel وWord ونص، ويُعلِّم كل رقم يشكّ فيه.",
+        "en": "Turns PDFs and images, such as bank statements and scanned tables, into Excel, Word and text, and flags every doubtful number."
+      },
+      "url": { "ar": "https://fastkiwi.app/ar/downloads/#instaconvert", "en": "https://fastkiwi.app/downloads/#instaconvert" },
+      "store": null,
+      "winget": null,
+      "icon": "img/instaconvert.svg"
+    }
+  ]
+}

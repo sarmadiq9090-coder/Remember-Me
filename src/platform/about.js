@@ -1,4 +1,5 @@
 'use strict';
+const { LINK_IDS: APP_LINK_IDS, isStorePage } = require('./more-apps');
 // The only pages the About card can open. The window sends one of these IDs, never a URL; the
 // main process maps it to the exact address here before calling shell.openExternal.
 const REPO = 'https://github.com/sarmadiq9090-coder/Remember-Me';
@@ -23,13 +24,16 @@ const STORE_LINKS = new Map([
   ['moreApps', 'ms-windows-store://publisher/?name=FastKiwi'],
   ['rate', `ms-windows-store://review/?ProductId=${STORE_PRODUCT_ID}`],
 ]);
-function isStoreUrl(url) { return typeof url === 'string' && /^ms-windows-store:\/\/(publisher|review)\/\?/.test(url); }
+// Also a product page of another FastKiwi app (More from FastKiwi, src/platform/more-apps.js): exactly
+// ms-windows-store://pdp/?productid= and a 12-character Store ID.
+function isStoreUrl(url) { return typeof url === 'string' && (/^ms-windows-store:\/\/(publisher|review)\/\?/.test(url) || isStorePage(url)); }
 function linkUrl(id) {
   if (typeof id !== 'string' || !LINKS.has(id)) throw new Error('Unknown link.');
   return LINKS.get(id);
 }
-// The IDs the About card may send: its web pages and the Store's "More from FastKiwi" page.
-const ABOUT_LINK_IDS = new Set([...LINKS.keys(), 'moreApps']);
+// The IDs the About card may send: its web pages, the Store's FastKiwi publisher page, and the page
+// (app:<id>) and live Store page (store:<id>) of each other app in More from FastKiwi.
+const ABOUT_LINK_IDS = new Set([...LINKS.keys(), 'moreApps', ...APP_LINK_IDS]);
 // Windows 11 still reports itself as 10.0; build 22000 and later is Windows 11.
 function windowsVersion(release) {
   const [major, minor, build] = String(release).split('.').map(Number);
