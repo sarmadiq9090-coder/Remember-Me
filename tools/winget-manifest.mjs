@@ -27,6 +27,16 @@ export function sha256From(sums, version) {
   throw new Error(`SHA256SUMS.txt has no line for ${name}.`);
 }
 
+// Versions up to 1.7.0 were published under the MIT licence; later ones are proprietary (free), D-051.
+export const LAST_MIT_VERSION = '1.7.0';
+export function isMitVersion(version) {
+  const parts = v => String(v).split('.').map(Number);
+  const [a, b] = [parts(version), parts(LAST_MIT_VERSION)];
+  for (let i = 0; i < 3; i++) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) < (b[i] || 0);
+  return true;
+}
+export const licenseName = version => (isMitVersion(version) ? 'MIT' : 'Proprietary (free)');
+
 export function manifests({ version, sha256 = PLACEHOLDER, releaseDate }) {
   const header = type => `# yaml-language-server: $schema=https://aka.ms/winget-manifest.${type}.${SCHEMA}.schema.json\n\nPackageIdentifier: ${IDENTIFIER}\nPackageVersion: ${version}\n`;
   const footer = type => `ManifestType: ${type}\nManifestVersion: ${SCHEMA}\n`;
@@ -59,7 +69,7 @@ PublisherSupportUrl: ${REPO}/issues
 Author: ${pkg.author}
 PackageName: Remember Me
 PackageUrl: ${REPO}
-License: MIT
+License: ${licenseName(version)}
 LicenseUrl: ${REPO}/blob/main/LICENSE
 ShortDescription: Tasks, notes and reminders for Windows, with alerts that stay on screen until you deal with them.
 Description: Remember Me is an offline-first task, note and reminder app in 12 interface languages, including Arabic with a right-to-left layout. Each reminder stays in a window above the taskbar until you mark it done or snooze it, and your data stays on your PC.

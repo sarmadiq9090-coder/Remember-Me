@@ -5,7 +5,7 @@
   "main": "src/main/index.js",
   "private": true,
   "author": "Sarmad",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "repository": { "type": "git", "url": "https://github.com/sarmadiq9090-coder/Remember-Me.git" },
   "homepage": "https://github.com/sarmadiq9090-coder/Remember-Me#readme",
   "bugs": { "url": "https://github.com/sarmadiq9090-coder/Remember-Me/issues" },

@@ -129,7 +129,7 @@ This replaces the earlier instruction to fill only English and Arabic and remove
 
 **Short description:**
 
-> Tasks, notes and reminders for Windows, with alerts that stay on screen until you deal with them. Free, open source and offline: no account, no tracking.
+> Tasks, notes and reminders for Windows, with alerts that stay on screen until you deal with them. Free and offline: no account, no tracking.
 
 **Description:**
 
@@ -139,7 +139,7 @@ This replaces the earlier instruction to fill only English and Arabic and remove
 >
 > Your data stays on your PC. There is no account, no analytics and no tracking. You can export a full backup with checksums, restore it after it's verified, or copy daily backups into a folder that Google Drive for desktop syncs. Remember Me never signs in to Google and has no access to your Google account.
 >
-> Remember Me speaks 12 languages, including a full right-to-left Arabic interface, and offers light and dark themes with six color palettes. It is free and open source under the MIT license.
+> Remember Me speaks 12 languages, including a full right-to-left Arabic interface, and offers light and dark themes with six color palettes. It is free to use.
 >
 > Reminders appear while Remember Me is running: closing the window keeps it in the notification area, and you can turn on Start with Windows in Windows Settings > Apps > Startup.
 >
@@ -160,7 +160,7 @@ This replaces the earlier instruction to fill only English and Arabic and remove
 11. Light, dark or system theme, six color palettes including high contrast.
 12. Pause reminders for an hour, until tomorrow, or until you resume.
 13. No account, no analytics, no tracking. Your data stays on your PC.
-14. Free and open source (MIT).
+14. Free to use.
 15. Quick add from anywhere (off until you turn it on): a global shortcut, Ctrl+Alt+R or one you choose, opens a small box to add a task without opening the app.
 16. Windows only — no phone app or cloud sync.
 
@@ -170,9 +170,9 @@ This replaces the earlier instruction to fill only English and Arabic and remove
 
 > First release in the Microsoft Store. Updates now arrive through the Store. If you used the version from GitHub, your tasks, notes and attachments are copied in the first time you start this one.
 
-**Copyright and trademark info:** © FastKiwi. Open source under the MIT license.
+**Copyright and trademark info:** © FastKiwi. All rights reserved.
 
-**Additional license terms:** MIT License, https://github.com/sarmadiq9090-coder/Remember-Me/blob/main/LICENSE
+**Additional license terms:** Proprietary licence, free to use: https://github.com/sarmadiq9090-coder/Remember-Me/blob/main/LICENSE
 
 ### Arabic (العربية)
 
@@ -180,7 +180,7 @@ This replaces the earlier instruction to fill only English and Arabic and remove
 
 **الوصف المختصر:**
 
-> مهام وملاحظات وتذكيرات لويندوز، بتنبيهات تبقى على الشاشة حتى تتعامل معها. مجاني ومفتوح المصدر ويعمل دون إنترنت: بلا حساب وبلا تتبع.
+> مهام وملاحظات وتذكيرات لويندوز، بتنبيهات تبقى على الشاشة حتى تتعامل معها. مجاني ويعمل دون إنترنت: بلا حساب وبلا تتبع.
 
 **الوصف:**
 
@@ -190,7 +190,7 @@ This replaces the earlier instruction to fill only English and Arabic and remove
 >
 > بياناتك تبقى على جهازك. لا حساب، ولا إحصاءات، ولا تتبع. يمكنك تصدير نسخة احتياطية كاملة مع بصمات للتحقق منها، واستعادتها بعد التحقق، أو نسخ نسخة يومية إلى مجلد يزامنه تطبيق Google Drive لسطح المكتب. لا يسجّل ذكرني الدخول إلى Google ولا يصل إلى حسابك فيها.
 >
-> يدعم ذكرني 12 لغة، منها واجهة عربية كاملة من اليمين إلى اليسار، مع سمة فاتحة وداكنة وست لوحات ألوان. وهو مجاني ومفتوح المصدر بترخيص MIT.
+> يدعم ذكرني 12 لغة، منها واجهة عربية كاملة من اليمين إلى اليسار، مع سمة فاتحة وداكنة وست لوحات ألوان. وهو مجاني.
 >
 > تظهر التذكيرات ما دام ذكرني يعمل: إغلاق النافذة يبقيه في منطقة الإشعارات بجانب الساعة، ويمكنك تشغيله مع ويندوز من إعدادات ويندوز ← التطبيقات ← بدء التشغيل.
 >
@@ -211,7 +211,7 @@ This replaces the earlier instruction to fill only English and Arabic and remove
 11. سمة فاتحة أو داكنة أو حسب ويندوز، وست لوحات ألوان منها التباين العالي.
 12. إيقاف التذكيرات مؤقتًا لساعة أو حتى الغد أو حتى تستأنفها.
 13. بلا حساب ولا إحصاءات ولا تتبع. بياناتك تبقى على جهازك.
-14. مجاني ومفتوح المصدر (MIT).
+14. مجاني.
 15. إضافة سريعة من أي مكان (متوقفة حتى تفعّلها): اختصار عام، Ctrl+Alt+R أو اختصار تختاره، يفتح مربعًا صغيرًا لإضافة مهمة دون فتح البرنامج.
 16. لويندوز فقط، بلا تطبيق للهاتف ولا مزامنة سحابية.
 
@@ -221,7 +221,7 @@ This replaces the earlier instruction to fill only English and Arabic and remove
 
 > أول إصدار في Microsoft Store. التحديثات تصل الآن من المتجر. إذا كنت تستخدم النسخة من GitHub، تُنسخ مهامك وملاحظاتك ومرفقاتك تلقائيًا في أول تشغيل لهذه النسخة.
 
-**حقوق النشر:** © FastKiwi. مفتوح المصدر بترخيص MIT.
+**حقوق النشر:** © FastKiwi. جميع الحقوق محفوظة.
 
 ### Privacy policy
 

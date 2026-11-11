@@ -11,6 +11,7 @@
 
 ### Changed
 
+- Licence: Remember Me is now proprietary (free); third-party notices unchanged. / الترخيص: ذكرني أصبح برنامجاً مملوكاً (مجانياً)؛ إشعارات الأطراف الثالثة دون تغيير. Versions up to 1.7.0 stay MIT.
 - On Arabic Windows, and other right-to-left Windows where the clock is on the left, a new install shows the reminder alert at the bottom left. The side you saved, or choose in Settings, is kept.
 - Electron 45.2.3 (was 45.1.0), with Chromium security fixes; electron-updater 6.8.12 and electron-builder 26.18.1.
 - No text is smaller than 12 px any more: small labels, hints, counts and badges that were 9 to 11 px are now 12 px.
