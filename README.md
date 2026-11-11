@@ -280,3 +280,5 @@ Ideas are welcome in [Discussions](https://github.com/sarmadiq9090-coder/Remembe
 ## Contributing and license
 
 Contributions are welcome through Issues and Pull Requests. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md) first. To review or improve a translation, see [TRANSLATING.md](TRANSLATING.md); for questions and ideas, use [Discussions](https://github.com/sarmadiq9090-coder/Remember-Me/discussions). Remember Me is licensed under the [MIT License](LICENSE).
+
+The Remember Me name and icon are trademarks of FastKiwi (Sarmad) and are not covered by the MIT License: see [TRADEMARKS.md](TRADEMARKS.md).
