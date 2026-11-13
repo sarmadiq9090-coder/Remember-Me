@@ -103,3 +103,30 @@ test('the pages stay under 200 KB without screenshots', () => {
     assert.ok(bytes < 200 * 1024, `${page}: ${bytes} bytes`);
   }
 });
+
+test('Microsoft Store is the first, recommended download; the installer is the second', () => {
+  const STORE = 'https://apps.microsoft.com/detail/9NGB1F7T7JGN';
+  for (const [page, { lang }] of Object.entries(PAGES)) {
+    const html = read(page);
+    // Every Store link is the official badge (self-hosted, never a script or remote image) to the plain Store URL.
+    const links = tags(html, 'a').filter(t => /apps\.microsoft\.com/.test(attr(t, 'href') || ''));
+    assert.ok(links.length >= 3, `${page}: Store badge in the hero, the install steps and the closing band`);
+    for (const t of links) assert.equal(attr(t, 'href'), STORE, `${page}: ${t}`);
+    for (const m of html.matchAll(/<a class="store-badge"[^>]*>([\s\S]*?)<\/a>/g)) {
+      for (const src of [...attrs(m[1], 'src'), ...attrs(m[1], 'srcset')]) assert.match(src, new RegExp(`^(\\.\\./)?images/ms-store-badge-${lang}(-light)?\\.svg$`), `${page}: ${src}`);
+      assert.match(m[1], /alt="[^"]*Microsoft Store"/, `${page}: badge alt text`);
+    }
+    // In each download block the Store option comes before the installer, and both are labelled.
+    const blocks = [...html.matchAll(/<div class="cta dl-opts">([\s\S]*?)\n\s*<\/div>\n/g)].map(m => m[1]);
+    assert.equal(blocks.length, 2, `${page}: hero and closing download blocks`);
+    for (const b of blocks) {
+      const store = b.indexOf(STORE), installer = b.indexOf('releases/latest');
+      assert.ok(store > 0 && installer > store, `${page}: Store first, installer second`);
+      assert.equal((b.match(/class="dl-label"/g) || []).length, 2, `${page}: both options labelled`);
+    }
+  }
+  for (const f of ['ms-store-badge-en.svg', 'ms-store-badge-en-light.svg', 'ms-store-badge-ar.svg', 'ms-store-badge-ar-light.svg']) {
+    const svg = read('images/' + f);
+    assert.ok(svg.startsWith('<svg') && !/<script|<foreignObject|href="http|@import|url\(http/i.test(svg), f);
+  }
+});
