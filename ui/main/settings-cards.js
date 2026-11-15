@@ -57,7 +57,7 @@ const ABOUT_LINKS = [
   ['support', 'lifebuoy', msg('Support'), msg('Help and contact on fastkiwi.app')],
   ['email', 'mail', msg('Email support'), null, 'support@fastkiwi.app'],
   ['privacy', 'shield', msg('Privacy'), msg('No account, no tracking, your data stays on your PC')],
-  ['license', 'file', msg('License: MIT'), msg('Free and open source')],
+  ['license', 'file', msg('License'), msg('Free to use')],
 ];
 // More from FastKiwi: the other FastKiwi apps from main's embedded list (src/platform/more-apps.js), read
 // once. Their names and texts exist in Arabic and English only: the Arabic interface shows Arabic, every

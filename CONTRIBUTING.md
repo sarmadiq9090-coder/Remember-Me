@@ -23,4 +23,4 @@ Thank you for improving Remember Me. Open an issue before large changes, and kee
 - Check both the English (left-to-right) and Arabic (right-to-left) interface when you change the layout.
 - Do not commit user data, attachments, backups, installers, or generated release folders.
 
-By contributing, you agree that your contribution is licensed under the [MIT License](LICENSE) and that you follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+By contributing, you agree that your contribution is covered by the project's [LICENSE](LICENSE) (proprietary; free to use) and that you follow the [Code of Conduct](CODE_OF_CONDUCT.md).

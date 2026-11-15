@@ -36,8 +36,8 @@ function preview({ lang, dir, name, tagline, facts, alert }) {
     <img class="shot" src="${require('node:url').pathToFileURL(path.join(shots, alert + '.png'))}" alt=""></body></html>`;
 }
 const PREVIEWS = {
-  'og-image.png': { lang: 'en', dir: 'ltr', name: 'Remember Me', tagline: 'Reminders for Windows that stay on screen until you deal with them.', facts: ['Free', 'Open source', 'No account', '12 languages'], alert: 'alert-en' },
-  'og-image-ar.png': { lang: 'ar', dir: 'rtl', name: 'ذكرني', tagline: 'تذكيرات لويندوز تبقى على الشاشة حتى تتعامل معها.', facts: ['مجاني', 'مفتوح المصدر', 'بلا حساب', '12 لغة'], alert: 'alert-ar' },
+  'og-image.png': { lang: 'en', dir: 'ltr', name: 'Remember Me', tagline: 'Reminders for Windows that stay on screen until you deal with them.', facts: ['Free', 'Works offline', 'No account', '12 languages'], alert: 'alert-en' },
+  'og-image-ar.png': { lang: 'ar', dir: 'rtl', name: 'ذكرني', tagline: 'تذكيرات لويندوز تبقى على الشاشة حتى تتعامل معها.', facts: ['مجاني', 'يعمل دون إنترنت', 'بلا حساب', '12 لغة'], alert: 'alert-ar' },
 };
 
 async function capture(html) {

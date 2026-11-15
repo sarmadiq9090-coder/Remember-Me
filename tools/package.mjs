@@ -10,8 +10,9 @@ const require = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const version = require('../package.json').version;
 const { FEED, UPDATER_CACHE } = require('../src/platform/updates.js');
-// Only the app itself goes into app.asar: never docs, CI files, worktrees or local data.
-const bundled = ['/package.json', '/LICENSE', '/src', '/ui', '/assets'];
+// Only the app itself goes into app.asar: never docs, CI files, worktrees or local data. LICENSE-MIT
+// travels with the app because outside contributions made under MIT (ui/locales/hi.json) ship in it.
+const bundled = ['/package.json', '/LICENSE', '/LICENSE-MIT', '/src', '/ui', '/assets'];
 const ignore = file => !!file && !bundled.some(entry => file === entry || file.startsWith(entry + '/'));
 // Chromium's own strings (date pickers, context menus) are kept for every interface language in
 // ui/lib/translate.js, so the list cannot drift from the app's; other system languages use en-US.

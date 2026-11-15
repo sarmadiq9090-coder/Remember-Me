@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { sha256From, installerName } from './winget-manifest.mjs';
+import { sha256From, installerName, isMitVersion, licenseName, licenseUrl } from './winget-manifest.mjs';
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json');
 
@@ -23,7 +23,7 @@ export function scoopManifest({ version, sha256 }) {
     version,
     description: SUMMARY,
     homepage: REPO,
-    license: 'MIT',
+    license: { identifier: licenseName(version), url: licenseUrl(version) },
     notes: 'Your tasks, notes and settings are kept in %APPDATA%\\Remember Me, so they survive updates and uninstalling. Scoop updates this copy; the app\'s own updater is off.',
     architecture: {
       '64bit': {
@@ -48,7 +48,7 @@ const xml = text => String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').re
 export function chocolateyPackage({ version, sha256 }) {
   const description = `${SUMMARY}
 
-Remember Me is an open-source (MIT) task, note and reminder app for 64-bit Windows, in 12 interface languages, including a full right-to-left Arabic interface. It runs without an account and keeps all data on your PC.
+Remember Me is ${isMitVersion(version) ? 'an open-source (MIT)' : 'a free'} task, note and reminder app for 64-bit Windows, in 12 interface languages, including a full right-to-left Arabic interface. It runs without an account and keeps all data on your PC.
 
 ## Features
 - Sticky reminders above the taskbar that stay until you choose **Done** or snooze them
@@ -72,7 +72,7 @@ Remember Me is an open-source (MIT) task, note and reminder app for 64-bit Windo
     <projectUrl>${REPO}</projectUrl>
     <iconUrl>https://raw.githubusercontent.com/sarmadiq9090-coder/Remember-Me/v${version}/assets/icon.png</iconUrl>
     <copyright>Copyright (c) 2026 ${xml(pkg.author)}</copyright>
-    <licenseUrl>${REPO}/blob/main/LICENSE</licenseUrl>
+    <licenseUrl>${licenseUrl(version)}</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <projectSourceUrl>${REPO}</projectSourceUrl>
     <docsUrl>${REPO}#readme</docsUrl>

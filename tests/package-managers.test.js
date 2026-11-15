@@ -14,7 +14,8 @@ test('the Scoop manifest unpacks the release installer and lets Scoop update it'
   assert.match(m.architecture['64bit'].pre_install, /\$PLUGINSDIR\\app-64\.7z/);
   assert.match(m.post_install, /Uninstall\*\.exe/, 'Without the uninstaller the app leaves updating to Scoop');
   assert.deepEqual(m.shortcuts, [['Remember Me.exe', 'Remember Me']]);
-  assert.equal(m.license, 'MIT');
+  assert.deepEqual(m.license, { identifier: 'MIT', url: 'https://github.com/sarmadiq9090-coder/Remember-Me/blob/v1.6.0/LICENSE' }, 'Versions up to 1.7.0 were published under MIT: the link is the LICENSE at their tag');
+  assert.deepEqual(scoopManifest({ version: '1.8.0', sha256: hash.toUpperCase() }).license, { identifier: 'Proprietary (free)', url: 'https://github.com/sarmadiq9090-coder/Remember-Me/blob/main/LICENSE' });
   assert.ok(!('persist' in m), 'Data lives in %APPDATA%, outside the Scoop folder');
   assert.deepEqual(m.autoupdate.hash, { url: '$baseurl/SHA256SUMS.txt', regex: '$sha256\\s+$basename' });
   assert.deepEqual(Object.keys(m), ['version', 'description', 'homepage', 'license', 'notes', 'architecture', 'post_install', 'shortcuts', 'checkver', 'autoupdate'], "Extras' field order");
@@ -32,6 +33,8 @@ test('the Chocolatey package downloads the checked installer and uninstalls thro
   const nuspec = files['remember-me.nuspec'];
   for (const tag of ['id>remember-me<', 'version>1.6.0<', 'packageSourceUrl>', 'docsUrl>', 'bugTrackerUrl>', 'projectSourceUrl>', 'releaseNotes>', 'iconUrl>https://raw.githubusercontent.com/sarmadiq9090-coder/Remember-Me/v1.6.0/assets/icon.png<']) assert.ok(nuspec.includes(tag), tag);
   assert.ok(!/<description>([^]*?)<\/description>/.exec(nuspec)[1].includes('<'), 'The Markdown description is XML-escaped');
+  assert.ok(nuspec.includes('<licenseUrl>https://github.com/sarmadiq9090-coder/Remember-Me/blob/v1.6.0/LICENSE</licenseUrl>'), 'An MIT version links the MIT LICENSE at its tag');
+  assert.ok(chocolateyPackage({ version: '1.8.0', sha256: hash })['remember-me.nuspec'].includes('<licenseUrl>https://github.com/sarmadiq9090-coder/Remember-Me/blob/main/LICENSE</licenseUrl>'), 'A later version links the current LICENSE');
 });
 
 // The committed files follow the latest release, so the version and hash come from the Scoop manifest.

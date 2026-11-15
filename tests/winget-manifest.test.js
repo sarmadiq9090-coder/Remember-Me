@@ -24,7 +24,21 @@ test('the manifests point at the release installer as a per-user NSIS package', 
     `ProductCode: ${PRODUCT_CODE}`, "DefaultInstallLocation: '%LocalAppData%\\Programs\\Remember Me'"]) assert.ok(installer.includes(line), line);
   assert.match(files[`${IDENTIFIER}.yaml`], /DefaultLocale: en-US\nManifestType: version\n/);
   assert.match(files[`${IDENTIFIER}.locale.en-US.yaml`], /License: MIT\n/);
+  assert.match(manifests({ version: '1.8.0', sha256: 'AB'.repeat(32), releaseDate: '2026-11-13' })[`${IDENTIFIER}.locale.en-US.yaml`], /License: Proprietary \(free\)\n/);
   for (const text of Object.values(files)) assert.match(text, /^PackageVersion: 1\.5\.0$/m);
+});
+
+test('an MIT version links the LICENSE at its own tag; later versions link the LICENSE on main', async () => {
+  const { manifests, licenseUrl, IDENTIFIER } = await load();
+  const repo = 'https://github.com/sarmadiq9090-coder/Remember-Me';
+  for (const version of ['1.5.0', '1.6.2', '1.7.0']) {
+    assert.equal(licenseUrl(version), `${repo}/blob/v${version}/LICENSE`, version);
+    assert.ok(manifests({ version })[`${IDENTIFIER}.locale.en-US.yaml`].includes(`\nLicense: MIT\nLicenseUrl: ${repo}/blob/v${version}/LICENSE\n`), version);
+  }
+  for (const version of ['1.7.1', '1.8.0', '2.0.0']) {
+    assert.equal(licenseUrl(version), `${repo}/blob/main/LICENSE`, version);
+    assert.ok(manifests({ version })[`${IDENTIFIER}.locale.en-US.yaml`].includes(`\nLicense: Proprietary (free)\nLicenseUrl: ${repo}/blob/main/LICENSE\n`), version);
+  }
 });
 
 test('the Apps & features key matches what electron-builder derives from the appId', async () => {
@@ -44,4 +58,13 @@ test('docs/distribution/winget/1.5.0 is the generator output with a placeholder 
     assert.equal(fs.readFileSync(path.join(docs, name), 'utf8').replace(/\r\n/g, '\n'), text, `Run: node tools/winget-manifest.mjs --version 1.5.0 --out docs/distribution/winget/1.5.0 (${name})`);
   }
   assert.ok(fs.readFileSync(path.join(docs, 'Sarmad.RememberMe.installer.yaml'), 'utf8').includes(PLACEHOLDER));
+});
+
+test('the MIT notice for outside contributions made under MIT is kept and ships with the app', () => {
+  const root = path.join(__dirname, '..');
+  const mit = fs.readFileSync(path.join(root, 'LICENSE-MIT'), 'utf8').replace(/\r\n/g, '\n');
+  assert.match(mit, /^MIT License\n\nCopyright \(c\) 2026 Sarmad\n/);
+  assert.ok(mit.includes('The above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.'));
+  assert.match(fs.readFileSync(path.join(root, 'LICENSE'), 'utf8'), /Outside contributions made under the MIT licence .*keep that licence; its full text is in LICENSE-MIT\./);
+  assert.match(fs.readFileSync(path.join(root, 'tools/package.mjs'), 'utf8'), /'\/LICENSE-MIT'/, 'LICENSE-MIT is packaged with the app');
 });
