@@ -284,3 +284,5 @@ Ideas are welcome in [Discussions](https://github.com/sarmadiq9090-coder/Remembe
 ## Contributing and license
 
 Contributions are welcome through Issues and Pull Requests. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md) first. To review or improve a translation, see [TRANSLATING.md](TRANSLATING.md); for questions and ideas, use [Discussions](https://github.com/sarmadiq9090-coder/Remember-Me/discussions). Remember Me is free to use on your own devices and is proprietary software, see [LICENSE](LICENSE). Versions up to 1.7.0 (released before 2026-11-09) remain available under the MIT license they were published with.
+
+The Remember Me (ذكرني) and FastKiwi names and icons are trademarks of Sarmad and are not covered by the licence: see [TRADEMARKS.md](TRADEMARKS.md).
