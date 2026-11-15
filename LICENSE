@@ -13,6 +13,8 @@ Third-party components are licensed under their own terms; see the licence files
 Versions released before 2026-11-09 (up to 1.7.0) remain available under the
 MIT licence they were published with.
 
+Outside contributions made under the MIT licence (such as the Hindi translation in commit 8a95f9d) keep that licence; its full text is in LICENSE-MIT.
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR
 OTHER LIABILITY ARISING FROM THE USE OF THE SOFTWARE.

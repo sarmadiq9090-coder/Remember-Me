@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { sha256From, installerName, isMitVersion, licenseName } from './winget-manifest.mjs';
+import { sha256From, installerName, isMitVersion, licenseName, licenseUrl } from './winget-manifest.mjs';
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json');
 
@@ -23,7 +23,7 @@ export function scoopManifest({ version, sha256 }) {
     version,
     description: SUMMARY,
     homepage: REPO,
-    license: isMitVersion(version) ? 'MIT' : { identifier: licenseName(version), url: `${REPO}/blob/main/LICENSE` },
+    license: { identifier: licenseName(version), url: licenseUrl(version) },
     notes: 'Your tasks, notes and settings are kept in %APPDATA%\\Remember Me, so they survive updates and uninstalling. Scoop updates this copy; the app\'s own updater is off.',
     architecture: {
       '64bit': {
@@ -72,7 +72,7 @@ Remember Me is ${isMitVersion(version) ? 'an open-source (MIT)' : 'a free'} task
     <projectUrl>${REPO}</projectUrl>
     <iconUrl>https://raw.githubusercontent.com/sarmadiq9090-coder/Remember-Me/v${version}/assets/icon.png</iconUrl>
     <copyright>Copyright (c) 2026 ${xml(pkg.author)}</copyright>
-    <licenseUrl>${REPO}/blob/main/LICENSE</licenseUrl>
+    <licenseUrl>${licenseUrl(version)}</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <projectSourceUrl>${REPO}</projectSourceUrl>
     <docsUrl>${REPO}#readme</docsUrl>

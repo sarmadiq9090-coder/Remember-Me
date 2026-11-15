@@ -36,6 +36,9 @@ export function isMitVersion(version) {
   return true;
 }
 export const licenseName = version => (isMitVersion(version) ? 'MIT' : 'Proprietary (free)');
+// An MIT version links the LICENSE at its own tag, which is the MIT text it was published with;
+// later versions link the current LICENSE on main.
+export const licenseUrl = version => `${REPO}/blob/${isMitVersion(version) ? `v${version}` : 'main'}/LICENSE`;
 
 export function manifests({ version, sha256 = PLACEHOLDER, releaseDate }) {
   const header = type => `# yaml-language-server: $schema=https://aka.ms/winget-manifest.${type}.${SCHEMA}.schema.json\n\nPackageIdentifier: ${IDENTIFIER}\nPackageVersion: ${version}\n`;
@@ -70,7 +73,7 @@ Author: ${pkg.author}
 PackageName: Remember Me
 PackageUrl: ${REPO}
 License: ${licenseName(version)}
-LicenseUrl: ${REPO}/blob/main/LICENSE
+LicenseUrl: ${licenseUrl(version)}
 ShortDescription: Tasks, notes and reminders for Windows, with alerts that stay on screen until you deal with them.
 Description: Remember Me is an offline-first task, note and reminder app in 12 interface languages, including Arabic with a right-to-left layout. Each reminder stays in a window above the taskbar until you mark it done or snooze it, and your data stays on your PC.
 Moniker: remember-me

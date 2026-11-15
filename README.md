@@ -240,11 +240,9 @@ Bump `version` in `package.json` and push a matching tag, such as `v1.4.1`. `.gi
 
 ## Code signing policy
 
-Windows releases are being prepared for code signing through the SignPath Foundation open-source program (application pending). Once approved:
+Windows releases are signed through the Microsoft Store (D-051): Microsoft signs the Store version when it is published.
 
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
-
-Every signed file is built automatically by GitHub Actions from this repository, and every release needs manual approval before it's signed. Release installers are also published with `SHA256SUMS.txt` and GitHub build provenance (see [Verify the download](#verify-the-download)).
+Every release is built automatically by GitHub Actions from this repository. Release installers are also published with `SHA256SUMS.txt` and GitHub build provenance (see [Verify the download](#verify-the-download)).
 
 Team roles:
 
