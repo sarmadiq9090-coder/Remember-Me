@@ -61,8 +61,8 @@ const ABOUT_LINKS = [
 ];
 // More from FastKiwi: the other FastKiwi apps from main's embedded list (src/platform/more-apps.js), read
 // once. Their names and texts exist in Arabic and English only: the Arabic interface shows Arabic, every
-// other language English. Each row sends a link ID (app:<id>, store:<id>), never a URL. A coming-soon app
-// gets only its page, never a Store or download action. The last row is the FastKiwi page in the Store.
+// other language English. Each row sends a link ID (app:<id>, store:<id>), never a URL. Only released apps
+// are listed (main leaves out the rest). The last row is the FastKiwi page in the Store.
 let fastkiwiApps = null, fastkiwiAppsAsked = false;
 function moreAppsMarkup() {
   if (!fastkiwiAppsAsked) {
@@ -71,7 +71,7 @@ function moreAppsMarkup() {
   }
   const lang = state.settings.language === 'ar' ? 'ar' : 'en';
   const open = '<span class="about-link-open" data-icon="external"></span>';
-  const apps = (fastkiwiApps || []).map(app => `<div class="more-app"><button type="button" class="about-link" data-link="${esc(app.page)}" title="${esc(app.description[lang])}"><span class="about-link-icon" data-icon="layers"></span><span class="about-link-text"><strong><bdi lang="${lang}" dir="auto">${esc(app.name[lang])}</bdi>${app.comingSoon ? ` <span class="more-app-soon">${esc(tr('Coming soon'))}</span>` : ''}</strong><small lang="${lang}" dir="auto">${esc(app.tagline[lang])}</small></span>${open}</button>${app.store && !app.comingSoon ? `<button type="button" class="text-button more-app-store" data-link="${esc(app.store)}" aria-label="${esc(tr('{name} in Microsoft Store', { name: isolate(app.name[lang]) }))}"><span data-icon="external"></span> ${esc(tr('Microsoft Store'))}</button>` : ''}</div>`).join('');
+  const apps = (fastkiwiApps || []).map(app => `<div class="more-app"><button type="button" class="about-link" data-link="${esc(app.page)}" title="${esc(app.description[lang])}"><span class="about-link-icon" data-icon="layers"></span><span class="about-link-text"><strong><bdi lang="${lang}" dir="auto">${esc(app.name[lang])}</bdi></strong><small lang="${lang}" dir="auto">${esc(app.tagline[lang])}</small></span>${open}</button>${app.store ? `<button type="button" class="text-button more-app-store" data-link="${esc(app.store)}" aria-label="${esc(tr('{name} in Microsoft Store', { name: isolate(app.name[lang]) }))}"><span data-icon="external"></span> ${esc(tr('Microsoft Store'))}</button>` : ''}</div>`).join('');
   const publisher = `<button type="button" class="about-link" data-link="moreApps"><span class="about-link-icon" data-icon="layers"></span><span class="about-link-text"><strong>${esc(tr('Microsoft Store'))}</strong><small>${esc(tr('Other free apps in the Microsoft Store'))}</small></span>${open}</button>`;
   return `<section class="more-apps" aria-labelledby="more-apps-title"><h3 id="more-apps-title">${esc(tr('More from FastKiwi'))}</h3><div class="about-links">${apps}${publisher}</div></section>`;
 }

@@ -19,18 +19,19 @@ function storeUrl(id) { return `ms-windows-store://pdp/?productid=${id}`; }
 function isStorePage(url) { return typeof url === 'string' && /^ms-windows-store:\/\/pdp\/\?productid=[0-9A-Z]{12}$/.test(url); }
 const text = value => (typeof value === 'string' && value.trim() && !/[<>\n\r]/.test(value) ? value : null);
 const pair = value => (value && text(value.ar) && text(value.en) ? { ar: value.ar, en: value.en } : null);
-// The other apps, in the file's order. An entry with a missing text or an address outside the
-// whitelist is left out. A Store page is kept only for a released app whose listing is live.
+// The other released apps, in the file's order. An app that is not released (coming soon, or any other
+// status) is left out, as is an entry with a missing text or an address outside the whitelist. A Store
+// page is kept only when the app's listing is live.
 function parseApps(data, self = SELF) {
   if (!data || data.schema !== 1 || !Array.isArray(data.apps)) throw new Error('apps.json: expected schema 1 with an apps list');
   const apps = [];
   for (const app of data.apps) {
     if (!app || typeof app.id !== 'string' || !APP_ID.test(app.id) || app.id === self) continue;
-    if (!['released', 'coming-soon'].includes(app.status)) continue;
+    if (app.status !== 'released') continue;
     const name = pair(app.name), tagline = pair(app.tagline), description = pair(app.description);
     if (!name || !tagline || !description || !app.url || !isAppPage(app.url.ar) || !isAppPage(app.url.en)) continue;
-    const live = app.status === 'released' && app.store && app.store.live === true && typeof app.store.id === 'string' && STORE_ID.test(app.store.id);
-    apps.push({ id: app.id, comingSoon: app.status === 'coming-soon', name, tagline, description, url: { ar: app.url.ar, en: app.url.en }, store: live ? storeUrl(app.store.id) : null });
+    const live = app.store && app.store.live === true && typeof app.store.id === 'string' && STORE_ID.test(app.store.id);
+    apps.push({ id: app.id, name, tagline, description, url: { ar: app.url.ar, en: app.url.en }, store: live ? storeUrl(app.store.id) : null });
   }
   return apps;
 }
@@ -38,7 +39,7 @@ const APPS = parseApps(require('../../assets/apps.json'));
 const LINK_IDS = new Set(APPS.flatMap(app => [`app:${app.id}`, ...(app.store ? [`store:${app.id}`] : [])]));
 // What the About card shows: texts in Arabic and English (the card picks one), and the link IDs.
 function appList(apps = APPS) {
-  return apps.map(({ id, comingSoon, name, tagline, description, store }) => ({ id, comingSoon, name, tagline, description, page: `app:${id}`, store: store ? `store:${id}` : null }));
+  return apps.map(({ id, name, tagline, description, store }) => ({ id, name, tagline, description, page: `app:${id}`, store: store ? `store:${id}` : null }));
 }
 // The exact address for a link ID: the Arabic page in the Arabic interface, else the English one.
 function appLinkUrl(link, language, apps = APPS) {

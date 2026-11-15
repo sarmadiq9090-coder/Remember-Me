@@ -383,9 +383,9 @@ Updates card), "Copy diagnostic info" and "Open log folder".
 - More from FastKiwi: a section of the card lists the other FastKiwi apps from `assets/apps.json`, a copy
   of the website's `data/apps.json` (`tools/sync-apps.cjs` refreshes it; `assets/apps.source.txt` names
   the site commit). It is embedded: the app never fetches the list or icons. `src/platform/more-apps.js`
-  leaves out Remember Me, keeps only `https://fastkiwi.app/` pages, and gives a Store page
-  (`ms-windows-store://pdp/?productid=…`) only to a released app whose `store.live` is true; a
-  coming-soon app gets its page and a «قريباً» / "Coming soon" label, never a Store or download action.
+  leaves out Remember Me and every app whose `status` is not `released` (a coming-soon app is not
+  shown at all), keeps only `https://fastkiwi.app/` pages, and gives a Store page
+  (`ms-windows-store://pdp/?productid=…`) only to an app whose `store.live` is true.
   The page reads the list once with `otherApps` (names and texts in Arabic and English: the Arabic
   interface shows Arabic, every other language English) and sends `openLink` with `app:<id>` or
   `store:<id>`; main opens the Arabic page in the Arabic interface and the English page otherwise.

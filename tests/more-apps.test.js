@@ -9,30 +9,41 @@ const { createHandlers } = require('../src/main/handlers');
 const root = path.join(__dirname, '..');
 const vendored = JSON.parse(fs.readFileSync(path.join(root, 'assets/apps.json'), 'utf8'));
 
-test('the vendored apps.json is schema 1, names its source commit, and lists the other apps without Remember Me', () => {
+test('the vendored apps.json is schema 1, names its source commit, and lists the other released apps without Remember Me', () => {
   assert.equal(vendored.schema, 1);
   assert.ok(vendored.apps.some(app => app.id === SELF), 'The site list includes Remember Me itself');
   assert.match(fs.readFileSync(path.join(root, 'assets/apps.source.txt'), 'utf8'), /^sarmadiq9090-coder\.github\.io [0-9a-f]{40} data\/apps\.json\r?\n$/);
   assert.ok(APPS.length >= 1);
   assert.ok(APPS.every(app => app.id !== SELF), 'Self is left out');
-  assert.deepEqual(APPS.map(app => app.id), vendored.apps.filter(app => app.id !== SELF).map(app => app.id), 'Every other app, in the file\'s order');
+  assert.deepEqual(APPS.map(app => app.id), vendored.apps.filter(app => app.id !== SELF && app.status === 'released').map(app => app.id), 'Every other released app, in the file\'s order');
   for (const app of APPS) for (const field of ['name', 'tagline', 'description']) {
     assert.ok(app[field].ar && app[field].en, `${app.id} ${field}`);
     assert.match(app[field].ar, /[\u0600-\u06ff]|^[A-Za-z]+$/, `${app.id} ${field}.ar is Arabic or a Latin brand name`);
   }
 });
 
-test('a coming-soon app has only its page: no Store link even when its listing says live', () => {
-  const soon = APPS.filter(app => app.comingSoon);
-  assert.ok(soon.length >= 1, 'InstaConvert is coming soon in the vendored list');
-  for (const app of soon) {
-    assert.equal(app.store, null);
-    assert.ok(!LINK_IDS.has(`store:${app.id}`));
-    assert.throws(() => appLinkUrl(`store:${app.id}`, 'en'), /Unknown link/);
+test('only released apps are listed: every app that is not released is absent', () => {
+  const notReleased = vendored.apps.filter(app => app.status !== 'released');
+  assert.ok(notReleased.some(app => app.id === 'instaconvert'), 'InstaConvert is not released in the vendored list');
+  for (const app of notReleased) {
+    assert.ok(!APPS.some(a => a.id === app.id), `${app.id} is absent`);
+    assert.ok(!LINK_IDS.has(`app:${app.id}`) && !LINK_IDS.has(`store:${app.id}`), `${app.id} has no link`);
+    assert.throws(() => appLinkUrl(`app:${app.id}`, 'en'), /Unknown link/);
   }
-  const data = { schema: 1, apps: [{ ...vendored.apps.find(app => app.status === 'coming-soon'), store: { id: '9ABCDEFGHJKL', live: true } }] };
-  assert.equal(parseApps(data)[0].store, null);
-  assert.equal(appList(parseApps(data))[0].store, null);
+  assert.ok(APPS.every(app => !('comingSoon' in app)) && appList().every(app => !('comingSoon' in app)), 'No coming-soon flag reaches the window');
+  const base = vendored.apps.find(app => app.id === 'lemon');
+  for (const status of ['coming-soon', 'beta', 'retired', undefined])
+    assert.deepEqual(parseApps({ schema: 1, apps: [{ ...base, status, store: { id: '9ABCDEFGHJKL', live: true } }] }), [], String(status));
+  assert.deepEqual(APPS.map(app => app.id), vendored.apps.filter(app => app.id !== SELF && app.status === 'released').map(app => app.id));
+});
+
+test('the synced list shows Scan Kiwi and opens the English InstaWords page at /instawords/', () => {
+  const scanKiwi = APPS.find(app => app.id === 'scan-kiwi');
+  assert.ok(scanKiwi, 'Scan Kiwi is listed');
+  assert.equal(appLinkUrl('app:scan-kiwi', 'ar'), scanKiwi.url.ar);
+  assert.equal(appLinkUrl('app:scan-kiwi', 'en'), scanKiwi.url.en);
+  assert.equal(appLinkUrl('app:instawords', 'en'), 'https://fastkiwi.app/instawords/');
+  assert.equal(appLinkUrl('app:instawords', 'fr'), 'https://fastkiwi.app/instawords/');
 });
 
 test('a Store page is offered only for a released app whose listing is live', () => {
@@ -43,7 +54,7 @@ test('a Store page is offered only for a released app whose listing is live', ()
   assert.equal(parseApps({ schema: 1, apps: [{ ...base, store: { id: '9MTK4KMFQ657', live: false } }] })[0].store, null);
   assert.equal(parseApps({ schema: 1, apps: [{ ...base, store: null }] })[0].store, null);
   assert.equal(parseApps({ schema: 1, apps: [{ ...base, store: { id: 'x&y=1', live: true } }] })[0].store, null, 'A malformed Store ID gives no link');
-  for (const app of APPS) assert.equal(!!app.store, vendored.apps.find(a => a.id === app.id).store?.live === true && !app.comingSoon, app.id);
+  for (const app of APPS) assert.equal(!!app.store, vendored.apps.find(a => a.id === app.id).store?.live === true, app.id);
 });
 
 test('only https://fastkiwi.app pages and ms-windows-store://pdp product pages can open', () => {

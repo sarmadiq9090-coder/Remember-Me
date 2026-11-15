@@ -7,7 +7,7 @@
       "name": { "ar": "InstaFind", "en": "InstaFind" },
       "tagline": { "ar": "بحث سريع", "en": "Instant file search" },
       "description": {
-        "ar": "ابحث عن أي ملف على جهازك أثناء الكتابة، بالعربية أو الإنكليزية، وحتى داخل ملفات PDF وWord.",
+        "ar": "ابحث عن أي ملف على جهازك أثناء الكتابة، بالعربية أو الإنجليزية، وحتى داخل ملفات PDF وWord.",
         "en": "Find any file on your PC as you type, in English or Arabic, even inside PDF and Word documents."
       },
       "url": { "ar": "https://fastkiwi.app/arabic-file-search/", "en": "https://fastkiwi.app/arabic-file-search/en/" },
@@ -52,10 +52,24 @@
         "ar": "اكتب أي مبلغ بالحروف للشيكات والفواتير، بالعربية أو الإنجليزية أو الفرنسية. في المتصفح أو كبرنامج ويندوز، وحتى بلا إنترنت.",
         "en": "Write any amount in words for cheques and invoices, in Arabic, English or French. In your browser or as a Windows app, even offline."
       },
-      "url": { "ar": "https://fastkiwi.app/instawords/", "en": "https://fastkiwi.app/instawords/en/" },
+      "url": { "ar": "https://fastkiwi.app/instawords/", "en": "https://fastkiwi.app/instawords/" },
       "store": { "id": "9P62P4WQSQNK", "live": false },
       "winget": { "id": "Sarmad.InstaWords", "live": false },
       "icon": "img/instawords.svg"
+    },
+    {
+      "id": "scan-kiwi",
+      "status": "released",
+      "name": { "ar": "ماسح كيوي", "en": "Scan Kiwi" },
+      "tagline": { "ar": "ماسح مستندات لأندرويد", "en": "Document scanner for Android" },
+      "description": {
+        "ar": "امسح الورق إلى ملفات PDF واضحة على هاتف أندرويد، بلا إنترنت ولا إذن إنترنت. مجاني ومفتوح المصدر.",
+        "en": "Scan paper to clean PDFs on your Android phone, offline and with no internet permission. Free and open source."
+      },
+      "url": { "ar": "https://fastkiwi.app/ar/scan-kiwi/", "en": "https://fastkiwi.app/scan-kiwi/" },
+      "store": null,
+      "winget": null,
+      "icon": "img/scan-kiwi.svg"
     },
     {
       "id": "instaconvert",
