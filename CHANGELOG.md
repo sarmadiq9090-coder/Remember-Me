@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## v1.8.0 (2026-11-18)
+
+Dates in plain Arabic and English, a text size setting, More from FastKiwi, Support in About, and the new FastKiwi icon. Your tasks, notes, attachments and settings load unchanged. Tested automatically in CI; not yet tried on a real PC.
 
 ### Added
 
