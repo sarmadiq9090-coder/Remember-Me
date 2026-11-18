@@ -120,7 +120,7 @@ test('Microsoft Store is the first, recommended download; the installer is the s
     const blocks = [...html.matchAll(/<div class="cta dl-opts">([\s\S]*?)\n\s*<\/div>\n/g)].map(m => m[1]);
     assert.equal(blocks.length, 2, `${page}: hero and closing download blocks`);
     for (const b of blocks) {
-      const store = b.indexOf(STORE), installer = b.indexOf('releases/latest');
+      const store = b.indexOf(STORE), installer = b.indexOf('/releases/download/v');
       assert.ok(store > 0 && installer > store, `${page}: Store first, installer second`);
       assert.equal((b.match(/class="dl-label"/g) || []).length, 2, `${page}: both options labelled`);
     }
