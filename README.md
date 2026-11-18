@@ -75,13 +75,13 @@ The installer is built by GitHub Actions from the published source. It is not co
 Compare the file's fingerprint with `SHA256SUMS.txt` from the same release:
 
 ```powershell
-Get-FileHash .\Remember-Me-Setup-1.7.0-x64.exe -Algorithm SHA256
+Get-FileHash .\Remember-Me-Setup-1.8.0-x64.exe -Algorithm SHA256
 ```
 
 With the GitHub CLI you can also confirm the file was built by this repository's release workflow from the release tag:
 
 ```powershell
-gh attestation verify .\Remember-Me-Setup-1.7.0-x64.exe --repo sarmadiq9090-coder/Remember-Me --source-ref refs/tags/v1.7.0 --signer-workflow sarmadiq9090-coder/Remember-Me/.github/workflows/release.yml
+gh attestation verify .\Remember-Me-Setup-1.8.0-x64.exe --repo sarmadiq9090-coder/Remember-Me --source-ref refs/tags/v1.8.0 --signer-workflow sarmadiq9090-coder/Remember-Me/.github/workflows/release.yml
 ```
 
 ### Microsoft Store
@@ -274,8 +274,8 @@ Planned work is tracked in [milestones](https://github.com/sarmadiq9090-coder/Re
 
 - **v1.6.1:** the snooze fixes, and the first end-to-end test of automatic updates.
 - **v1.7.0 (released):** quick add from anywhere, a Microsoft Store package, and a new install that opens in your Windows language. Code signing and Windows on ARM were planned for it but did not ship.
-- **v1.8.0, faster input:** due dates in plain language, and templates.
-- **v1.9.0, planning:** a calendar view, a daily summary and local statistics.
+- **v1.8.0 (released):** due dates in plain Arabic and English, a text size setting, More from FastKiwi, and the new icon. Templates move to v1.9.0.
+- **v1.9.0, planning:** templates, a calendar view, a daily summary and local statistics.
 - **v2.0.0:** sync between PCs through a folder you choose, with no account.
 - **Later:** code signing and Windows on ARM.
 
